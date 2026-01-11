@@ -128,7 +128,7 @@ export default function HomePage() {
             Ready to protect your pet?
           </h2>
           <p className="text-xl text-primary-100 mb-8">
-            Join thousands of pet parents who trust TailTrackers to keep their furry family safe
+            Join thousands of pet parents who trust NotAStray to keep their furry family safe
           </p>
           <Link href="/shop" className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg text-lg transition-colors duration-200">
             Get Started Today

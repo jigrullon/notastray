@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       
       <p>The person who scanned the tag can see ${owner.petName}'s profile with your contact information.</p>
       
-      <p><em>This is an automated notification from TailTrackers. The location is ${locationMethod === 'ip' ? 'approximate based on internet connection' : 'based on the scanner\'s device GPS'}.</em></p>
+      <p><em>This is an automated notification from NotAStray. The location is ${locationMethod === 'ip' ? 'approximate based on internet connection' : 'based on the scanner\'s device GPS'}.</em></p>
     `
 
     // Send SMS notification
@@ -156,7 +156,7 @@ async function sendEmail(email: string, subject: string, htmlBody: string) {
   
   await sgMail.send({
     to: email,
-    from: 'alerts@tailtrackers.com',
+    from: 'alerts@notastray.com',
     subject: subject,
     html: htmlBody
   })

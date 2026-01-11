@@ -1,6 +1,6 @@
-# TailTrackers - Smart Pet ID Tags Website
+# NotAStray - Smart Pet ID Tags Website
 
-A modern, responsive website for QR code pet tags built with Next.js 14, TypeScript, and Tailwind CSS. Inspired by GitHub's clean, professional design.
+A modern, responsive website for NotAStray QR code pet tags built with Next.js 14, TypeScript, and Tailwind CSS. Inspired by GitHub's clean, professional design.
 
 ## Features
 
@@ -98,7 +98,7 @@ primary: {
 ```
 
 ### Content
-- Update company name from "TailTrackers" in components
+- Update company name from "NotAStray" in components if needed
 - Replace placeholder content with your actual copy
 - Add real product images and pricing
 - Customize the pet profile mock data

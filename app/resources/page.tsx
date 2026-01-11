@@ -12,7 +12,7 @@ const articles = [
   },
   {
     id: 2,
-    title: "Setting Up Your TailTrackers Profile: Complete Guide",
+    title: "Setting Up Your NotAStray Profile: Complete Guide",
     excerpt: "Step-by-step instructions for creating the perfect pet profile that will help bring your pet home.",
     category: "Setup",
     readTime: "3 min read",
@@ -74,7 +74,7 @@ export default function ResourcesPage() {
             Pet Safety Resources
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Expert tips, guides, and resources to keep your pets safe and help you get the most out of your TailTrackers tag
+            Expert tips, guides, and resources to keep your pets safe and help you get the most out of your NotAStray tag
           </p>
         </div>
       </section>

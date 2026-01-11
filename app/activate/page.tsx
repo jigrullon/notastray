@@ -72,7 +72,7 @@ export default function ActivatePage() {
           <div className="bg-white rounded-lg shadow-sm p-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Activate Your Tag</h1>
             <p className="text-gray-600 mb-8">
-              Enter the code found on your TailTrackers tag to get started
+              Enter the code found on your NotAStray tag to get started
             </p>
 
             <form onSubmit={handleCodeSubmit}>

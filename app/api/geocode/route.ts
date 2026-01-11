@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
       {
         headers: {
-          'User-Agent': 'TailTrackers Pet Tag Service'
+          'User-Agent': 'NotAStray Pet Tag Service'
         }
       }
     )

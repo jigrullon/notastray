@@ -5,7 +5,7 @@ import Footer from '@/components/Footer'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
 export const metadata: Metadata = {
-  title: 'TailTrackers - Smart Pet ID Tags',
+  title: 'NotAStray - Smart Pet ID Tags',
   description: 'Keep your pets safe with smart QR code ID tags. Instant access to pet profiles when they need help most.',
 }
 

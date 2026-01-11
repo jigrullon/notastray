@@ -2,7 +2,7 @@
 
 ## Overview
 
-The TailTrackers notification system provides instant alerts to pet owners when someone scans their pet's QR code tag. This system includes location sharing, multiple notification methods, and smart privacy controls.
+The NotAStray notification system provides instant alerts to pet owners when someone scans their pet's QR code tag. This system includes location sharing, multiple notification methods, and smart privacy controls.
 
 ## How It Works
 
@@ -188,7 +188,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 await sgMail.send({
   to: email,
-  from: 'alerts@tailtrackers.com',
+  from: 'alerts@notastray.com',
   subject: subject,
   html: htmlBody
 })

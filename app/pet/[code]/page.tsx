@@ -279,7 +279,7 @@ export default function PetProfilePage({ params }: { params: { code: string } })
             </div>
             
             <p className="text-center text-sm text-gray-500 mt-4">
-              Tag ID: {params.code} • Powered by TailTrackers
+              Tag ID: {params.code} • Powered by NotAStray
             </p>
           </div>
         </div>
