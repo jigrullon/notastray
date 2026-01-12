@@ -12,10 +12,13 @@
     "reset": "./scripts/dev-reset.sh"
   },
   "dependencies": {
+    "@stripe/stripe-js": "^8.6.1",
+    "firebase": "^12.7.0",
+    "lucide-react": "^0.294.0",
     "next": "14.0.4",
     "react": "^18",
     "react-dom": "^18",
-    "lucide-react": "^0.294.0"
+    "stripe": "^20.1.2"
   },
   "devDependencies": {
     "@types/node": "^20",

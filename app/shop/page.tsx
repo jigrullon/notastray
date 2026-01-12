@@ -1,4 +1,5 @@
 import { Check, Star, Shield, Zap } from 'lucide-react'
+import Link from 'next/link'
 
 const products = [
   {
@@ -82,13 +83,15 @@ export default function ShopPage() {
                   </ul>
 
                   {/* CTA Button */}
-                  <button className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                  <Link 
+                    href={`/shop/checkout?productId=${product.id}`}
+                    className={`block w-full text-center py-3 rounded-lg font-medium transition-colors ${
                     product.popular 
                       ? 'bg-primary-600 hover:bg-primary-700 text-white' 
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
                   }`}>
-                    Add to Cart
-                  </button>
+                    Buy Now
+                  </Link>
                 </div>
               </div>
             ))}
