@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function onRequestGet(context) {
+  const { request } = context;
   const { searchParams } = new URL(request.url)
   const lat = searchParams.get('lat')
   const lng = searchParams.get('lng')
 
   if (!lat || !lng) {
-    return NextResponse.json({ error: 'Latitude and longitude required' }, { status: 400 })
+    return Response.json({ error: 'Latitude and longitude required' }, { status: 400 })
   }
 
   try {
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
+    return Response.json({ 
       address,
       fullAddress: data.display_name,
       coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) }
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     console.error('Geocoding error:', error)
     
     // Fallback to coordinates if geocoding fails
-    return NextResponse.json({ 
+    return Response.json({ 
       address: `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}`,
       coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) },
       error: 'Could not resolve address'

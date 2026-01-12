@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server'
 
 // This would normally connect to your database and notification services
 // For demo purposes, we'll simulate the notification process
@@ -28,7 +27,8 @@ const mockOwnerData = {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function onRequestPost(context) {
+  const { request } = context;
   try {
     const body: NotificationRequest = await request.json()
     const { tagCode, location, timestamp, userAgent, locationMethod = 'gps' } = body
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // Get owner information from database
     const owner = mockOwnerData[tagCode as keyof typeof mockOwnerData]
     if (!owner) {
-      return NextResponse.json({ error: 'Tag not found' }, { status: 404 })
+      return Response.json({ error: 'Tag not found' }, { status: 404 })
     }
 
     // Format location information
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       userAgent
     })
 
-    return NextResponse.json({ 
+    return Response.json({ 
       success: true, 
       message: 'Owner notified successfully',
       notificationsSent: {
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Notification error:', error)
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to send notification' }, 
       { status: 500 }
     )

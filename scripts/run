@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# run - Project Task Runner
+#
+# This script serves as a central entry point for running various tasks & services.
+# Usage: ./scripts/run [command]
+# e.g. ./scripts/run dev
+
+# Function to display help documentation
+show_help() {
+  echo "Usage: ./scripts/run [command]"
+  echo ""
+  echo "Available commands:"
+  echo "  dev       Run the local development instance (Cloudflare Pages + Functions)"
+  echo "  help      Show this help message"
+  echo ""
+  echo "Examples:"
+  echo "  ./scripts/run dev"
+}
+
+# Check if a command is provided
+if [ -z "$1" ]; then
+  show_help
+  exit 0
+fi
+
+COMMAND=$1
+shift # Shift arguments so $1 becomes the first argument after the command
+
+case "$COMMAND" in
+  dev)
+    # Runs the Cloudflare Pages dev server, proxying requests to the Next.js dev server on port 3000
+    echo "Starting development environment..."
+    npx wrangler pages dev --proxy 3000 -- npm run dev "$@"
+    ;;
+  
+  help|--help|-h)
+    show_help
+    ;;
+
+  *)
+    echo "Error: Unknown command '$COMMAND'"
+    echo ""
+    show_help
+    exit 1
+    ;;
+esac

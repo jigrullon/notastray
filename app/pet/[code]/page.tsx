@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, Navigation, CheckCircle } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 
 // This would normally come from a database
 const mockPetData = {
@@ -19,6 +20,14 @@ const mockPetData = {
   lastSeen: "2 hours ago"
 }
 
+export function generateStaticParams() {
+  return [
+    { code: 'example' },
+    { code: 'ABC123' },
+    { code: 'demo' }
+  ]
+}
+
 interface LocationData {
   latitude: number
   longitude: number
@@ -27,6 +36,12 @@ interface LocationData {
 }
 
 export default function PetProfilePage({ params }: { params: { code: string } }) {
+  const pathname = usePathname()
+  // Handle static export fallback: if served via rewrite, params.code might be fixed
+  const code = (params.code === 'example' || params.code === 'demo') && pathname 
+    ? pathname.split('/').pop() || params.code 
+    : params.code
+
   const [notificationSent, setNotificationSent] = useState(false)
   const [location, setLocation] = useState<LocationData | null>(null)
   const [locationError, setLocationError] = useState<string | null>(null)
@@ -80,7 +95,7 @@ export default function PetProfilePage({ params }: { params: { code: string } })
     }
 
     sendNotification()
-  }, [params.code])
+  }, [code])
 
   const sendNotificationWithLocation = async (locationData: LocationData) => {
     try {
@@ -90,7 +105,7 @@ export default function PetProfilePage({ params }: { params: { code: string } })
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tagCode: params.code,
+          tagCode: code,
           location: locationData,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent
@@ -121,7 +136,7 @@ export default function PetProfilePage({ params }: { params: { code: string } })
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tagCode: params.code,
+          tagCode: code,
           location: ipLocation,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
@@ -279,7 +294,7 @@ export default function PetProfilePage({ params }: { params: { code: string } })
             </div>
             
             <p className="text-center text-sm text-gray-500 mt-4">
-              Tag ID: {params.code} • Powered by NotAStray
+              Tag ID: {code} • Powered by NotAStray
             </p>
           </div>
         </div>
