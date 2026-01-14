@@ -1,0 +1,303 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle } from 'lucide-react'
+
+interface LocationData {
+  latitude: number
+  longitude: number
+  accuracy: number
+  address?: string
+}
+
+interface PetData {
+  name: string
+  photo: string
+  owner: string
+  address: string
+  phone: string
+  vet: string
+  vetAddress: string
+  allergies: string
+  goodWithDogs: boolean
+  goodWithCats: boolean
+  goodWithChildren: boolean
+}
+
+interface PetProfileClientProps {
+  petData: PetData
+  tagCode: string
+}
+
+export default function PetProfileClient({ petData, tagCode }: PetProfileClientProps) {
+  const [notificationSent, setNotificationSent] = useState(false)
+  const [location, setLocation] = useState<LocationData | null>(null)
+
+  // Send notification when component mounts
+  useEffect(() => {
+    const sendNotification = async () => {
+      try {
+        // Get location if available
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const locationData: LocationData = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy
+              }
+              
+              // Try to get address from coordinates
+              try {
+                const response = await fetch(`/api/geocode?lat=${locationData.latitude}&lng=${locationData.longitude}`)
+                if (response.ok) {
+                  const data = await response.json()
+                  locationData.address = data.address
+                }
+              } catch (error) {
+                console.log('Geocoding failed, using coordinates only')
+              }
+              
+              setLocation(locationData)
+              await sendNotificationWithLocation(locationData)
+            },
+            async (error) => {
+              console.log('Location error:', error.message)
+              // Send notification without precise location, use IP-based location
+              await sendNotificationWithIPLocation()
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 300000 // 5 minutes
+            }
+          )
+        } else {
+          // Geolocation not supported, use IP-based location
+          await sendNotificationWithIPLocation()
+        }
+      } catch (error) {
+        console.error('Failed to send notification:', error)
+      }
+    }
+
+    sendNotification()
+  }, [tagCode])
+
+  const sendNotificationWithLocation = async (locationData: LocationData) => {
+    try {
+      const response = await fetch('/api/notify-owner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tagCode: tagCode,
+          location: locationData,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent
+        }),
+      })
+
+      if (response.ok) {
+        setNotificationSent(true)
+      }
+    } catch (error) {
+      console.error('Failed to send notification:', error)
+    }
+  }
+
+  const sendNotificationWithIPLocation = async () => {
+    try {
+      // Get approximate location from IP
+      const ipResponse = await fetch('/api/ip-location')
+      let ipLocation = null
+      
+      if (ipResponse.ok) {
+        ipLocation = await ipResponse.json()
+      }
+
+      const response = await fetch('/api/notify-owner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tagCode: tagCode,
+          location: ipLocation,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          locationMethod: 'ip'
+        }),
+      })
+
+      if (response.ok) {
+        setNotificationSent(true)
+      }
+    } catch (error) {
+      console.error('Failed to send notification:', error)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Notification Status */}
+        {notificationSent && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+              <div>
+                <p className="text-green-800 font-medium">Owner has been notified!</p>
+                <p className="text-green-700 text-sm">
+                  {location 
+                    ? `Location shared: ${location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}`
+                    : 'Approximate location shared'
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Header Alert */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <AlertTriangle className="w-5 h-5 text-amber-600 mr-2" />
+            <p className="text-amber-800 font-medium">
+              Found Pet Alert - Please help reunite this pet with their family
+            </p>
+          </div>
+        </div>
+
+        {/* Pet Profile Card */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {/* Pet Photo and Basic Info */}
+          <div className="p-6 text-center border-b border-gray-200">
+            <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden">
+              <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                <span className="text-white text-4xl font-bold">{petData.name.charAt(0)}</span>
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{petData.name}</h1>
+            <p className="text-gray-600">Golden Retriever</p>
+          </div>
+
+          {/* Contact Information */}
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <Phone className="w-5 h-5 mr-2 text-primary-600" />
+              Contact Owner
+            </h2>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-gray-700">{petData.owner}</span>
+                <a 
+                  href={`tel:${petData.phone}`}
+                  className="btn-primary"
+                >
+                  Call Now
+                </a>
+              </div>
+              
+              {petData.address && (
+                <div className="flex items-start p-3 bg-gray-50 rounded-lg">
+                  <MapPin className="w-5 h-5 text-gray-400 mr-2 mt-0.5" />
+                  <span className="text-gray-700">{petData.address}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Medical Information */}
+          {petData.allergies && (
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <Heart className="w-5 h-5 mr-2 text-red-500" />
+                Medical Information
+              </h2>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-800">{petData.allergies}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Veterinarian */}
+          {petData.vet && (
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Veterinarian</h2>
+              <div className="space-y-2">
+                <p className="text-gray-700 font-medium">{petData.vet}</p>
+                {petData.vetAddress && (
+                  <div className="flex items-start">
+                    <MapPin className="w-4 h-4 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
+                    <p className="text-gray-600 text-sm">{petData.vetAddress}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Temperament */}
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <Users className="w-5 h-5 mr-2 text-primary-600" />
+              Temperament
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {petData.goodWithDogs && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                  <Dog className="w-4 h-4 mr-1" />
+                  Good with dogs
+                </span>
+              )}
+              {petData.goodWithCats && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                  <Cat className="w-4 h-4 mr-1" />
+                  Good with cats
+                </span>
+              )}
+              {petData.goodWithChildren && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                  <Baby className="w-4 h-4 mr-1" />
+                  Good with children
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a 
+                href={`tel:${petData.phone}`}
+                className="btn-primary flex-1 text-center py-3"
+              >
+                Call Owner Now
+              </a>
+              <button className="btn-outline flex-1 py-3">
+                Report Found
+              </button>
+            </div>
+            
+            <p className="text-center text-sm text-gray-500 mt-4">
+              Tag ID: {tagCode} • Powered by NotAStray
+            </p>
+          </div>
+        </div>
+
+        {/* Safety Tips */}
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-semibold text-blue-900 mb-2">Found a pet? Here's how to help:</h3>
+          <ul className="text-blue-800 text-sm space-y-1">
+            <li>• Keep the pet safe and secure</li>
+            <li>• Call the owner using the number above</li>
+            <li>• If no answer, try texting or calling again later</li>
+            <li>• Consider taking the pet to the listed veterinarian</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}
