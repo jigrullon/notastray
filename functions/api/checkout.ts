@@ -1,5 +1,5 @@
-
 import Stripe from 'stripe';
+import type { PagesFunction } from '../types';
 
 interface Env {
   STRIPE_SECRET_KEY: string;
