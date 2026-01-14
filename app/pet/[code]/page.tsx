@@ -18,8 +18,13 @@ async function getPetData(code: string) {
   }
 }
 
-export default async function PetProfilePage({ params }: { params: { code: string } }) {
-  const petData = await getPetData(params.code)
+export default async function PetProfilePage({ 
+  params 
+}: { 
+  params: Promise<{ code: string }> 
+}) {
+  const { code } = await params
+  const petData = await getPetData(code)
   
-  return <PetProfileClient petData={petData} tagCode={params.code} />
+  return <PetProfileClient petData={petData} tagCode={code} />
 }
