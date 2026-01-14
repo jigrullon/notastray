@@ -1,13 +1,10 @@
-
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Check, Shield, Star, AlertCircle, Loader2 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
-// Make sure to call loadStripe outside of a component’s render to avoid
-// recreating the Stripe object on every render.
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 );
@@ -36,7 +33,7 @@ const products = [
   }
 ]
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const searchParams = useSearchParams()
   const productId = searchParams.get('productId')
   
@@ -73,27 +70,25 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           items: [
-             // The main product
              {
                name: selectedProduct.name,
                amount: selectedProduct.price,
                quantity: 1,
                currency: 'usd'
              },
-             // The subscription upsell
              ...(includeSubscription ? [{
-               priceId: 'price_REPLACE_WITH_REAL_ID', // TODO: Make this configurable
+               priceId: 'price_REPLACE_WITH_REAL_ID',
                quantity: 1,
-               name: 'NotAStray Plus Subscription', // Fallback if priceId invalid in mock
-               amount: 5.00 // Fallback for mock
+               name: 'NotAStray Plus Subscription',
+               amount: 5.00
              }] : [])
           ],
           subscription: includeSubscription,
-          userEmail: 'guest@example.com', // In a real app, get this from auth
+          userEmail: 'guest@example.com',
         }),
       })
 
-      const { id: sessionId, url, error: apiError } = await response.json()
+      const { url, error: apiError } = await response.json()
 
       if (apiError) throw new Error(apiError)
 
@@ -130,10 +125,8 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
-          {/* Main Checkout Content */}
           <div className="md:col-span-2 space-y-6">
             
-            {/* Order Summary Card */}
             <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
               
@@ -148,7 +141,6 @@ export default function CheckoutPage() {
                  <div className="font-semibold text-gray-900">${selectedProduct.price.toFixed(2)}</div>
               </div>
 
-               {/* Upsell Section */}
               <div className={`border rounded-lg p-4 transition-all ${includeSubscription ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-primary-300'}`}>
                 <div className="flex items-start space-x-3">
                    <input 
@@ -181,7 +173,6 @@ export default function CheckoutPage() {
 
           </div>
 
-          {/* Sidebar / Totals */}
           <div className="md:col-span-1">
              <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100 sticky top-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Total</h3>
@@ -235,5 +226,17 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   )
 }
