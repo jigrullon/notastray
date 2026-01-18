@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@stripe/stripe-js": "^8.6.1",
-    "firebase": "^12.7.0",
+    "firebase": "^12.8.0",
     "lucide-react": "^0.294.0",
     "next": "15.1.11",
     "react": "^19.0.0",
