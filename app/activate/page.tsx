@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Camera, Upload, Check } from 'lucide-react'
+import { Camera, Upload, Check, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import { useAuth } from '../../lib/AuthContext'
 
 export default function ActivatePage() {
+  const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [tagCode, setTagCode] = useState('')
   const [petData, setPetData] = useState({
@@ -24,7 +27,7 @@ export default function ActivatePage() {
   const formatPhoneNumber = (value: string) => {
     // Remove all non-digits
     const phoneNumber = value.replace(/\D/g, '')
-    
+
     // Format as XXX-XXX-XXXX
     if (phoneNumber.length >= 6) {
       return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`
@@ -36,7 +39,7 @@ export default function ActivatePage() {
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value)
-    setPetData({...petData, phone: formatted})
+    setPetData({ ...petData, phone: formatted })
   }
 
   const handleCodeSubmit = (e: React.FormEvent) => {
@@ -54,6 +57,15 @@ export default function ActivatePage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <Link
+            href={user ? '/dashboard' : '/'}
+            className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Link>
+        </div>
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
@@ -61,7 +73,7 @@ export default function ActivatePage() {
             <span className="text-sm font-medium text-gray-500">{Math.round((step / 3) * 100)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className="bg-primary-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${(step / 3) * 100}%` }}
             ></div>
@@ -137,7 +149,7 @@ export default function ActivatePage() {
                   type="text"
                   id="petName"
                   value={petData.name}
-                  onChange={(e) => setPetData({...petData, name: e.target.value})}
+                  onChange={(e) => setPetData({ ...petData, name: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   required
                 />
@@ -153,7 +165,7 @@ export default function ActivatePage() {
                     type="text"
                     id="ownerName"
                     value={petData.ownerName}
-                    onChange={(e) => setPetData({...petData, ownerName: e.target.value})}
+                    onChange={(e) => setPetData({ ...petData, ownerName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
                   />
@@ -182,7 +194,7 @@ export default function ActivatePage() {
                 <textarea
                   id="address"
                   value={petData.address}
-                  onChange={(e) => setPetData({...petData, address: e.target.value})}
+                  onChange={(e) => setPetData({ ...petData, address: e.target.value })}
                   rows={2}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
@@ -198,7 +210,7 @@ export default function ActivatePage() {
                     type="text"
                     id="vetName"
                     value={petData.vetName}
-                    onChange={(e) => setPetData({...petData, vetName: e.target.value})}
+                    onChange={(e) => setPetData({ ...petData, vetName: e.target.value })}
                     placeholder="Dr. Smith"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
@@ -211,7 +223,7 @@ export default function ActivatePage() {
                     type="text"
                     id="vetAddress"
                     value={petData.vetAddress}
-                    onChange={(e) => setPetData({...petData, vetAddress: e.target.value})}
+                    onChange={(e) => setPetData({ ...petData, vetAddress: e.target.value })}
                     placeholder="123 Main St, City, State"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
@@ -226,7 +238,7 @@ export default function ActivatePage() {
                 <textarea
                   id="allergies"
                   value={petData.allergies}
-                  onChange={(e) => setPetData({...petData, allergies: e.target.value})}
+                  onChange={(e) => setPetData({ ...petData, allergies: e.target.value })}
                   rows={3}
                   placeholder="List any allergies, medications, or medical conditions..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -243,7 +255,7 @@ export default function ActivatePage() {
                     <input
                       type="checkbox"
                       checked={petData.goodWithDogs}
-                      onChange={(e) => setPetData({...petData, goodWithDogs: e.target.checked})}
+                      onChange={(e) => setPetData({ ...petData, goodWithDogs: e.target.checked })}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                     <span className="ml-2 text-gray-700">Dogs</span>
@@ -252,7 +264,7 @@ export default function ActivatePage() {
                     <input
                       type="checkbox"
                       checked={petData.goodWithCats}
-                      onChange={(e) => setPetData({...petData, goodWithCats: e.target.checked})}
+                      onChange={(e) => setPetData({ ...petData, goodWithCats: e.target.checked })}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                     <span className="ml-2 text-gray-700">Cats</span>
@@ -261,7 +273,7 @@ export default function ActivatePage() {
                     <input
                       type="checkbox"
                       checked={petData.goodWithChildren}
-                      onChange={(e) => setPetData({...petData, goodWithChildren: e.target.checked})}
+                      onChange={(e) => setPetData({ ...petData, goodWithChildren: e.target.checked })}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                     <span className="ml-2 text-gray-700">Children</span>
@@ -283,10 +295,10 @@ export default function ActivatePage() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Profile Created!</h1>
             <p className="text-gray-600 mb-8">
-              Your pet's profile is now active. The QR code on tag {tagCode} will now 
+              Your pet's profile is now active. The QR code on tag {tagCode} will now
               direct to their profile page.
             </p>
-            
+
             <div className="bg-gray-50 rounded-lg p-6 mb-8">
               <h3 className="font-semibold text-gray-900 mb-2">What's next?</h3>
               <ul className="text-left text-gray-600 space-y-2">
