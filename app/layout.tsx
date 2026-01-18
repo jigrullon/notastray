@@ -3,6 +3,7 @@ import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import { AuthProvider } from '@/lib/AuthContext'
 
 export const metadata: Metadata = {
   title: 'NotAStray - Smart Pet ID Tags',
@@ -17,13 +18,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ErrorBoundary>
-          <Header />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
-        </ErrorBoundary>
+        <AuthProvider>
+          <ErrorBoundary>
+            <Header />
+            <main className="min-h-screen">
+              {children}
+            </main>
+            <Footer />
+          </ErrorBoundary>
+        </AuthProvider>
       </body>
     </html>
   )

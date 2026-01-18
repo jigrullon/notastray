@@ -9,15 +9,20 @@ A modern, responsive website for NotAStray QR code pet tags built with Next.js 1
 - **Activate**: Multi-step form for setting up pet profiles
 - **Pet Profiles**: Dynamic pages showing pet information when QR codes are scanned
 - **Resources**: Safety tips, guides, and educational content
+- **Authentication**: Secure login/signup with Firebase Auth
+- **User Dashboard**: Manage pet tags and account settings
+- **Real-time Notifications**: SMS/email alerts when tags are scanned
 - **Responsive Design**: Mobile-first approach with clean, modern UI
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 with App Router
+- **Framework**: Next.js 15 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Icons**: Lucide React
-- **Deployment**: Ready for Vercel, Netlify, or any static hosting
+- **Authentication**: Firebase Auth
+- **Database**: Firebase Firestore
+- **Deployment**: Cloudflare Pages / Vercel
 
 ## Getting Started
 
@@ -26,12 +31,18 @@ A modern, responsive website for NotAStray QR code pet tags built with Next.js 1
    npm install
    ```
 
-2. **Run development server**:
+2. **Set up environment variables**:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+   Then edit `.env.local` with your Firebase credentials.
+
+3. **Run development server**:
    ```bash
    npm run dev
    ```
 
-3. **Open your browser**:
+4. **Open your browser**:
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## Project Structure
@@ -39,15 +50,24 @@ A modern, responsive website for NotAStray QR code pet tags built with Next.js 1
 ```
 ├── app/                    # Next.js App Router pages
 │   ├── activate/          # Tag activation flow
+│   ├── forgot-password/   # Password reset page
+│   ├── dashboard/         # User dashboard
+│   ├── login/             # Login page
+│   ├── signup/            # Signup page
 │   ├── pet/[code]/        # Dynamic pet profile pages
 │   ├── resources/         # Safety guides and tips
 │   ├── shop/              # Product catalog
+│   ├── settings/          # User settings
 │   ├── globals.css        # Global styles
 │   ├── layout.tsx         # Root layout
 │   └── page.tsx           # Homepage
 ├── components/            # Reusable components
 │   ├── Header.tsx         # Navigation header
-│   └── Footer.tsx         # Site footer
+│   ├── Footer.tsx         # Site footer
+│   └── PetProfileClient.tsx  # Pet profile with notifications
+├── lib/                   # Utilities and configurations
+│   ├── firebase.ts        # Firebase client setup
+│   └── AuthContext.tsx    # Authentication context provider
 └── public/                # Static assets
 ```
 
@@ -83,6 +103,18 @@ A modern, responsive website for NotAStray QR code pet tags built with Next.js 1
 - Emergency procedures
 - Educational content
 
+### Login/Signup (`/login`, `/signup`)
+- Email/password authentication
+- Google OAuth integration
+- Password reset functionality
+- Email verification
+
+### Dashboard (`/dashboard`)
+- Overview of active tags
+- Quick access to common actions
+- Tag management
+- Account settings
+
 ## Customization
 
 ### Colors
@@ -104,13 +136,13 @@ primary: {
 - Customize the pet profile mock data
 
 ### Features to Add
-- User authentication and accounts
-- Database integration for pet profiles
+- Database integration for storing pet profiles
+- Connect activated tags to user accounts
 - Payment processing for shop
 - Admin dashboard for managing profiles
-- Email notifications
 - GPS tracking integration
 - Mobile app companion
+- Tag scan history and analytics
 
 ## Deployment
 
@@ -138,12 +170,12 @@ npm start
 
 ## Next Steps
 
-1. **Backend Integration**: Connect to a database for real pet profiles
-2. **Payment Processing**: Add Stripe or similar for tag purchases
-3. **User Accounts**: Allow owners to manage multiple pets
-4. **Mobile App**: Companion app for easier profile management
-5. **Analytics**: Track QR code scans and user behavior
-6. **Notifications**: Email/SMS alerts when pets are found
+1. **Firebase Setup**: Configure authentication in Firebase Console
+2. **Database Schema**: Create collections for pets, tags, and users in Firestore
+3. **Connect Tags to Users**: Link activated tags to user accounts
+4. **Payment Processing**: Add Stripe for tag purchases
+5. **Mobile App**: Companion app for easier profile management
+6. **Analytics**: Track QR code scans and user behavior
 
 ## License
 
