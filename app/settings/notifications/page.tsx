@@ -1,9 +1,12 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
-import { Bell, Mail, MessageSquare, MapPin, Clock, Shield } from 'lucide-react'
+import { Bell, Mail, MessageSquare, MapPin, Clock, Shield, ArrowLeft } from 'lucide-react'
+import { useAuth } from '@/lib/AuthContext'
 
 export default function NotificationSettingsPage() {
+  const { user } = useAuth()
   const [settings, setSettings] = useState({
     smsEnabled: true,
     emailEnabled: true,
@@ -21,6 +24,15 @@ export default function NotificationSettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <Link
+            href={user ? '/dashboard' : '/'}
+            className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Link>
+        </div>
         <div className="bg-white rounded-lg shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200">
             <h1 className="text-2xl font-bold text-gray-900">Notification Settings</h1>
@@ -36,7 +48,7 @@ export default function NotificationSettingsPage() {
                 <Bell className="w-5 h-5 mr-2 text-primary-600" />
                 Notification Methods
               </h2>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
@@ -50,7 +62,7 @@ export default function NotificationSettingsPage() {
                     <input
                       type="checkbox"
                       checked={settings.smsEnabled}
-                      onChange={(e) => setSettings({...settings, smsEnabled: e.target.checked})}
+                      onChange={(e) => setSettings({ ...settings, smsEnabled: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -69,7 +81,7 @@ export default function NotificationSettingsPage() {
                     <input
                       type="checkbox"
                       checked={settings.emailEnabled}
-                      onChange={(e) => setSettings({...settings, emailEnabled: e.target.checked})}
+                      onChange={(e) => setSettings({ ...settings, emailEnabled: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -84,7 +96,7 @@ export default function NotificationSettingsPage() {
                 <MapPin className="w-5 h-5 mr-2 text-primary-600" />
                 Location Information
               </h2>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
@@ -98,7 +110,7 @@ export default function NotificationSettingsPage() {
                     <input
                       type="checkbox"
                       checked={settings.locationSharing}
-                      onChange={(e) => setSettings({...settings, locationSharing: e.target.checked})}
+                      onChange={(e) => setSettings({ ...settings, locationSharing: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -123,14 +135,14 @@ export default function NotificationSettingsPage() {
                 <Clock className="w-5 h-5 mr-2 text-primary-600" />
                 Rate Limiting
               </h2>
-              
+
               <div className="p-4 bg-gray-50 rounded-lg">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Maximum notifications per hour
                 </label>
                 <select
                   value={settings.maxNotificationsPerHour}
-                  onChange={(e) => setSettings({...settings, maxNotificationsPerHour: parseInt(e.target.value)})}
+                  onChange={(e) => setSettings({ ...settings, maxNotificationsPerHour: parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value={1}>1 notification</option>
