@@ -2,10 +2,24 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Menu, X, Heart } from 'lucide-react'
+import { useAuth } from '@/lib/AuthContext'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { user, logOut } = useAuth()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    try {
+      await logOut()
+      router.push('/')
+      setIsMenuOpen(false)
+    } catch (error) {
+      console.error('Logout failed', error)
+    }
+  }
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -33,9 +47,15 @@ export default function Header() {
             <Link href="/settings/notifications" className="text-gray-600 hover:text-gray-900 font-medium">
               Settings
             </Link>
-            <Link href="/login" className="btn-primary">
-              Sign In
-            </Link>
+            {user ? (
+              <button onClick={handleSignOut} className="btn-primary">
+                Sign Out
+              </button>
+            ) : (
+              <Link href="/login" className="btn-primary">
+                Sign In
+              </Link>
+            )}
           </nav>
 
           {/* Mobile menu button */}
@@ -63,9 +83,15 @@ export default function Header() {
               <Link href="/settings/notifications" className="text-gray-600 hover:text-gray-900 font-medium">
                 Settings
               </Link>
-              <Link href="/login" className="btn-primary w-full text-center">
-                Sign In
-              </Link>
+              {user ? (
+                <button onClick={handleSignOut} className="btn-primary w-full text-center">
+                  Sign Out
+                </button>
+              ) : (
+                <Link href="/login" className="btn-primary w-full text-center">
+                  Sign In
+                </Link>
+              )}
             </div>
           </div>
         )}

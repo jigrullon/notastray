@@ -1,9 +1,22 @@
 'use client'
 
-import { useState } from 'react'
-import { Bell, Mail, MessageSquare, MapPin, Clock, Shield } from 'lucide-react'
+import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { Bell, Mail, MessageSquare, MapPin, Clock, Shield, ArrowLeft, User, Phone, Save } from 'lucide-react'
+import { useAuth } from '@/lib/AuthContext'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 export default function NotificationSettingsPage() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+
+  const [contactInfo, setContactInfo] = useState({
+    email: '',
+    phone: ''
+  })
+
   const [settings, setSettings] = useState({
     smsEnabled: true,
     emailEnabled: true,
@@ -12,15 +25,65 @@ export default function NotificationSettingsPage() {
     maxNotificationsPerHour: 3
   })
 
+  useEffect(() => {
+    if (user) {
+      const fetchData = async () => {
+        try {
+          const docRef = doc(db, 'users', user.uid)
+          const docSnap = await getDoc(docRef)
+
+          if (docSnap.exists()) {
+            const data = docSnap.data()
+            setContactInfo({
+              email: data.email || user.email || '',
+              phone: data.phone || ''
+            })
+            // Put other settings loading logic here if we decide to persist them too
+          } else {
+            setContactInfo(prev => ({ ...prev, email: user.email || '' }))
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error)
+        }
+      }
+      fetchData()
+    }
+  }, [user])
+
   const handleSave = async () => {
-    // Save settings to backend
-    console.log('Saving notification settings:', settings)
-    // Show success message
+    if (!user) return
+    setLoading(true)
+    setSuccessMessage('')
+
+    try {
+      const docRef = doc(db, 'users', user.uid)
+      await setDoc(docRef, {
+        email: contactInfo.email,
+        phone: contactInfo.phone,
+        updatedAt: new Date().toISOString()
+      }, { merge: true })
+
+      setSuccessMessage('Settings saved successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      console.error('Error saving settings:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <Link
+            href={user ? '/dashboard' : '/'}
+            className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Link>
+        </div>
         <div className="bg-white rounded-lg shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200">
             <h1 className="text-2xl font-bold text-gray-900">Notification Settings</h1>
@@ -30,13 +93,59 @@ export default function NotificationSettingsPage() {
           </div>
 
           <div className="p-6 space-y-8">
+            {/* User Information */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <User className="w-5 h-5 mr-2 text-primary-600" />
+                Contact Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="email"
+                      id="email"
+                      value={contactInfo.email}
+                      onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="tel"
+                      id="phone"
+                      value={contactInfo.phone}
+                      onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Notification Methods */}
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <Bell className="w-5 h-5 mr-2 text-primary-600" />
                 Notification Methods
               </h2>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
@@ -50,7 +159,7 @@ export default function NotificationSettingsPage() {
                     <input
                       type="checkbox"
                       checked={settings.smsEnabled}
-                      onChange={(e) => setSettings({...settings, smsEnabled: e.target.checked})}
+                      onChange={(e) => setSettings({ ...settings, smsEnabled: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -69,7 +178,7 @@ export default function NotificationSettingsPage() {
                     <input
                       type="checkbox"
                       checked={settings.emailEnabled}
-                      onChange={(e) => setSettings({...settings, emailEnabled: e.target.checked})}
+                      onChange={(e) => setSettings({ ...settings, emailEnabled: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -84,7 +193,7 @@ export default function NotificationSettingsPage() {
                 <MapPin className="w-5 h-5 mr-2 text-primary-600" />
                 Location Information
               </h2>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
@@ -98,7 +207,7 @@ export default function NotificationSettingsPage() {
                     <input
                       type="checkbox"
                       checked={settings.locationSharing}
-                      onChange={(e) => setSettings({...settings, locationSharing: e.target.checked})}
+                      onChange={(e) => setSettings({ ...settings, locationSharing: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -123,14 +232,14 @@ export default function NotificationSettingsPage() {
                 <Clock className="w-5 h-5 mr-2 text-primary-600" />
                 Rate Limiting
               </h2>
-              
+
               <div className="p-4 bg-gray-50 rounded-lg">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Maximum notifications per hour
                 </label>
                 <select
                   value={settings.maxNotificationsPerHour}
-                  onChange={(e) => setSettings({...settings, maxNotificationsPerHour: parseInt(e.target.value)})}
+                  onChange={(e) => setSettings({ ...settings, maxNotificationsPerHour: parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value={1}>1 notification</option>
@@ -147,12 +256,27 @@ export default function NotificationSettingsPage() {
 
             {/* Save Button */}
             <div className="flex justify-end pt-6 border-t border-gray-200">
-              <button
-                onClick={handleSave}
-                className="btn-primary px-6 py-2"
-              >
-                Save Settings
-              </button>
+              <div className="flex items-center">
+                {successMessage && (
+                  <span className="text-green-600 text-sm mr-4 font-medium animate-fade-in">
+                    {successMessage}
+                  </span>
+                )}
+                <button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="btn-primary px-6 py-2 flex items-center disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    'Saving...'
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Settings
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,8 @@
-import { Check, Star, Shield, Zap } from 'lucide-react'
+'use client'
+
+import { Check, Star, Shield, Zap, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/lib/AuthContext'
 
 const products = [
   {
@@ -29,17 +32,30 @@ const products = [
 ]
 
 export default function ShopPage() {
+  const { user } = useAuth()
+
   return (
     <div className="bg-white">
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-gray-50 to-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Choose the perfect tag for your pet
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            All tags include QR code technology, profile setup, and lifetime profile updates
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-6">
+            <Link
+              href={user ? '/dashboard' : '/'}
+              className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Link>
+          </div>
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Choose the perfect tag for your pet
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              All tags include QR code technology, profile setup, and lifetime profile updates
+            </p>
+          </div>
         </div>
       </section>
 
@@ -56,7 +72,7 @@ export default function ShopPage() {
                     </span>
                   </div>
                 )}
-                
+
                 <div className="p-6">
                   {/* Product Image */}
                   <div className="w-full h-48 bg-gray-100 rounded-lg mb-6 flex items-center justify-center">
@@ -83,13 +99,12 @@ export default function ShopPage() {
                   </ul>
 
                   {/* CTA Button */}
-                  <Link 
+                  <Link
                     href={`/shop/checkout?productId=${product.id}`}
-                    className={`block w-full text-center py-3 rounded-lg font-medium transition-colors ${
-                    product.popular 
-                      ? 'bg-primary-600 hover:bg-primary-700 text-white' 
+                    className={`block w-full text-center py-3 rounded-lg font-medium transition-colors ${product.popular
+                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                  }`}>
+                      }`}>
                     Buy Now
                   </Link>
                 </div>

@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
-import { BookOpen, Shield, Heart, Zap, Calendar, ArrowRight } from 'lucide-react'
+import { BookOpen, Shield, Heart, Zap, Calendar, ArrowRight, ArrowLeft } from 'lucide-react'
+import { useAuth } from '@/lib/AuthContext'
 
 const articles = [
   {
@@ -62,6 +65,7 @@ const categories = [
 ]
 
 export default function ResourcesPage() {
+  const { user } = useAuth()
   const featuredArticles = articles.filter(article => article.featured)
   const regularArticles = articles.filter(article => !article.featured)
 
@@ -69,13 +73,24 @@ export default function ResourcesPage() {
     <div className="bg-white">
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-gray-50 to-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Pet Safety Resources
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Expert tips, guides, and resources to keep your pets safe and help you get the most out of your NotAStray tag
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-6">
+            <Link
+              href={user ? '/dashboard' : '/'}
+              className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Link>
+          </div>
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Pet Safety Resources
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Expert tips, guides, and resources to keep your pets safe and help you get the most out of your NotAStray tag
+            </p>
+          </div>
         </div>
       </section>
 
@@ -123,7 +138,7 @@ export default function ResourcesPage() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-8">Featured Articles</h2>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
             {featuredArticles.map((article) => (
               <article key={article.id} className="group cursor-pointer">
