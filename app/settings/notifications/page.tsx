@@ -9,8 +9,12 @@ import { db } from '@/lib/firebase'
 
 export default function NotificationSettingsPage() {
   const { user } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const [testStatus, setTestStatus] = useState<{
+    email: 'idle' | 'sending' | 'sent' | 'error';
+    sms: 'idle' | 'sending' | 'sent' | 'error';
+  }>({ email: 'idle', sms: 'idle' })
 
   const [contactInfo, setContactInfo] = useState({
     email: '',
@@ -50,9 +54,76 @@ export default function NotificationSettingsPage() {
     }
   }, [user])
 
+  const [showSMSConsent, setShowSMSConsent] = useState(false)
+  const [smsConsentAccepted, setSmsConsentAccepted] = useState(false)
+  const [consentChecked, setConsentChecked] = useState(false)
+
+  const handleTestNotification = async (type: 'email' | 'sms') => {
+    if (!user) return
+
+    // SMS Consent Check
+    if (type === 'sms' && !smsConsentAccepted) {
+      setShowSMSConsent(true)
+      return
+    }
+
+    // Get the destination based on type
+    const to = type === 'email' ? contactInfo.email : contactInfo.phone
+
+    // Basic validation
+    if (!to) {
+      alert(`Please enter a valid ${type === 'email' ? 'email address' : 'phone number'} first.`)
+      return
+    }
+
+    setTestStatus(prev => ({ ...prev, [type]: 'sending' }))
+    setSuccessMessage('')
+
+    try {
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          to,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setTestStatus(prev => ({ ...prev, [type]: 'sent' }))
+        setTimeout(() => {
+          setTestStatus(prev => ({ ...prev, [type]: 'idle' }))
+        }, 3000)
+      } else {
+        alert(`Failed to send test: ${data.error}`)
+        setTestStatus(prev => ({ ...prev, [type]: 'error' }))
+        setTimeout(() => {
+          setTestStatus(prev => ({ ...prev, [type]: 'idle' }))
+        }, 3000)
+      }
+    } catch (error) {
+      console.error('Test notification error:', error)
+      alert('An error occurred while sending the test notification.')
+      setTestStatus(prev => ({ ...prev, [type]: 'error' }))
+      setTimeout(() => {
+        setTestStatus(prev => ({ ...prev, [type]: 'idle' }))
+      }, 3000)
+    }
+  }
+
+  const handleConsentConfirm = () => {
+    setSmsConsentAccepted(true)
+    setShowSMSConsent(false)
+    handleTestNotification('sms')
+  }
+
   const handleSave = async () => {
     if (!user) return
-    setLoading(true)
+    setSaving(true)
     setSuccessMessage('')
 
     try {
@@ -68,7 +139,7 @@ export default function NotificationSettingsPage() {
     } catch (error) {
       console.error('Error saving settings:', error)
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
@@ -149,40 +220,70 @@ export default function NotificationSettingsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
-                    <MessageSquare className="w-5 h-5 text-blue-600 mr-3" />
+                    <Mail className="h-5 w-5 text-gray-400 mr-3" />
                     <div>
-                      <h3 className="font-medium text-gray-900">SMS Notifications</h3>
-                      <p className="text-sm text-gray-600">Get instant text messages when your pet's tag is scanned</p>
+                      <h3 className="text-sm font-medium text-gray-900">Email Notifications</h3>
+                      <p className="text-sm text-gray-500">Receive alerts via email</p>
                     </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.smsEnabled}
-                      onChange={(e) => setSettings({ ...settings, smsEnabled: e.target.checked })}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                  </label>
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={() => handleTestNotification('email')}
+                      disabled={!contactInfo.email || testStatus.email === 'sending'}
+                      className={`text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${testStatus.email === 'sent' ? 'text-green-600' :
+                        testStatus.email === 'error' ? 'text-red-600' :
+                          'text-primary-600 hover:text-primary-700'
+                        }`}
+                    >
+                      {testStatus.email === 'idle' && 'Test'}
+                      {testStatus.email === 'sending' && 'Sending...'}
+                      {testStatus.email === 'sent' && 'Sent!'}
+                      {testStatus.email === 'error' && 'Failed'}
+                    </button>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={settings.emailEnabled}
+                        onChange={(e) => setSettings({ ...settings, emailEnabled: e.target.checked })}
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
-                    <Mail className="w-5 h-5 text-green-600 mr-3" />
+                    <MessageSquare className="h-5 w-5 text-gray-400 mr-3" />
                     <div>
-                      <h3 className="font-medium text-gray-900">Email Notifications</h3>
-                      <p className="text-sm text-gray-600">Receive detailed email alerts with location and next steps</p>
+                      <h3 className="text-sm font-medium text-gray-900">SMS Notifications</h3>
+                      <p className="text-sm text-gray-500">Receive alerts via text message</p>
                     </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.emailEnabled}
-                      onChange={(e) => setSettings({ ...settings, emailEnabled: e.target.checked })}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                  </label>
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={() => handleTestNotification('sms')}
+                      disabled={!contactInfo.phone || testStatus.sms === 'sending'}
+                      className={`text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${testStatus.sms === 'sent' ? 'text-green-600' :
+                        testStatus.sms === 'error' ? 'text-red-600' :
+                          'text-primary-600 hover:text-primary-700'
+                        }`}
+                    >
+                      {testStatus.sms === 'idle' && 'Test'}
+                      {testStatus.sms === 'sending' && 'Sending...'}
+                      {testStatus.sms === 'sent' && 'Sent!'}
+                      {testStatus.sms === 'error' && 'Failed'}
+                    </button>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={settings.smsEnabled}
+                        onChange={(e) => setSettings({ ...settings, smsEnabled: e.target.checked })}
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -264,10 +365,10 @@ export default function NotificationSettingsPage() {
                 )}
                 <button
                   onClick={handleSave}
-                  disabled={loading}
+                  disabled={saving}
                   className="btn-primary px-6 py-2 flex items-center disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {loading ? (
+                  {saving ? (
                     'Saving...'
                   ) : (
                     <>
@@ -292,6 +393,91 @@ export default function NotificationSettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* SMS Consent Modal */}
+      {showSMSConsent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">SMS Messaging Consent</h3>
+            </div>
+
+            <div className="p-6 overflow-y-auto">
+              <p className="text-sm text-gray-600 mb-4">
+                By providing your mobile phone number and checking this box, you consent to receive SMS text messages from NotAStray related to your pet's safety and identification services.
+              </p>
+
+              <div className="space-y-4 text-sm text-gray-600">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-1">What messages you'll receive:</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Notifications when someone scans your pet's QR code tag</li>
+                    <li>Important alerts about your lost pet</li>
+                    <li>Service updates and account information</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Message frequency:</h4>
+                  <p>Message frequency varies based on QR code scans and account activity. You may receive multiple messages if your pet's tag is scanned multiple times.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Standard rates:</h4>
+                  <p>Message and data rates may apply. Check with your mobile carrier for details.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Opt-out:</h4>
+                  <p>You can opt out at any time by replying STOP to any message. Reply HELP for assistance.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Privacy:</h4>
+                  <p>Your contact information will only be used for pet identification and safety purposes. We will not share your information with third parties for marketing purposes. View our <Link href="/privacy" className="text-primary-600 hover:underline">Privacy Policy</Link>.</p>
+                </div>
+
+                <p className="text-xs text-gray-500 mt-4">
+                  By clicking "I Agree" or checking this box, you confirm that you are authorized to provide this phone number and consent to receive SMS messages as described above.
+                </p>
+              </div>
+
+              <div className="mt-6 flex items-start">
+                <div className="flex items-center h-5">
+                  <input
+                    id="consent-checkbox"
+                    type="checkbox"
+                    checked={consentChecked}
+                    onChange={(e) => setConsentChecked(e.target.checked)}
+                    className="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded"
+                  />
+                </div>
+                <div className="ml-3 text-sm">
+                  <label htmlFor="consent-checkbox" className="font-medium text-gray-700">
+                    I agree to receive SMS notifications at the phone number provided
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+              <button
+                onClick={() => setShowSMSConsent(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConsentConfirm}
+                disabled={!consentChecked}
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                I Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
