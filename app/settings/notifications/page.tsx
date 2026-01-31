@@ -115,7 +115,25 @@ export default function NotificationSettingsPage() {
     }
   }
 
-  const handleConsentConfirm = () => {
+  const handleConsentConfirm = async () => {
+    // Save consent immediately when confirmed
+    try {
+      if (user) {
+        await fetch('/api/user/consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            phone: contactInfo.phone,
+            email: contactInfo.email,
+            consentIp: 'client-ip'
+          }),
+        })
+      }
+    } catch (err) {
+      console.error("Failed to save consent record", err)
+    }
+
     setSmsConsentAccepted(true)
     setShowSMSConsent(false)
     handleTestNotification('sms')
@@ -127,17 +145,32 @@ export default function NotificationSettingsPage() {
     setSuccessMessage('')
 
     try {
-      const docRef = doc(db, 'users', user.uid)
-      await setDoc(docRef, {
-        email: contactInfo.email,
-        phone: contactInfo.phone,
-        updatedAt: new Date().toISOString()
-      }, { merge: true })
+      // Use the secure API route to save encrypted data
+      const response = await fetch('/api/user/consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          phone: contactInfo.phone,
+          email: contactInfo.email,
+          consentIp: 'client-ip', // In a real app, capture this server-side or via a service
+        }),
+      })
 
-      setSuccessMessage('Settings saved successfully!')
-      setTimeout(() => setSuccessMessage(''), 3000)
+      const data = await response.json()
+
+      if (data.success) {
+        setSuccessMessage('Settings saved successfully!')
+        setTimeout(() => setSuccessMessage(''), 3000)
+      } else {
+        console.error('Save failed:', data.error)
+        alert('Failed to save settings. Please try again.')
+      }
     } catch (error) {
       console.error('Error saving settings:', error)
+      alert('An error occurred while saving.')
     } finally {
       setSaving(false)
     }
