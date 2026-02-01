@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
-import { Loader2, LogOut, Package, Settings, Heart } from 'lucide-react'
+import { Loader2, Package, Settings, Heart } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DashboardPage() {
@@ -16,10 +16,7 @@ export default function DashboardPage() {
     }
   }, [user, loading, router])
 
-  const handleSignOut = async () => {
-    await logOut()
-    router.push('/')
-  }
+
 
   if (loading) {
     return (
@@ -40,7 +37,10 @@ export default function DashboardPage() {
             Please check your email and click the verification link to access your dashboard.
           </p>
           <button
-            onClick={handleSignOut}
+            onClick={async () => {
+              await logOut()
+              router.push('/login')
+            }}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md transition-colors"
           >
             Back to Login
@@ -52,27 +52,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <Heart className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">NotAStray</span>
-            </Link>
 
-            <button
-              onClick={handleSignOut}
-              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="text-sm font-medium">Sign out</span>
-            </button>
-          </div>
-        </div>
-      </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -86,7 +66,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -107,18 +87,6 @@ export default function DashboardPage() {
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <Heart className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Notifications</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">Enabled</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Settings className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </div>
