@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Heart, Mail, Phone, MapPin } from 'lucide-react'
+import Image from 'next/image'
+import { Mail, Phone, MapPin } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -8,11 +9,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
-            <Link href="/" className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <Heart className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">NotAStray</span>
+            <Link href="/" className="flex items-center mb-4">
+              <Image
+                src="/notastraylogo.png"
+                alt="NotAStray - One scan brings them home"
+                width={180}
+                height={60}
+              />
             </Link>
             <p className="text-gray-600 mb-4 max-w-md">
               Keeping pets safe with smart QR code ID tags. When your pet is found,
