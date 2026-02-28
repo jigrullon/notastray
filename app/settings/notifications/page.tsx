@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { Bell, Mail, MessageSquare, MapPin, Clock, Shield, ArrowLeft, User, Phone, Save } from 'lucide-react'
+import { Bell, Mail, MessageSquare, MapPin, Clock, Shield, ArrowLeft, User, Phone, Save, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
+import { useRouter } from 'next/navigation'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 export default function NotificationSettingsPage() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [testStatus, setTestStatus] = useState<{
@@ -28,6 +30,12 @@ export default function NotificationSettingsPage() {
     locationSharing: true,
     maxNotificationsPerHour: 3
   })
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router])
 
   useEffect(() => {
     if (user) {
@@ -174,6 +182,18 @@ export default function NotificationSettingsPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
