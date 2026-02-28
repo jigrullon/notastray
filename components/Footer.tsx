@@ -18,7 +18,7 @@ export default function Footer() {
               />
             </Link>
             <p className="text-gray-600 mb-4 max-w-md">
-              Keeping pets safe with smart QR code ID tags. When your pet is found,
+              Keeping pets safe with QR code ID tags. When your pet is found,
               their profile is just a scan away.
             </p>
             <div className="flex space-x-4 text-gray-500">

@@ -31,7 +31,7 @@ function SuccessContent() {
         <div className="space-y-4">
           <Link 
             href="/settings" 
-            className="block w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 rounded-lg transition-colors"
+            className="block w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors"
           >
             Go to Dashboard
           </Link>

@@ -9,10 +9,16 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          50: '#f0f9ff',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
+          50: '#f0faf6',
+          100: '#d5f0e5',
+          200: '#a8dfc8',
+          300: '#6fc9a3',
+          400: '#3da87a',
+          500: '#267a54',
+          600: '#1F4D3A',
+          700: '#193f30',
+          800: '#133126',
+          900: '#0d231c',
         },
         gray: {
           50: '#f9fafb',
@@ -23,9 +29,10 @@ module.exports = {
           500: '#6b7280',
           600: '#4b5563',
           700: '#374151',
-          800: '#1f2937',
-          900: '#111827',
-        }
+          800: '#4B4B4B',
+          900: '#373737',
+        },
+        'brand-cream': '#F5F0E8',
       },
       fontFamily: {
         sans: ['"Fredoka"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif'],

@@ -3,18 +3,18 @@ import { Shield, Smartphone, Heart, Users, Clock, MapPin } from 'lucide-react'
 
 export default function HomePage() {
   return (
-    <div className="bg-white">
+    <div className="bg-transparent">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+      <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-brand-cream">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="text-center">
             <h1 className="text-4xl sm:text-6xl font-bold text-gray-900 mb-6">
               Keep your pets{' '}
               <span className="text-primary-600">safe</span>{' '}
-              with smart ID tags
+              with QR Code tags
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              When your pet goes missing, every second counts. Our QR code tags provide 
+              When your pet goes missing, every second counts. Our QR code tags provide
               instant access to their profile, medical info, and your contact details.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -30,7 +30,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-transparent">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">

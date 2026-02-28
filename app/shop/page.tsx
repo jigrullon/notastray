@@ -35,9 +35,9 @@ export default function ShopPage() {
   const { user } = useAuth()
 
   return (
-    <div className="bg-white">
+    <div className="bg-transparent">
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-gray-50 to-white py-16">
+      <section className="bg-gradient-to-b from-gray-50 to-brand-cream py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
             <Link
@@ -102,7 +102,7 @@ export default function ShopPage() {
                   <Link
                     href={`/shop/checkout?productId=${product.id}`}
                     className={`block w-full text-center py-3 rounded-lg font-medium transition-colors ${product.popular
-                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                      ? 'bg-primary-600 hover:bg-primary-400 text-white'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
                       }`}>
                     Buy Now

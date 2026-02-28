@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
                     </p>
                     <Link
                         href="/login"
-                        className="block w-full text-center bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md"
+                        className="block w-full text-center bg-primary-600 hover:bg-primary-400 text-white px-4 py-2 rounded-md"
                     >
                         Back to Login
                     </Link>
@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+                        className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                     >
                         {loading ? 'Sending...' : 'Send reset link'}
                     </button>
