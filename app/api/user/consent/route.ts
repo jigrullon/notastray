@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { saveUserConsent } from '@/lib/userConsent'
+import { encryptUserContact } from '@/lib/userConsent'
 
 export async function POST(request: Request) {
     try {
@@ -13,20 +13,28 @@ export async function POST(request: Request) {
             )
         }
 
-        // Call the server-side encryption and save function
-        await saveUserConsent({
-            userId,
-            phone,
-            email,
-            consentIp
+        // Encrypt data server-side
+        const encryptedData = encryptUserContact(phone, email)
+
+        // Return encrypted data to client for saving
+        // This leverages the authenticated client's permission to write to their own doc
+        return NextResponse.json({
+            success: true,
+            data: {
+                ...encryptedData,
+                consent: {
+                    smsOptIn: true,
+                    consentTimestamp: new Date().toISOString(),
+                    consentIp: consentIp || null,
+                    consentMethod: "checkbox",
+                }
+            }
         })
 
-        return NextResponse.json({ success: true, message: 'Consent saved successfully' })
-
     } catch (error: any) {
-        console.error('Consent save error:', error)
+        console.error('Encryption error:', error)
         return NextResponse.json(
-            { success: false, error: error.message || 'Failed to save consent' },
+            { success: false, error: error.message || 'Failed to encrypt data' },
             { status: 500 }
         )
     }

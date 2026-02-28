@@ -42,7 +42,11 @@ export default function NotificationSettingsPage() {
               email: data.email || user.email || '',
               phone: data.phone || ''
             })
-            // Put other settings loading logic here if we decide to persist them too
+
+            // Check for existing consent
+            if (data.consent?.smsOptIn) {
+              setSmsConsentAccepted(true)
+            }
           } else {
             setContactInfo(prev => ({ ...prev, email: user.email || '' }))
           }
@@ -119,7 +123,7 @@ export default function NotificationSettingsPage() {
     // Save consent immediately when confirmed
     try {
       if (user) {
-        await fetch('/api/user/consent', {
+        const response = await fetch('/api/user/consent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -129,6 +133,15 @@ export default function NotificationSettingsPage() {
             consentIp: 'client-ip'
           }),
         })
+
+        const data = await response.json()
+        if (data.success && data.data) {
+          const docRef = doc(db, 'users', user.uid)
+          await setDoc(docRef, {
+            ...data.data,
+            updatedAt: new Date().toISOString()
+          }, { merge: true })
+        }
       }
     } catch (err) {
       console.error("Failed to save consent record", err)
@@ -145,7 +158,7 @@ export default function NotificationSettingsPage() {
     setSuccessMessage('')
 
     try {
-      // Use the secure API route to save encrypted data
+      // Use the secure API route to get encrypted data
       const response = await fetch('/api/user/consent', {
         method: 'POST',
         headers: {
@@ -155,18 +168,25 @@ export default function NotificationSettingsPage() {
           userId: user.uid,
           phone: contactInfo.phone,
           email: contactInfo.email,
-          consentIp: 'client-ip', // In a real app, capture this server-side or via a service
+          consentIp: 'client-ip',
         }),
       })
 
       const data = await response.json()
 
-      if (data.success) {
+      if (data.success && data.data) {
+        // Save the Encrypted Data to Firestore using Client SDK
+        // This works because the user is authenticated and rules allow write to own doc
+        const docRef = doc(db, 'users', user.uid)
+        await setDoc(docRef, {
+          ...data.data,
+          updatedAt: new Date().toISOString()
+        }, { merge: true })
+
         setSuccessMessage('Settings saved successfully!')
         setTimeout(() => setSuccessMessage(''), 3000)
       } else {
-        console.error('Save failed:', data.error)
-        alert('Failed to save settings. Please try again.')
+        throw new Error(data.error || 'Failed to encrypt data')
       }
     } catch (error) {
       console.error('Error saving settings:', error)
