@@ -48,9 +48,11 @@ export default function Header() {
             <Link href="/activate" className="btn-outline">
               Activate Tag
             </Link>
-            <Link href="/settings/notifications" className="text-gray-600 hover:text-gray-900 font-medium">
-              Settings
-            </Link>
+            {user && (
+              <Link href="/settings/notifications" className="text-gray-600 hover:text-gray-900 font-medium">
+                Settings
+              </Link>
+            )}
             {user ? (
               <button onClick={handleSignOut} className="btn-primary">
                 Sign Out
@@ -84,9 +86,11 @@ export default function Header() {
               <Link href="/activate" className="btn-outline w-full text-center">
                 Activate Tag
               </Link>
-              <Link href="/settings/notifications" className="text-gray-600 hover:text-gray-900 font-medium">
-                Settings
-              </Link>
+              {user && (
+                <Link href="/settings/notifications" className="text-gray-600 hover:text-gray-900 font-medium">
+                  Settings
+                </Link>
+              )}
               {user ? (
                 <button onClick={handleSignOut} className="btn-primary w-full text-center">
                   Sign Out
