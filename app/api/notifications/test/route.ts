@@ -52,12 +52,18 @@ export async function POST(request: Request) {
                 throw new Error('Twilio configuration missing')
             }
 
+            // Normalize to E.164 format (+1XXXXXXXXXX) — strips spaces, dashes, parens, etc.
+            const digits = to.replace(/\D/g, '')
+            const toE164 = digits.startsWith('1') ? `+${digits}` : `+1${digits}`
+
             const client = twilio(accountSid, authToken)
+
+            console.log(`[SMS Test] From: ${fromNumber} | To: ${toE164}`)
 
             await client.messages.create({
                 body: 'NotAStray Test: This is a test notification. Your settings are working correctly!',
                 from: fromNumber,
-                to: to,
+                to: toE164,
             })
 
             return NextResponse.json({ success: true, message: 'SMS sent successfully' })

@@ -1,5 +1,4 @@
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "./firebase"; // <-- pulls in your existing firebase.ts
+// Removed Firebase imports to make this a pure utility file
 import crypto from "crypto";
 
 // --- Config ---
@@ -50,54 +49,19 @@ interface UserContact {
 }
 
 // --- Save / Update User with Encrypted Fields + Consent ---
-export async function saveUserConsent({ userId, phone, email, consentIp }: SaveConsentParams): Promise<void> {
-    const docRef = doc(db, "users", userId); // matches your existing "users" collection
-
-    await setDoc(docRef, {
+// --- Helper to Encrypt Data for Client-Side Save ---
+export function encryptUserContact(phone: string, email: string) {
+    return {
         encryptedPhone: encrypt(phone),
         encryptedEmail: encrypt(email),
         phoneHash: hashValue(phone),
-        consent: {
-            smsOptIn: true,
-            consentTimestamp: new Date().toISOString(),
-            consentIp: consentIp || null,
-            consentMethod: "checkbox",
-        },
-        updatedAt: new Date().toISOString(),
-    }, { merge: true }); // merge: true so it doesn't wipe other fields on the doc
+    };
 }
 
 // --- Retrieve & Decrypt by User ID ---
-export async function getUserContact(userId: string): Promise<UserContact | null> {
-    const docRef = doc(db, "users", userId);
-    const snapshot = await getDoc(docRef);
-
-    if (!snapshot.exists()) return null;
-
-    const data = snapshot.data();
-    return {
-        userId,
-        phone: decrypt(data.encryptedPhone),
-        email: decrypt(data.encryptedEmail),
-        consent: data.consent,
-    };
-}
+// --- Deprecated: Client-side decryption must be handled via API to keep key secret ---
+// These functions were removed as they required direct DB access which is not available in this context without Admin SDK.
+// Future implementation: Create API endpoints to fetch and decrypt data for specific use cases.
 
 // --- Lookup by Phone (e.g. when QR code is scanned) ---
-export async function getUserByPhone(phone: string): Promise<UserContact | null> {
-    const hash = hashValue(phone);
-    const q = query(collection(db, "users"), where("phoneHash", "==", hash));
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) return null;
-
-    const docSnap = snapshot.docs[0];
-    const data = docSnap.data();
-
-    return {
-        userId: docSnap.id,
-        phone: decrypt(data.encryptedPhone),
-        email: decrypt(data.encryptedEmail),
-        consent: data.consent,
-    };
-}
+// Remaining lookup logic removed for now. Scanner implementation requires Admin SDK or Cloud Functions.
