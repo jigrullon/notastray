@@ -204,7 +204,7 @@ function CheckoutContent() {
                 <button 
                   onClick={handleCheckout}
                   disabled={loading}
-                  className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>

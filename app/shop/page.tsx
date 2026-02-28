@@ -102,7 +102,7 @@ export default function ShopPage() {
                   <Link
                     href={`/shop/checkout?productId=${product.id}`}
                     className={`block w-full text-center py-3 rounded-lg font-medium transition-colors ${product.popular
-                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                      ? 'bg-primary-600 hover:bg-primary-400 text-white'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
                       }`}>
                     Buy Now

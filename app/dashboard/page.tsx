@@ -41,7 +41,7 @@ export default function DashboardPage() {
               await logOut()
               router.push('/login')
             }}
-            className="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md transition-colors"
+            className="w-full bg-primary-600 hover:bg-primary-400 text-white px-4 py-2 rounded-md transition-colors"
           >
             Back to Login
           </button>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
             </p>
             <Link
               href="/activate"
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-400 transition-colors"
             >
               Activate a Tag
             </Link>
