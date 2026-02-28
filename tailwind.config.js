@@ -29,9 +29,10 @@ module.exports = {
           500: '#6b7280',
           600: '#4b5563',
           700: '#374151',
-          800: '#1f2937',
-          900: '#111827',
-        }
+          800: '#4B4B4B',
+          900: '#373737',
+        },
+        'brand-cream': '#F5F0E8',
       },
       fontFamily: {
         sans: ['"Fredoka"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif'],
