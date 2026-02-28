@@ -15,7 +15,7 @@ export default function Footer() {
               <span className="text-xl font-bold text-gray-900">NotAStray</span>
             </Link>
             <p className="text-gray-600 mb-4 max-w-md">
-              Keeping pets safe with smart QR code ID tags. When your pet is found, 
+              Keeping pets safe with smart QR code ID tags. When your pet is found,
               their profile is just a scan away.
             </p>
             <div className="flex space-x-4 text-gray-500">
@@ -49,7 +49,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-200 mt-8 pt-8 text-center text-gray-500">
-          <p>&copy; 2024 NotAStray. All rights reserved.</p>
+          <p>&copy; 2026 NotAStray. All rights reserved.</p>
         </div>
       </div>
     </footer>
