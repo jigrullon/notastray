@@ -33,6 +33,11 @@ yarn-error.log*
 # wrangler (Cloudflare)
 .wrangler
 
+# claude
+.claude
+CLAUDE.md
+/specs
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -13,6 +13,8 @@ interface CheckoutRequest {
     subscription?: boolean;
     userEmail?: string;
     userId?: string;
+    color?: string;
+    size?: string;
 }
 
 export async function POST(request: Request) {
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
 
     try {
         const body: CheckoutRequest = await request.json();
-        const { items, subscription, userEmail, userId } = body;
+        const { items, subscription, userEmail, userId, color, size } = body;
 
         const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item) => {
             if (item.priceId && item.priceId !== 'price_REPLACE_WITH_REAL_ID') {
@@ -57,6 +59,8 @@ export async function POST(request: Request) {
             customer_email: userEmail,
             metadata: {
                 userId: userId || '',
+                color: color || '',
+                size: size || '',
                 ...(subscription ? { type: 'subscription_upgrade' } : { type: 'one_time_purchase' }),
             },
         });

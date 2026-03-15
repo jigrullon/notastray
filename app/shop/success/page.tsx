@@ -40,7 +40,7 @@ function SuccessContent() {
             href="/shop" 
             className="block w-full text-gray-600 hover:text-gray-900 font-medium"
           >
-            Continue Shopping
+            Shop Again
           </Link>
         </div>
       </div>

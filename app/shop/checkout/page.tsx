@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Check, Shield, Star, AlertCircle, Loader2 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
@@ -9,51 +9,19 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 );
 
-const products = [
-  {
-    id: 1,
-    name: "Classic QR Tag",
-    price: 19.99,
-    image: "/api/placeholder/300/300",
-    features: ["Waterproof", "Durable plastic"],
-  },
-  {
-    id: 2,
-    name: "Premium Metal Tag",
-    price: 29.99,
-    image: "/api/placeholder/300/300",
-    features: ["Stainless steel", "Laser engraved"],
-  },
-  {
-    id: 3,
-    name: "Smart Tag Pro",
-    price: 39.99,
-    image: "/api/placeholder/300/300",
-    features: ["GPS tracking", "Activity monitoring"],
-  }
-]
-
 function CheckoutContent() {
   const searchParams = useSearchParams()
-  const productId = searchParams.get('productId')
-  
-  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const color = searchParams.get('color') || 'Red'
+  const size = searchParams.get('size') || 'Small'
+
   const [loading, setLoading] = useState(false)
   const [includeSubscription, setIncludeSubscription] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (productId) {
-      const product = products.find(p => p.id === Number(productId))
-      if (product) {
-        setSelectedProduct(product)
-      }
-    }
-  }, [productId])
-
-  const subTotal = selectedProduct ? selectedProduct.price : 0
+  const productName = 'NotAStray Smart Pet Tag'
+  const productPrice = 14.95
   const subscriptionPrice = 5.00
-  const total = subTotal + (includeSubscription ? subscriptionPrice : 0)
+  const total = productPrice + (includeSubscription ? subscriptionPrice : 0)
 
   const handleCheckout = async () => {
     setLoading(true)
@@ -71,8 +39,8 @@ function CheckoutContent() {
         body: JSON.stringify({
           items: [
              {
-               name: selectedProduct.name,
-               amount: selectedProduct.price,
+               name: `${productName} - ${color} / ${size}`,
+               amount: 14.95,
                quantity: 1,
                currency: 'usd'
              },
@@ -85,6 +53,8 @@ function CheckoutContent() {
           ],
           subscription: includeSubscription,
           userEmail: 'guest@example.com',
+          color,
+          size,
         }),
       })
 
@@ -106,18 +76,6 @@ function CheckoutContent() {
     }
   }
 
-  if (!selectedProduct) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-             <h1 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h1>
-             <p className="text-gray-600 mb-8">Please select a product from the shop.</p>
-             <a href="/shop" className="text-primary-600 hover:text-primary-700 font-medium">Return to Shop</a>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -135,10 +93,10 @@ function CheckoutContent() {
                     <Shield className="w-8 h-8 text-gray-400" />
                  </div>
                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{selectedProduct.name}</h3>
-                    <p className="text-sm text-gray-500">{selectedProduct.features.join(', ')}</p>
+                    <h3 className="font-medium text-gray-900">{productName}</h3>
+                    <p className="text-sm text-gray-500">{color} / {size}</p>
                  </div>
-                 <div className="font-semibold text-gray-900">${selectedProduct.price.toFixed(2)}</div>
+                 <div className="font-semibold text-gray-900">${productPrice.toFixed(2)}</div>
               </div>
 
               <div className={`border rounded-lg p-4 transition-all ${includeSubscription ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-primary-300'}`}>
@@ -180,7 +138,7 @@ function CheckoutContent() {
                 <div className="space-y-3 mb-6">
                    <div className="flex justify-between text-gray-600">
                       <span>Subtotal</span>
-                      <span>${subTotal.toFixed(2)}</span>
+                      <span>${productPrice.toFixed(2)}</span>
                    </div>
                    {includeSubscription && (
                       <div className="flex justify-between text-primary-700 bg-primary-50 p-2 rounded">
