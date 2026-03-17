@@ -35,7 +35,6 @@ export default function ImageZoom({ images }: ImageZoomProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const mainImage = displayImages[selectedIndex] ?? displayImages[0];
-  const thumbnails = displayImages.filter((_, i) => i !== selectedIndex).slice(0, 3);
 
   const closeLightbox = useCallback(() => {
     setLightboxOpen(false);
@@ -73,39 +72,8 @@ export default function ImageZoom({ images }: ImageZoomProps) {
 
   return (
     <>
-      {/* Desktop layout: thumbnails left, main right */}
-      <div className="hidden md:flex gap-3">
-        {/* Thumbnails column */}
-        <div className="flex flex-col gap-3 w-20 shrink-0">
-          {thumbnails.map((img) => {
-            const originalIndex = displayImages.indexOf(img);
-            return (
-              <button
-                key={originalIndex}
-                type="button"
-                onClick={() => setSelectedIndex(originalIndex)}
-                className="w-20 h-20 rounded-lg overflow-hidden border-2 border-transparent hover:border-primary-500 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-                aria-label={`View ${img.alt}`}
-              >
-                {renderImage(img, 'w-full h-full')}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Main image */}
-        <button
-          type="button"
-          onClick={() => setLightboxOpen(true)}
-          className="flex-1 aspect-square rounded-xl overflow-hidden cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary-500"
-          aria-label={`Zoom into ${mainImage.alt}`}
-        >
-          {renderImage(mainImage, 'w-full h-full')}
-        </button>
-      </div>
-
-      {/* Mobile layout: main on top, thumbnails below */}
-      <div className="flex flex-col gap-3 md:hidden">
+      {/* Main layout: main image on top, carousel below */}
+      <div className="flex flex-col gap-4">
         {/* Main image */}
         <button
           type="button"
@@ -116,22 +84,23 @@ export default function ImageZoom({ images }: ImageZoomProps) {
           {renderImage(mainImage, 'w-full h-full')}
         </button>
 
-        {/* Thumbnails row */}
-        <div className="flex gap-3 justify-center">
-          {thumbnails.map((img) => {
-            const originalIndex = displayImages.indexOf(img);
-            return (
-              <button
-                key={originalIndex}
-                type="button"
-                onClick={() => setSelectedIndex(originalIndex)}
-                className="w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent hover:border-primary-500 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-                aria-label={`View ${img.alt}`}
-              >
-                {renderImage(img, 'w-full h-full')}
-              </button>
-            );
-          })}
+        {/* Carousel thumbnails below */}
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {displayImages.map((img, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => setSelectedIndex(index)}
+              className={`h-20 w-20 rounded-lg overflow-hidden border-2 shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                selectedIndex === index
+                  ? 'border-primary-500'
+                  : 'border-gray-200 hover:border-primary-300'
+              }`}
+              aria-label={`View ${img.alt}`}
+            >
+              {renderImage(img, 'w-full h-full')}
+            </button>
+          ))}
         </div>
       </div>
 

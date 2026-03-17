@@ -7,9 +7,10 @@ import { useAuth } from '@/lib/AuthContext'
 import ImageZoom from '@/components/ImageZoom'
 
 const productImages = [
-  { src: '/images/tag-front.jpg', alt: 'NotAStray Smart Pet Tag - Front view' },
-  { src: '/images/tag-back.jpg', alt: 'NotAStray Smart Pet Tag - Back view with QR code' },
-  { src: '/images/tag-on-collar.jpg', alt: 'NotAStray Smart Pet Tag - Attached to collar' },
+  { src: '', alt: 'NotAStray Smart Pet Tag - Main product image' },
+  { src: '/sizes.jpeg', alt: 'NotAStray Smart Pet Tag - Size reference' },
+  { src: '/size-penny.jpeg', alt: 'NotAStray Smart Pet Tag - Size compared to penny' },
+  { src: '/colors.jpeg', alt: 'NotAStray Smart Pet Tag - Available colors' },
 ]
 
 const colorOptions = ['Red', 'Blue', 'Pink', 'Teal', 'Black']
