@@ -15,10 +15,10 @@ interface ImageZoomProps {
 function PlaceholderImage({ alt, className }: { alt: string; className?: string }) {
   return (
     <div
-      className={`bg-gray-200 flex items-center justify-center ${className ?? ''}`}
+      className={`bg-gray-200 dark:bg-gray-700 flex items-center justify-center ${className ?? ''}`}
       aria-label={alt}
     >
-      <Tag className="w-10 h-10 text-gray-400" />
+      <Tag className="w-10 h-10 text-gray-400 dark:text-gray-500" />
     </div>
   );
 }
@@ -94,7 +94,7 @@ export default function ImageZoom({ images }: ImageZoomProps) {
               className={`h-20 w-20 rounded-lg overflow-hidden border-2 shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                 selectedIndex === index
                   ? 'border-primary-500'
-                  : 'border-gray-200 hover:border-primary-300'
+                  : 'border-gray-200 dark:border-gray-600 hover:border-primary-300'
               }`}
               aria-label={`View ${img.alt}`}
             >

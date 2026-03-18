@@ -4,6 +4,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/lib/AuthContext'
+import { ThemeProvider } from '@/lib/ThemeProvider'
 
 export const metadata: Metadata = {
   title: 'NotAStray - Smart Pet ID Tags',
@@ -16,17 +17,35 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>
-        <AuthProvider>
-          <ErrorBoundary>
-            <Header />
-            <main className="min-h-screen">
-              {children}
-            </main>
-            <Footer />
-          </ErrorBoundary>
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function() {
+  try {
+    var theme = localStorage.getItem('theme');
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var isDark = theme === 'dark' || (theme === null && prefersDark);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    }
+  } catch (e) {}
+})();`,
+          }}
+        />
+      </head>
+      <body className="transition-colors duration-200">
+        <ThemeProvider>
+          <AuthProvider>
+            <ErrorBoundary>
+              <Header />
+              <main className="min-h-screen">
+                {children}
+              </main>
+              <Footer />
+            </ErrorBoundary>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

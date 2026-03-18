@@ -31,12 +31,12 @@ export default function ShopPage() {
   return (
     <div className="bg-transparent">
       {/* Back Button & Header */}
-      <section className="bg-gradient-to-b from-gray-50 to-brand-cream py-8">
+      <section className="bg-gradient-to-b from-gray-50 to-brand-cream dark:from-gray-900 dark:to-gray-800 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-4">
             <Link
               href={user ? '/dashboard' : '/'}
-              className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center"
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium inline-flex items-center"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
@@ -56,7 +56,7 @@ export default function ShopPage() {
 
             {/* Right Column - Product Info */}
             <div className="flex flex-col">
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">
                 NotAStray Smart Pet Tag
               </h1>
 
@@ -68,7 +68,7 @@ export default function ShopPage() {
               <div className="mb-4">
                 <label
                   htmlFor="color-select"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
                   Color
                 </label>
@@ -76,7 +76,7 @@ export default function ShopPage() {
                   id="color-select"
                   value={selectedColor}
                   onChange={(e) => setSelectedColor(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   {colorOptions.map((color) => (
                     <option key={color} value={color}>
@@ -90,7 +90,7 @@ export default function ShopPage() {
               <div className="mb-6">
                 <label
                   htmlFor="size-select"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
                   Size
                 </label>
@@ -98,7 +98,7 @@ export default function ShopPage() {
                   id="size-select"
                   value={selectedSize}
                   onChange={(e) => setSelectedSize(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   {sizeOptions.map((size) => (
                     <option key={size} value={size}>
@@ -119,7 +119,7 @@ export default function ShopPage() {
               {/* Feature Bullets */}
               <ul className="space-y-3">
                 {featureBullets.map((feature) => (
-                  <li key={feature} className="flex items-center text-gray-700">
+                  <li key={feature} className="flex items-center text-gray-700 dark:text-gray-300">
                     <Check className="w-5 h-5 text-green-500 mr-3 shrink-0" />
                     {feature}
                   </li>
@@ -131,41 +131,41 @@ export default function ShopPage() {
       </section>
 
       {/* Why Choose NotAStray Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Why choose NotAStray?
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-6 h-6 text-primary-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Built to Last</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Built to Last</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 Waterproof, scratch-resistant, and designed for active pets
               </p>
             </div>
 
             <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Zap className="w-6 h-6 text-primary-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Instant Setup</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Instant Setup</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 Get your pet protected in minutes with our simple activation process
               </p>
             </div>
 
             <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Star className="w-6 h-6 text-primary-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Lifetime Updates</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Lifetime Updates</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 Update your pet&apos;s profile anytime - no additional fees ever
               </p>
             </div>
@@ -176,43 +176,43 @@ export default function ShopPage() {
       {/* FAQ Section */}
       <section className="py-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 text-center mb-12">
             Frequently Asked Questions
           </h2>
 
           <div className="space-y-8">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 How does the QR code work?
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Anyone can scan the QR code with their smartphone camera to instantly access your pet&apos;s profile page with your contact information.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 What if my phone number changes?
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 You can update your contact information anytime through your account dashboard. Changes are reflected immediately on your pet&apos;s profile.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Are the tags durable?
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Yes! All our tags are waterproof and designed to withstand daily wear. The Premium Metal Tag comes with a lifetime warranty.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Do I need a smartphone to use this?
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 While QR codes work best with smartphones, each tag also includes backup contact information printed directly on the tag.
               </p>
             </div>

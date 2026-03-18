@@ -77,49 +77,49 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-8">Checkout</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
+
           <div className="md:col-span-2 space-y-6">
-            
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
-              
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 border border-gray-100 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Order Summary</h2>
+
               <div className="flex items-center space-x-4 mb-6">
-                 <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
-                    <Shield className="w-8 h-8 text-gray-400" />
+                 <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center">
+                    <Shield className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                  </div>
                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{productName}</h3>
-                    <p className="text-sm text-gray-500">{color} / {size}</p>
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">{productName}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{color} / {size}</p>
                  </div>
-                 <div className="font-semibold text-gray-900">${productPrice.toFixed(2)}</div>
+                 <div className="font-semibold text-gray-900 dark:text-gray-100">${productPrice.toFixed(2)}</div>
               </div>
 
-              <div className={`border rounded-lg p-4 transition-all ${includeSubscription ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-primary-300'}`}>
+              <div className={`border rounded-lg p-4 transition-all ${includeSubscription ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-primary-300'}`}>
                 <div className="flex items-start space-x-3">
-                   <input 
-                      type="checkbox" 
+                   <input
+                      type="checkbox"
                       id="upsell"
                       checked={includeSubscription}
                       onChange={(e) => setIncludeSubscription(e.target.checked)}
-                      className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                    />
                    <label htmlFor="upsell" className="flex-1 cursor-pointer">
                       <div className="flex justify-between items-center mb-1">
-                         <span className="font-semibold text-gray-900 flex items-center">
+                         <span className="font-semibold text-gray-900 dark:text-gray-100 flex items-center">
                             <Star className="w-4 h-4 mr-1 text-yellow-500 fill-current" />
                             NotAStray Plus
                          </span>
-                         <span className="text-primary-700 font-bold">$5.00/mo</span>
+                         <span className="text-primary-700 dark:text-primary-400 font-bold">$5.00/mo</span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                         Get real-time GPS location when scanned, medical info storage, and instant SMS alerts.
                       </p>
-                      <ul className="text-xs text-gray-500 space-y-1">
+                      <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                          <li className="flex items-center"><Check className="w-3 h-3 mr-1 text-green-500" /> Advanced Location Tracking</li>
                          <li className="flex items-center"><Check className="w-3 h-3 mr-1 text-green-500" /> Detailed Medical Profile</li>
                       </ul>
@@ -132,49 +132,49 @@ function CheckoutContent() {
           </div>
 
           <div className="md:col-span-1">
-             <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100 sticky top-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Total</h3>
-                
+             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 border border-gray-100 dark:border-gray-700 sticky top-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Total</h3>
+
                 <div className="space-y-3 mb-6">
-                   <div className="flex justify-between text-gray-600">
+                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                       <span>Subtotal</span>
                       <span>${productPrice.toFixed(2)}</span>
                    </div>
                    {includeSubscription && (
-                      <div className="flex justify-between text-primary-700 bg-primary-50 p-2 rounded">
+                      <div className="flex justify-between text-primary-700 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 p-2 rounded">
                          <span>Plus Subscription</span>
                          <span>$5.00<span className="text-xs">/mo</span></span>
                       </div>
                    )}
-                   <div className="border-t pt-3 flex justify-between font-bold text-lg text-gray-900">
+                   <div className="border-t dark:border-gray-700 pt-3 flex justify-between font-bold text-lg text-gray-900 dark:text-gray-100">
                       <span>Due Today</span>
                       <span>${total.toFixed(2)}</span>
                    </div>
                 </div>
 
                 {error && (
-                   <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-md flex items-start">
+                   <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm rounded-md flex items-start">
                       <AlertCircle className="w-4 h-4 mr-1.5 mt-0.5" />
                       {error}
                    </div>
                 )}
 
-                <button 
+                <button
                   onClick={handleCheckout}
                   disabled={loading}
                   className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>
-                       <Loader2 className="w-4 h-4 mr-2 animate-spin" /> 
+                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                        Processing...
                     </>
                   ) : (
                     'Proceed to Checkout'
                   )}
                 </button>
-                
-                <p className="mt-4 text-xs text-gray-400 text-center">
+
+                <p className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center">
                    Secure payment via Stripe. <br /> Subscription can be cancelled anytime.
                 </p>
 
@@ -190,7 +190,7 @@ function CheckoutContent() {
 export default function CheckoutPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
       </div>
     }>
