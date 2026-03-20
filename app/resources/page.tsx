@@ -3,57 +3,7 @@
 import Link from 'next/link'
 import { BookOpen, Shield, Heart, Zap, Calendar, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
-
-const articles = [
-  {
-    id: 1,
-    title: "Fireworks Safety: Keeping Your Pet Calm During Celebrations",
-    excerpt: "Learn how to prepare your pet for fireworks season and keep them safe during loud celebrations.",
-    category: "Safety",
-    readTime: "5 min read",
-    featured: true
-  },
-  {
-    id: 2,
-    title: "Setting Up Your NotAStray Profile: Complete Guide",
-    excerpt: "Step-by-step instructions for creating the perfect pet profile that will help bring your pet home.",
-    category: "Setup",
-    readTime: "3 min read",
-    featured: false
-  },
-  {
-    id: 3,
-    title: "Holiday Pet Safety: What Every Owner Should Know",
-    excerpt: "From toxic foods to decorations, keep your pets safe during holiday celebrations.",
-    category: "Safety",
-    readTime: "7 min read",
-    featured: true
-  },
-  {
-    id: 4,
-    title: "Lost Pet Action Plan: What to Do in the First 24 Hours",
-    excerpt: "A comprehensive guide to the most effective steps to take when your pet goes missing.",
-    category: "Emergency",
-    readTime: "6 min read",
-    featured: false
-  },
-  {
-    id: 5,
-    title: "Traveling with Pets: Essential Safety Tips",
-    excerpt: "Make sure your pet stays safe and comfortable during travel with these expert tips.",
-    category: "Travel",
-    readTime: "4 min read",
-    featured: false
-  },
-  {
-    id: 6,
-    title: "Microchips vs. QR Tags: Which is Better?",
-    excerpt: "Compare the benefits of different pet identification methods and why you might want both.",
-    category: "Education",
-    readTime: "5 min read",
-    featured: false
-  }
-]
+import { articles } from '@/lib/articles'
 
 const categories = [
   { name: "All", count: articles.length },
@@ -141,7 +91,7 @@ export default function ResourcesPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
             {featuredArticles.map((article) => (
-              <article key={article.id} className="group cursor-pointer">
+              <Link key={article.id} href={'/resources/' + article.slug} className="group cursor-pointer block">
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-lg h-48 mb-4 flex items-center justify-center">
                   <Heart className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                 </div>
@@ -159,7 +109,7 @@ export default function ResourcesPage() {
                 <span className="text-primary-600 font-medium group-hover:text-primary-700 dark:group-hover:text-primary-400 flex items-center">
                   Read more <ArrowRight className="w-4 h-4 ml-1" />
                 </span>
-              </article>
+              </Link>
             ))}
           </div>
 
@@ -178,7 +128,7 @@ export default function ResourcesPage() {
           {/* All Articles */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {regularArticles.map((article) => (
-              <article key={article.id} className="group cursor-pointer bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-md dark:hover:shadow-gray-900/50 transition-shadow">
+              <Link key={article.id} href={'/resources/' + article.slug} className="group cursor-pointer block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-md dark:hover:shadow-gray-900/50 transition-shadow">
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3">
                   <span className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded text-xs font-medium mr-2">
                     {article.category}
@@ -189,7 +139,7 @@ export default function ResourcesPage() {
                   {article.title}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">{article.excerpt}</p>
-              </article>
+              </Link>
             ))}
           </div>
         </div>

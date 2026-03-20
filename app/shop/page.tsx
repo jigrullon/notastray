@@ -8,7 +8,7 @@ import { useCart } from '@/lib/CartContext'
 import ImageZoom from '@/components/ImageZoom'
 
 const productImages = [
-  { src: '', alt: 'NotAStray Smart Pet Tag - Main product image' },
+  { src: '/enlarged.jpg', alt: 'NotAStray Smart Pet Tag - Main product image' },
   { src: '/sizes.jpeg', alt: 'NotAStray Smart Pet Tag - Size reference' },
   { src: '/size-penny.jpeg', alt: 'NotAStray Smart Pet Tag - Size compared to penny' },
   { src: '/colors.jpeg', alt: 'NotAStray Smart Pet Tag - Available colors' },
