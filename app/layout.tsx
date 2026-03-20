@@ -5,6 +5,8 @@ import Footer from '@/components/Footer'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/lib/AuthContext'
 import { ThemeProvider } from '@/lib/ThemeProvider'
+import { CartProvider } from '@/lib/CartContext'
+import CartSlideout from '@/components/CartSlideout'
 
 export const metadata: Metadata = {
   title: 'NotAStray - Smart Pet ID Tags',
@@ -37,13 +39,16 @@ export default function RootLayout({
       <body className="transition-colors duration-200">
         <ThemeProvider>
           <AuthProvider>
-            <ErrorBoundary>
-              <Header />
-              <main className="min-h-screen">
-                {children}
-              </main>
-              <Footer />
-            </ErrorBoundary>
+            <CartProvider>
+              <CartSlideout />
+              <ErrorBoundary>
+                <Header />
+                <main className="min-h-screen">
+                  {children}
+                </main>
+                <Footer />
+              </ErrorBoundary>
+            </CartProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

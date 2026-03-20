@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Check, Star, Shield, Zap, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/AuthContext'
+import { useCart } from '@/lib/CartContext'
 import ImageZoom from '@/components/ImageZoom'
 
 const productImages = [
@@ -25,6 +26,7 @@ const featureBullets = [
 
 export default function ShopPage() {
   const { user } = useAuth()
+  const { addItem, setIsCartOpen } = useCart()
   const [selectedColor, setSelectedColor] = useState(colorOptions[0])
   const [selectedSize, setSelectedSize] = useState(sizeOptions[0])
 
@@ -108,13 +110,23 @@ export default function ShopPage() {
                 </select>
               </div>
 
-              {/* Buy Now Button */}
-              <Link
-                href={`/shop/checkout?color=${encodeURIComponent(selectedColor)}&size=${encodeURIComponent(selectedSize)}`}
+              {/* Add to Cart Button */}
+              <button
+                onClick={() => {
+                  addItem({
+                    name: 'NotAStray Smart Pet Tag',
+                    color: selectedColor,
+                    size: selectedSize,
+                    quantity: 1,
+                    price: 14.95,
+                    image: '',
+                  })
+                  setIsCartOpen(true)
+                }}
                 className="block w-full text-center py-3 rounded-lg font-medium transition-colors bg-primary-600 hover:bg-primary-400 text-white mb-8"
               >
-                Buy Now
-              </Link>
+                Add to Cart
+              </button>
 
               {/* Feature Bullets */}
               <ul className="space-y-3">
