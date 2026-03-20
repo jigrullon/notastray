@@ -46,7 +46,7 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
                 longitude: position.coords.longitude,
                 accuracy: position.coords.accuracy
               }
-              
+
               // Try to get address from coordinates
               try {
                 const response = await fetch(`/api/geocode?lat=${locationData.latitude}&lng=${locationData.longitude}`)
@@ -57,7 +57,7 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
               } catch (error) {
                 console.log('Geocoding failed, using coordinates only')
               }
-              
+
               setLocation(locationData)
               await sendNotificationWithLocation(locationData)
             },
@@ -112,7 +112,7 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
       // Get approximate location from IP
       const ipResponse = await fetch('/api/ip-location')
       let ipLocation = null
-      
+
       if (ipResponse.ok) {
         ipLocation = await ipResponse.json()
       }
@@ -140,17 +140,17 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Notification Status */}
         {notificationSent && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
             <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" />
               <div>
-                <p className="text-green-800 font-medium">Owner has been notified!</p>
-                <p className="text-green-700 text-sm">
-                  {location 
+                <p className="text-green-800 dark:text-green-300 font-medium">Owner has been notified!</p>
+                <p className="text-green-700 dark:text-green-400 text-sm">
+                  {location
                     ? `Location shared: ${location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}`
                     : 'Approximate location shared'
                   }
@@ -161,50 +161,50 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
         )}
 
         {/* Header Alert */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
           <div className="flex items-center">
-            <AlertTriangle className="w-5 h-5 text-amber-600 mr-2" />
-            <p className="text-amber-800 font-medium">
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2" />
+            <p className="text-amber-800 dark:text-amber-300 font-medium">
               Found Pet Alert - Please help reunite this pet with their family
             </p>
           </div>
         </div>
 
         {/* Pet Profile Card */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
           {/* Pet Photo and Basic Info */}
-          <div className="p-6 text-center border-b border-gray-200">
-            <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden">
+          <div className="p-6 text-center border-b border-gray-200 dark:border-gray-700">
+            <div className="w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
               <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
                 <span className="text-white text-4xl font-bold">{petData.name.charAt(0)}</span>
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{petData.name}</h1>
-            <p className="text-gray-600">Golden Retriever</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{petData.name}</h1>
+            <p className="text-gray-600 dark:text-gray-400">Golden Retriever</p>
           </div>
 
           {/* Contact Information */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
               <Phone className="w-5 h-5 mr-2 text-primary-600" />
               Contact Owner
             </h2>
-            
+
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-700">{petData.owner}</span>
-                <a 
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span className="text-gray-700 dark:text-gray-300">{petData.owner}</span>
+                <a
                   href={`tel:${petData.phone}`}
                   className="btn-primary"
                 >
                   Call Now
                 </a>
               </div>
-              
+
               {petData.address && (
-                <div className="flex items-start p-3 bg-gray-50 rounded-lg">
-                  <MapPin className="w-5 h-5 text-gray-400 mr-2 mt-0.5" />
-                  <span className="text-gray-700">{petData.address}</span>
+                <div className="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 mr-2 mt-0.5" />
+                  <span className="text-gray-700 dark:text-gray-300">{petData.address}</span>
                 </div>
               )}
             </div>
@@ -212,27 +212,27 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
 
           {/* Medical Information */}
           {petData.allergies && (
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                 <Heart className="w-5 h-5 mr-2 text-red-500" />
                 Medical Information
               </h2>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800">{petData.allergies}</p>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-800 dark:text-red-300">{petData.allergies}</p>
               </div>
             </div>
           )}
 
           {/* Veterinarian */}
           {petData.vet && (
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Veterinarian</h2>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Veterinarian</h2>
               <div className="space-y-2">
-                <p className="text-gray-700 font-medium">{petData.vet}</p>
+                <p className="text-gray-700 dark:text-gray-300 font-medium">{petData.vet}</p>
                 {petData.vetAddress && (
                   <div className="flex items-start">
-                    <MapPin className="w-4 h-4 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
-                    <p className="text-gray-600 text-sm">{petData.vetAddress}</p>
+                    <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">{petData.vetAddress}</p>
                   </div>
                 )}
               </div>
@@ -240,26 +240,26 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
           )}
 
           {/* Temperament */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
               <Users className="w-5 h-5 mr-2 text-primary-600" />
               Temperament
             </h2>
             <div className="flex flex-wrap gap-2">
               {petData.goodWithDogs && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                   <Dog className="w-4 h-4 mr-1" />
                   Good with dogs
                 </span>
               )}
               {petData.goodWithCats && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                   <Cat className="w-4 h-4 mr-1" />
                   Good with cats
                 </span>
               )}
               {petData.goodWithChildren && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                   <Baby className="w-4 h-4 mr-1" />
                   Good with children
                 </span>
@@ -270,7 +270,7 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
           {/* Action Buttons */}
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-3">
-              <a 
+              <a
                 href={`tel:${petData.phone}`}
                 className="btn-primary flex-1 text-center py-3"
               >
@@ -280,17 +280,17 @@ export default function PetProfileClient({ petData, tagCode }: PetProfileClientP
                 Report Found
               </button>
             </div>
-            
-            <p className="text-center text-sm text-gray-500 mt-4">
+
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
               Tag ID: {tagCode} • Powered by NotAStray
             </p>
           </div>
         </div>
 
         {/* Safety Tips */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">Found a pet? Here's how to help:</h3>
-          <ul className="text-blue-800 text-sm space-y-1">
+        <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">Found a pet? Here's how to help:</h3>
+          <ul className="text-blue-800 dark:text-blue-300 text-sm space-y-1">
             <li>• Keep the pet safe and secure</li>
             <li>• Call the owner using the number above</li>
             <li>• If no answer, try texting or calling again later</li>

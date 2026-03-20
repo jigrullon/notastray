@@ -55,12 +55,12 @@ export default function ActivatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Link
             href={user ? '/dashboard' : '/'}
-            className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center"
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium inline-flex items-center"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
@@ -69,10 +69,10 @@ export default function ActivatePage() {
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-500">Step {step} of 3</span>
-            <span className="text-sm font-medium text-gray-500">{Math.round((step / 3) * 100)}%</span>
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Step {step} of 3</span>
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{Math.round((step / 3) * 100)}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className="bg-primary-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${(step / 3) * 100}%` }}
@@ -81,15 +81,15 @@ export default function ActivatePage() {
         </div>
 
         {step === 1 && (
-          <div className="bg-white rounded-lg shadow-sm p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Activate Your Tag</h1>
-            <p className="text-gray-600 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Activate Your Tag</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
               Enter the code found on your NotAStray tag to get started
             </p>
 
             <form onSubmit={handleCodeSubmit}>
               <div className="mb-6">
-                <label htmlFor="tagCode" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="tagCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tag Code
                 </label>
                 <input
@@ -98,10 +98,10 @@ export default function ActivatePage() {
                   value={tagCode}
                   onChange={(e) => setTagCode(e.target.value.toUpperCase())}
                   placeholder="ABC123"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg font-mono"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg font-mono dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                   required
                 />
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   This code is printed on your tag and looks like "ABC123"
                 </p>
               </div>
@@ -118,21 +118,21 @@ export default function ActivatePage() {
         )}
 
         {step === 2 && (
-          <div className="bg-white rounded-lg shadow-sm p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Pet Profile</h1>
-            <p className="text-gray-600 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Create Pet Profile</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
               Fill out your pet's information to help them get home safely
             </p>
 
             <form onSubmit={handleProfileSubmit} className="space-y-6">
               {/* Pet Photo */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Pet Photo
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                  <Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">Upload a clear photo of your pet</p>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                  <Camera className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">Upload a clear photo of your pet</p>
                   <button type="button" className="btn-outline">
                     <Upload className="w-4 h-4 mr-2" />
                     Choose Photo
@@ -142,7 +142,7 @@ export default function ActivatePage() {
 
               {/* Pet Name */}
               <div>
-                <label htmlFor="petName" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="petName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Pet Name *
                 </label>
                 <input
@@ -150,7 +150,7 @@ export default function ActivatePage() {
                   id="petName"
                   value={petData.name}
                   onChange={(e) => setPetData({ ...petData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                   required
                 />
               </div>
@@ -158,7 +158,7 @@ export default function ActivatePage() {
               {/* Owner Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Owner's First Name *
                   </label>
                   <input
@@ -166,12 +166,12 @@ export default function ActivatePage() {
                     id="ownerName"
                     value={petData.ownerName}
                     onChange={(e) => setPetData({ ...petData, ownerName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Phone Number *
                   </label>
                   <input
@@ -181,14 +181,14 @@ export default function ActivatePage() {
                     onChange={handlePhoneChange}
                     placeholder="123-456-7890"
                     maxLength={12}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Address
                 </label>
                 <textarea
@@ -196,14 +196,14 @@ export default function ActivatePage() {
                   value={petData.address}
                   onChange={(e) => setPetData({ ...petData, address: e.target.value })}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                 />
               </div>
 
               {/* Vet Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="vetName" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="vetName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Veterinarian Name
                   </label>
                   <input
@@ -212,11 +212,11 @@ export default function ActivatePage() {
                     value={petData.vetName}
                     onChange={(e) => setPetData({ ...petData, vetName: e.target.value })}
                     placeholder="Dr. Smith"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                   />
                 </div>
                 <div>
-                  <label htmlFor="vetAddress" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="vetAddress" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Vet Clinic Address
                   </label>
                   <input
@@ -225,14 +225,14 @@ export default function ActivatePage() {
                     value={petData.vetAddress}
                     onChange={(e) => setPetData({ ...petData, vetAddress: e.target.value })}
                     placeholder="123 Main St, City, State"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                   />
                 </div>
               </div>
 
               {/* Medical Info */}
               <div>
-                <label htmlFor="allergies" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="allergies" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Allergies & Medical Information
                 </label>
                 <textarea
@@ -241,13 +241,13 @@ export default function ActivatePage() {
                   onChange={(e) => setPetData({ ...petData, allergies: e.target.value })}
                   rows={3}
                   placeholder="List any allergies, medications, or medical conditions..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                 />
               </div>
 
               {/* Temperament */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   Pet is good with:
                 </label>
                 <div className="space-y-2">
@@ -256,27 +256,27 @@ export default function ActivatePage() {
                       type="checkbox"
                       checked={petData.goodWithDogs}
                       onChange={(e) => setPetData({ ...petData, goodWithDogs: e.target.checked })}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="ml-2 text-gray-700">Dogs</span>
+                    <span className="ml-2 text-gray-700 dark:text-gray-300">Dogs</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
                       checked={petData.goodWithCats}
                       onChange={(e) => setPetData({ ...petData, goodWithCats: e.target.checked })}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="ml-2 text-gray-700">Cats</span>
+                    <span className="ml-2 text-gray-700 dark:text-gray-300">Cats</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
                       checked={petData.goodWithChildren}
                       onChange={(e) => setPetData({ ...petData, goodWithChildren: e.target.checked })}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="ml-2 text-gray-700">Children</span>
+                    <span className="ml-2 text-gray-700 dark:text-gray-300">Children</span>
                   </label>
                 </div>
               </div>
@@ -289,22 +289,22 @@ export default function ActivatePage() {
         )}
 
         {step === 3 && (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <Check className="w-8 h-8 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Profile Created!</h1>
-            <p className="text-gray-600 mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Profile Created!</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
               Your pet's profile is now active. The QR code on tag {tagCode} will now
               direct to their profile page.
             </p>
 
-            <div className="bg-gray-50 rounded-lg p-6 mb-8">
-              <h3 className="font-semibold text-gray-900 mb-2">What's next?</h3>
-              <ul className="text-left text-gray-600 space-y-2">
-                <li>• Attach the tag to your pet's collar</li>
-                <li>• Test the QR code by scanning it with your phone</li>
-                <li>• Update the profile anytime from your account</li>
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 mb-8">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">What's next?</h3>
+              <ul className="text-left text-gray-600 dark:text-gray-400 space-y-2">
+                <li>- Attach the tag to your pet's collar</li>
+                <li>- Test the QR code by scanning it with your phone</li>
+                <li>- Update the profile anytime from your account</li>
               </ul>
             </div>
 

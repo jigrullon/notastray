@@ -25,7 +25,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo)
-    
+
     // Check if it's a chunk loading error
     if (error.name === 'ChunkLoadError' || error.message.includes('Loading chunk')) {
       // Automatically retry after a short delay for chunk errors
@@ -51,21 +51,21 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 function DefaultErrorFallback({ error, retry }: { error?: Error; retry: () => void }) {
   const isChunkError = error?.name === 'ChunkLoadError' || error?.message.includes('Loading chunk')
-  
+
   if (isChunkError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Updating...
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             The app is being updated. This will only take a moment.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             If this takes too long, try refreshing the page.
           </p>
         </div>
@@ -74,15 +74,15 @@ function DefaultErrorFallback({ error, retry }: { error?: Error; retry: () => vo
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <AlertTriangle className="w-8 h-8 text-red-600" />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+        <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
           Something went wrong
         </h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
           We encountered an unexpected error. Please try again.
         </p>
         <button
@@ -93,10 +93,10 @@ function DefaultErrorFallback({ error, retry }: { error?: Error; retry: () => vo
         </button>
         {error && (
           <details className="mt-4 text-left">
-            <summary className="text-sm text-gray-500 cursor-pointer">
+            <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer">
               Technical details
             </summary>
-            <pre className="text-xs text-gray-400 mt-2 overflow-auto">
+            <pre className="text-xs text-gray-400 dark:text-gray-500 mt-2 overflow-auto">
               {error.message}
             </pre>
           </details>
