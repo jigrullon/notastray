@@ -1,156 +1,184 @@
 'use client'
 
+import { useState } from 'react'
 import { Check, Star, Shield, Zap, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/AuthContext'
+import { useCart } from '@/lib/CartContext'
+import ImageZoom from '@/components/ImageZoom'
 
-const products = [
-  {
-    id: 1,
-    name: "Classic QR Tag",
-    price: 19.99,
-    image: "/api/placeholder/300/300",
-    features: ["Waterproof", "Durable plastic", "QR code + backup info", "Multiple colors"],
-    popular: false
-  },
-  {
-    id: 2,
-    name: "Premium Metal Tag",
-    price: 29.99,
-    image: "/api/placeholder/300/300",
-    features: ["Stainless steel", "Laser engraved", "QR code + backup info", "Lifetime warranty"],
-    popular: true
-  },
-  {
-    id: 3,
-    name: "Smart Tag Pro",
-    price: 39.99,
-    image: "/api/placeholder/300/300",
-    features: ["GPS tracking", "Activity monitoring", "QR code + backup info", "Mobile app"],
-    popular: false
-  }
+const productImages = [
+  { src: '/enlarged.jpg', alt: 'NotAStray Smart Pet Tag - Main product image' },
+  { src: '/sizes.jpeg', alt: 'NotAStray Smart Pet Tag - Size reference' },
+  { src: '/size-penny.jpeg', alt: 'NotAStray Smart Pet Tag - Size compared to penny' },
+  { src: '/colors.jpeg', alt: 'NotAStray Smart Pet Tag - Available colors' },
+]
+
+const colorOptions = ['Red', 'Blue', 'Pink', 'Teal', 'Black']
+const sizeOptions = ['Small', 'Medium', 'Large']
+
+const featureBullets = [
+  'Waterproof',
+  'QR code technology',
+  'Instant SMS/Email alerts',
+  'Lifetime profile updates',
 ]
 
 export default function ShopPage() {
   const { user } = useAuth()
+  const { addItem, setIsCartOpen } = useCart()
+  const [selectedColor, setSelectedColor] = useState(colorOptions[0])
+  const [selectedSize, setSelectedSize] = useState(sizeOptions[0])
 
   return (
     <div className="bg-transparent">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-b from-gray-50 to-brand-cream py-16">
+      {/* Back Button & Header */}
+      <section className="bg-gradient-to-b from-gray-50 to-brand-cream dark:from-gray-900 dark:to-gray-800 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-6">
+          <div className="mb-4">
             <Link
               href={user ? '/dashboard' : '/'}
-              className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center"
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium inline-flex items-center"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Link>
           </div>
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Choose the perfect tag for your pet
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              All tags include QR code technology, profile setup, and lifetime profile updates
-            </p>
-          </div>
         </div>
       </section>
 
-      {/* Products Grid */}
-      <section className="py-16">
+      {/* Product Detail Section */}
+      <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {products.map((product) => (
-              <div key={product.id} className="relative bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                {product.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-primary-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16">
+            {/* Left Column - Image Gallery */}
+            <div>
+              <ImageZoom images={productImages} />
+            </div>
 
-                <div className="p-6">
-                  {/* Product Image */}
-                  <div className="w-full h-48 bg-gray-100 rounded-lg mb-6 flex items-center justify-center">
-                    <div className="w-24 h-24 bg-primary-600 rounded-lg flex items-center justify-center">
-                      <Shield className="w-12 h-12 text-white" />
-                    </div>
-                  </div>
+            {/* Right Column - Product Info */}
+            <div className="flex flex-col">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+                NotAStray Smart Pet Tag
+              </h1>
 
-                  {/* Product Info */}
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{product.name}</h3>
-                  <div className="flex items-center mb-4">
-                    <span className="text-3xl font-bold text-gray-900">${product.price}</span>
-                    <span className="text-gray-500 ml-2">one-time</span>
-                  </div>
+              <p className="text-3xl font-bold text-primary-600 mb-6">
+                $14.95
+              </p>
 
-                  {/* Features */}
-                  <ul className="space-y-2 mb-6">
-                    {product.features.map((feature, index) => (
-                      <li key={index} className="flex items-center text-gray-600">
-                        <Check className="w-4 h-4 text-green-500 mr-2" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* CTA Button */}
-                  <Link
-                    href={`/shop/checkout?productId=${product.id}`}
-                    className={`block w-full text-center py-3 rounded-lg font-medium transition-colors ${product.popular
-                      ? 'bg-primary-600 hover:bg-primary-400 text-white'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                      }`}>
-                    Buy Now
-                  </Link>
-                </div>
+              {/* Color Selector */}
+              <div className="mb-4">
+                <label
+                  htmlFor="color-select"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Color
+                </label>
+                <select
+                  id="color-select"
+                  value={selectedColor}
+                  onChange={(e) => setSelectedColor(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  {colorOptions.map((color) => (
+                    <option key={color} value={color}>
+                      {color}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ))}
+
+              {/* Size Selector */}
+              <div className="mb-6">
+                <label
+                  htmlFor="size-select"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Size
+                </label>
+                <select
+                  id="size-select"
+                  value={selectedSize}
+                  onChange={(e) => setSelectedSize(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  {sizeOptions.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Add to Cart Button */}
+              <button
+                onClick={() => {
+                  addItem({
+                    name: 'NotAStray Smart Pet Tag',
+                    color: selectedColor,
+                    size: selectedSize,
+                    quantity: 1,
+                    price: 14.95,
+                    image: '',
+                  })
+                  setIsCartOpen(true)
+                }}
+                className="block w-full text-center py-3 rounded-lg font-medium transition-colors bg-primary-600 hover:bg-primary-400 text-white mb-8"
+              >
+                Add to Cart
+              </button>
+
+              {/* Feature Bullets */}
+              <ul className="space-y-3">
+                {featureBullets.map((feature) => (
+                  <li key={feature} className="flex items-center text-gray-700 dark:text-gray-300">
+                    <Check className="w-5 h-5 text-green-500 mr-3 shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50">
+      {/* Why Choose NotAStray Section */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Why choose NotAStray?
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-6 h-6 text-primary-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Built to Last</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Built to Last</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 Waterproof, scratch-resistant, and designed for active pets
               </p>
             </div>
 
             <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Zap className="w-6 h-6 text-primary-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Instant Setup</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Instant Setup</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 Get your pet protected in minutes with our simple activation process
               </p>
             </div>
 
             <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Star className="w-6 h-6 text-primary-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Lifetime Updates</h3>
-              <p className="text-gray-600">
-                Update your pet's profile anytime - no additional fees ever
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Lifetime Updates</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Update your pet&apos;s profile anytime - no additional fees ever
               </p>
             </div>
           </div>
@@ -160,43 +188,43 @@ export default function ShopPage() {
       {/* FAQ Section */}
       <section className="py-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 text-center mb-12">
             Frequently Asked Questions
           </h2>
 
           <div className="space-y-8">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 How does the QR code work?
               </h3>
-              <p className="text-gray-600">
-                Anyone can scan the QR code with their smartphone camera to instantly access your pet's profile page with your contact information.
+              <p className="text-gray-600 dark:text-gray-400">
+                Anyone can scan the QR code with their smartphone camera to instantly access your pet&apos;s profile page with your contact information.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 What if my phone number changes?
               </h3>
-              <p className="text-gray-600">
-                You can update your contact information anytime through your account dashboard. Changes are reflected immediately on your pet's profile.
+              <p className="text-gray-600 dark:text-gray-400">
+                You can update your contact information anytime through your account dashboard. Changes are reflected immediately on your pet&apos;s profile.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Are the tags durable?
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Yes! All our tags are waterproof and designed to withstand daily wear. The Premium Metal Tag comes with a lifetime warranty.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Do I need a smartphone to use this?
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 While QR codes work best with smartphones, each tag also includes backup contact information printed directly on the tag.
               </p>
             </div>

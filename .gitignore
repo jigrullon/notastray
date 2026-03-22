@@ -26,6 +26,7 @@ yarn-error.log*
 .env*.local
 .env
 .dev.vars
+.env.local.example
 
 # vercel
 .vercel
@@ -33,6 +34,45 @@ yarn-error.log*
 # wrangler (Cloudflare)
 .wrangler
 
+# claude
+.claude
+CLAUDE.md
+/specs
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI agent tool directories
+.adal/
+.agent/
+.agents/
+.augment/
+.codebuddy/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+skills-lock.json
+skills/
+.env.local.example

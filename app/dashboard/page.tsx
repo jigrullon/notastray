@@ -20,7 +20,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
       </div>
     )
@@ -30,10 +30,10 @@ export default function DashboardPage() {
 
   if (!user.emailVerified) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Email Not Verified</h2>
-          <p className="text-gray-600 mb-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Email Not Verified</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             Please check your email and click the verification link to access your dashboard.
           </p>
           <button
@@ -51,41 +51,41 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
 
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             Welcome back{user?.displayName ? `, ${user.displayName}` : ''}!
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Manage your pet tags and account settings
           </p>
         </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Tags</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Tags</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">0</p>
               </div>
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
                 <Package className="w-6 h-6 text-primary-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Scans</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Scans</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">0</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
                 <Heart className="w-6 h-6 text-green-600" />
               </div>
             </div>
@@ -96,18 +96,18 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Link
             href="/activate"
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
           >
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 transition-colors">
                   Activate a New Tag
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   Enter your tag code to set up a pet profile
                 </p>
               </div>
-              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center group-hover:bg-primary-200 transition-colors">
+              <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center group-hover:bg-primary-200 transition-colors">
                 <Package className="w-5 h-5 text-primary-600" />
               </div>
             </div>
@@ -115,18 +115,18 @@ export default function DashboardPage() {
 
           <Link
             href="/shop"
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
           >
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 transition-colors">
                   Order More Tags
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   Get additional QR code tags for your pets
                 </p>
               </div>
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
                 <Heart className="w-5 h-5 text-green-600" />
               </div>
             </div>
@@ -134,18 +134,18 @@ export default function DashboardPage() {
 
           <Link
             href="/settings/notifications"
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
           >
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 transition-colors">
                   Notification Settings
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   Configure how you receive scan alerts
                 </p>
               </div>
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                 <Settings className="w-5 h-5 text-blue-600" />
               </div>
             </div>
@@ -153,18 +153,18 @@ export default function DashboardPage() {
 
           <Link
             href="/resources"
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
           >
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 transition-colors">
                   Pet Safety Resources
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   Tips and guides for keeping your pet safe
                 </p>
               </div>
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
                 <Heart className="w-5 h-5 text-purple-600" />
               </div>
             </div>
@@ -173,11 +173,11 @@ export default function DashboardPage() {
 
         {/* My Tags Section */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">My Pet Tags</h2>
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">My Pet Tags</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No tags yet</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No tags yet</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Activate your first tag to start protecting your pet
             </p>
             <Link
