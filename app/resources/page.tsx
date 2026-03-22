@@ -12,6 +12,9 @@ const categories = [
   { name: "Emergency", count: articles.filter(a => a.category === "Emergency").length },
   { name: "Travel", count: articles.filter(a => a.category === "Travel").length },
   { name: "Education", count: articles.filter(a => a.category === "Education").length },
+  { name: "Community", count: articles.filter(a => a.category === "Community").length },
+  { name: "Prevention", count: articles.filter(a => a.category === "Prevention").length },
+  { name: "Family", count: articles.filter(a => a.category === "Family").length },
 ]
 
 export default function ResourcesPage() {
