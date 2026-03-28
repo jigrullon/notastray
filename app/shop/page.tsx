@@ -14,8 +14,8 @@ const productImages = [
   { src: '/colors.jpeg', alt: 'NotAStray Smart Pet Tag - Available colors' },
 ]
 
-const colorOptions = ['Red', 'Blue', 'Pink', 'Teal', 'Black']
-const sizeOptions = ['Small', 'Medium', 'Large']
+const colorOptions = ['Choose One', 'Red', 'Blue', 'Pink', 'Teal', 'Black']
+const sizeOptions = ['Choose One', 'Small', 'Medium', 'Large']
 
 const featureBullets = [
   'Waterproof',
@@ -29,6 +29,7 @@ export default function ShopPage() {
   const { addItem, setIsCartOpen } = useCart()
   const [selectedColor, setSelectedColor] = useState(colorOptions[0])
   const [selectedSize, setSelectedSize] = useState(sizeOptions[0])
+  const [error, setError] = useState('')
 
   return (
     <div className="bg-transparent">
@@ -111,8 +112,19 @@ export default function ShopPage() {
               </div>
 
               {/* Add to Cart Button */}
+              {error && (
+                <p className="text-red-600 dark:text-red-400 text-sm mb-2">{error}</p>
+              )}
               <button
                 onClick={() => {
+                  const missing = []
+                  if (selectedColor === 'Choose One') missing.push('color')
+                  if (selectedSize === 'Choose One') missing.push('size')
+                  if (missing.length > 0) {
+                    setError(`Please select a ${missing.join(' and ')}.`)
+                    return
+                  }
+                  setError('')
                   addItem({
                     name: 'NotAStray Smart Pet Tag',
                     color: selectedColor,
