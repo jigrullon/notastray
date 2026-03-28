@@ -66,6 +66,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     Emergency: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200',
     Travel: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200',
     Education: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200',
+    Community: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200',
+    Prevention: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200',
+    Family: 'bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-200',
   }
 
   return (
