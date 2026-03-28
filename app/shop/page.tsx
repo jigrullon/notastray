@@ -14,13 +14,15 @@ const productImages = [
   { src: '/colors.jpeg', alt: 'NotAStray Smart Pet Tag - Available colors' },
 ]
 
-const colorOptions = ['Red', 'Blue', 'Pink', 'Teal', 'Black']
-const sizeOptions = ['Small', 'Medium', 'Large']
+const colorOptions = ['Choose One', 'Red', 'Blue', 'Pink', 'Teal', 'Black']
+const sizeOptions = ['Choose One', 'Small', 'Medium', 'Large']
 
 const featureBullets = [
   'Waterproof',
+  'Durable & scratch-resistant',
   'QR code technology',
-  'Instant SMS/Email alerts',
+  'No batteries or charging needed',
+  'Instant SMS/Email alerts (with Protect plan)',
   'Lifetime profile updates',
 ]
 
@@ -29,11 +31,12 @@ export default function ShopPage() {
   const { addItem, setIsCartOpen } = useCart()
   const [selectedColor, setSelectedColor] = useState(colorOptions[0])
   const [selectedSize, setSelectedSize] = useState(sizeOptions[0])
+  const [error, setError] = useState('')
 
   return (
     <div className="bg-transparent">
       {/* Back Button & Header */}
-      <section className="bg-gradient-to-b from-gray-50 to-brand-cream dark:from-gray-900 dark:to-gray-800 py-8">
+      <section className="bg-brand-cream dark:bg-gray-800 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-4">
             <Link
@@ -62,7 +65,7 @@ export default function ShopPage() {
                 NotAStray Smart Pet Tag
               </h1>
 
-              <p className="text-3xl font-bold text-primary-600 mb-6">
+              <p className="text-3xl font-bold text-primary-600 dark:text-primary-400 mb-6">
                 $14.95
               </p>
 
@@ -111,8 +114,19 @@ export default function ShopPage() {
               </div>
 
               {/* Add to Cart Button */}
+              {error && (
+                <p className="text-red-600 dark:text-red-400 text-sm mb-2">{error}</p>
+              )}
               <button
                 onClick={() => {
+                  const missing = []
+                  if (selectedColor === 'Choose One') missing.push('color')
+                  if (selectedSize === 'Choose One') missing.push('size')
+                  if (missing.length > 0) {
+                    setError(`Please select a ${missing.join(' and ')}.`)
+                    return
+                  }
+                  setError('')
                   addItem({
                     name: 'NotAStray Smart Pet Tag',
                     color: selectedColor,
@@ -123,7 +137,7 @@ export default function ShopPage() {
                   })
                   setIsCartOpen(true)
                 }}
-                className="block w-full text-center py-3 rounded-lg font-medium transition-colors bg-primary-600 hover:bg-primary-400 text-white mb-8"
+                className="block w-full text-center py-3 rounded-lg font-medium transition-colors bg-primary-600 dark:bg-primary-400 hover:bg-primary-400 text-white mb-8"
               >
                 Add to Cart
               </button>
@@ -143,7 +157,7 @@ export default function ShopPage() {
       </section>
 
       {/* Why Choose NotAStray Section */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-900">
+      <section className="py-16 bg-brand-cream dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
@@ -225,7 +239,7 @@ export default function ShopPage() {
                 Do I need a smartphone to use this?
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
-                While QR codes work best with smartphones, each tag also includes backup contact information printed directly on the tag.
+                While QR codes work best with smartphones, each tag also includes a code printed directly on the tag, which can be looked up <Link href="/lookup">here</Link>.
               </p>
             </div>
           </div>

@@ -30,7 +30,7 @@ export default function ResourcesPage() {
   return (
     <div className="bg-transparent">
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-gray-50 to-brand-cream dark:from-gray-900 dark:to-gray-800 py-16">
+      <section className="bg-brand-cream dark:bg-gray-800 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
             <Link
@@ -159,7 +159,7 @@ export default function ResourcesPage() {
       </section>
 
       {/* Newsletter Signup */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-900">
+      <section className="py-16 bg-brand-cream dark:bg-gray-900">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Stay updated on pet safety

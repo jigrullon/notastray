@@ -36,7 +36,7 @@ module.exports = {
         'brand-cream': '#F5F0E8',
       },
       fontFamily: {
-        sans: ['"Fredoka"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: ['"Montserrat"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif'],
       },
     },
   },

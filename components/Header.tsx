@@ -49,6 +49,9 @@ export default function Header() {
             <Link href="/resources" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium">
               Resources
             </Link>
+            <Link href="/lookup" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium">
+              Lookup
+            </Link>
             <Link href="/activate" className="btn-outline">
               Activate Tag
             </Link>
@@ -105,6 +108,9 @@ export default function Header() {
               </Link>
               <Link href="/resources" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium">
                 Resources
+              </Link>
+              <Link href="/lookup" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium">
+                Lookup
               </Link>
               <Link href="/activate" className="btn-outline w-full text-center">
                 Activate Tag

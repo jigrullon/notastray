@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { Mail, Phone, MapPin } from 'lucide-react'
+import { Mail, Phone, Facebook } from 'lucide-react'
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+    <footer className="bg-brand-cream dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
@@ -18,13 +18,18 @@ export default function Footer() {
               />
             </Link>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
-              Keeping pets safe with QR code ID tags. When your pet is found,
-              their profile is just a scan away.
+              Helping lost pets get home faster—just one scan away.
             </p>
             <div className="flex space-x-4 text-gray-500 dark:text-gray-400">
-              <Mail className="w-5 h-5" />
-              <Phone className="w-5 h-5" />
-              <MapPin className="w-5 h-5" />
+              <a href="mailto:notastray.hq@gmail.com" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors" aria-label="Email us">
+                <Mail className="w-5 h-5" />
+              </a>
+              <a href="tel:+14702107216" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors" aria-label="Call us">
+                <Phone className="w-5 h-5" />
+              </a>
+              <a href="https://www.facebook.com/profile.php?id=61577464901900" target="_blank" rel="noopener noreferrer" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors" aria-label="Facebook">
+                <Facebook className="w-5 h-5" />
+              </a>
             </div>
           </div>
 
