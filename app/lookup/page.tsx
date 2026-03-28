@@ -85,7 +85,7 @@ export default function LookupPage() {
   return (
     <div className="bg-transparent">
       {/* Header */}
-      <section className="bg-gradient-to-b from-gray-50 to-brand-cream dark:from-gray-900 dark:to-gray-800 py-8">
+      <section className="bg-brand-cream dark:bg-gray-800 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-4">
             <Link
