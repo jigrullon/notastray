@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { BookOpen, Shield, Heart, Zap, Calendar, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
@@ -19,8 +20,12 @@ const categories = [
 
 export default function ResourcesPage() {
   const { user } = useAuth()
+  const [activeCategory, setActiveCategory] = useState('All')
   const featuredArticles = articles.filter(article => article.featured)
   const regularArticles = articles.filter(article => !article.featured)
+  const filteredArticles = activeCategory === 'All'
+    ? regularArticles
+    : regularArticles.filter(article => article.category === activeCategory)
 
   return (
     <div className="bg-transparent">
@@ -121,7 +126,12 @@ export default function ResourcesPage() {
             {categories.map((category) => (
               <button
                 key={category.name}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                onClick={() => setActiveCategory(category.name)}
+                className={`px-4 py-2 rounded-lg border transition-colors ${
+                  activeCategory === category.name
+                    ? 'bg-primary-600 border-primary-600 text-white'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                }`}
               >
                 {category.name} ({category.count})
               </button>
@@ -130,7 +140,7 @@ export default function ResourcesPage() {
 
           {/* All Articles */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {regularArticles.map((article) => (
+            {filteredArticles.map((article) => (
               <Link key={article.id} href={'/resources/' + article.slug} className="group cursor-pointer block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-md dark:hover:shadow-gray-900/50 transition-shadow">
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3">
                   <span className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded text-xs font-medium mr-2">
