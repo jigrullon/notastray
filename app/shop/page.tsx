@@ -19,8 +19,10 @@ const sizeOptions = ['Choose One', 'Small', 'Medium', 'Large']
 
 const featureBullets = [
   'Waterproof',
+  'Durable & scratch-resistant',
   'QR code technology',
-  'Instant SMS/Email alerts',
+  'No batteries or charging needed',
+  'Instant SMS/Email alerts (with Protect plan)',
   'Lifetime profile updates',
 ]
 
