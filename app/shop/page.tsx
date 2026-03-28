@@ -63,7 +63,7 @@ export default function ShopPage() {
                 NotAStray Smart Pet Tag
               </h1>
 
-              <p className="text-3xl font-bold text-primary-600 mb-6">
+              <p className="text-3xl font-bold text-primary-600 dark:text-primary-400 mb-6">
                 $14.95
               </p>
 
@@ -135,7 +135,7 @@ export default function ShopPage() {
                   })
                   setIsCartOpen(true)
                 }}
-                className="block w-full text-center py-3 rounded-lg font-medium transition-colors bg-primary-600 hover:bg-primary-400 text-white mb-8"
+                className="block w-full text-center py-3 rounded-lg font-medium transition-colors bg-primary-600 dark:bg-primary-400 hover:bg-primary-400 text-white mb-8"
               >
                 Add to Cart
               </button>
