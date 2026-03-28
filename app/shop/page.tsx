@@ -237,7 +237,7 @@ export default function ShopPage() {
                 Do I need a smartphone to use this?
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
-                While QR codes work best with smartphones, each tag also includes backup contact information printed directly on the tag.
+                While QR codes work best with smartphones, each tag also includes a code printed directly on the tag, which can be looked up <Link href="/lookup">here</Link>.
               </p>
             </div>
           </div>
