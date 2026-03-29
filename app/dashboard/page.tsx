@@ -1,14 +1,38 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
-import { Loader2, Package, Settings, Heart } from 'lucide-react'
+import { Loader2, Package, Settings, Heart, Shield, Check, Star } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DashboardPage() {
   const router = useRouter()
   const { user, loading, logOut } = useAuth()
+  const [subscribeLoading, setSubscribeLoading] = useState(false)
+
+  const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
+    setSubscribeLoading(true)
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan,
+          userEmail: user?.email || undefined,
+          userId: user?.uid || undefined,
+        }),
+      })
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (err) {
+      console.error('Subscribe error:', err)
+    } finally {
+      setSubscribeLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!loading && !user) {
@@ -169,6 +193,58 @@ export default function DashboardPage() {
               </div>
             </div>
           </Link>
+        </div>
+
+        {/* PROTECT Plan Upsell */}
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg border-2 border-primary-200 dark:border-primary-800 p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center mb-3">
+                <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mr-3">
+                  <Shield className="w-5 h-5 text-primary-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">PROTECT Plan</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Get instant alerts when your tag is scanned</p>
+                </div>
+              </div>
+              <ul className="space-y-1.5 mb-3">
+                <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
+                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  Instant SMS &amp; Email scan alerts
+                </li>
+                <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
+                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  Advanced location tracking
+                </li>
+                <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
+                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  Detailed medical profile
+                </li>
+              </ul>
+              <Link href="/protect" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                Learn more &rarr;
+              </Link>
+            </div>
+            <div className="flex flex-col gap-2 md:min-w-[200px]">
+              <button
+                onClick={() => handleSubscribe('monthly')}
+                disabled={subscribeLoading}
+                className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70"
+              >
+                {subscribeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '$3/month'}
+              </button>
+              <button
+                onClick={() => handleSubscribe('yearly')}
+                disabled={subscribeLoading}
+                className="w-full border border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70"
+              >
+                {subscribeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                  <span>$30/year <span className="text-primary-400 dark:text-primary-500 text-xs ml-1">Save $6</span></span>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* My Tags Section */}

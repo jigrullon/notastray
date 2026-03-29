@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Camera, Upload, Check, ArrowLeft } from 'lucide-react'
+import { Camera, Upload, Check, ArrowLeft, Shield, Star, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '../../lib/AuthContext'
 
@@ -49,9 +49,34 @@ export default function ActivatePage() {
     }
   }
 
+  const [subscribeLoading, setSubscribeLoading] = useState(false)
+
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setStep(3)
+  }
+
+  const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
+    setSubscribeLoading(true)
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan,
+          userEmail: user?.email || undefined,
+          userId: user?.uid || undefined,
+        }),
+      })
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (err) {
+      console.error('Subscribe error:', err)
+    } finally {
+      setSubscribeLoading(false)
+    }
   }
 
   return (
@@ -289,32 +314,91 @@ export default function ActivatePage() {
         )}
 
         {step === 3 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-8 h-8 text-green-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Profile Created!</h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-8">
-              Your pet's profile is now active. The QR code on tag {tagCode} will now
-              direct to their profile page.
-            </p>
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8 text-center">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Check className="w-8 h-8 text-green-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Profile Created!</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-8">
+                Your pet's profile is now active. The QR code on tag {tagCode} will now
+                direct to their profile page.
+              </p>
 
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 mb-8">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">What's next?</h3>
-              <ul className="text-left text-gray-600 dark:text-gray-400 space-y-2">
-                <li>- Attach the tag to your pet's collar</li>
-                <li>- Test the QR code by scanning it with your phone</li>
-                <li>- Update the profile anytime from your account</li>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 mb-8">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">What&apos;s next?</h3>
+                <ul className="text-left text-gray-600 dark:text-gray-400 space-y-2">
+                  <li>- Attach the tag to your pet&apos;s collar</li>
+                  <li>- Test the QR code by scanning it with your phone</li>
+                  <li>- Update the profile anytime from your account</li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button className="btn-primary flex-1">
+                  View Profile
+                </button>
+                <button className="btn-outline flex-1">
+                  Manage Account
+                </button>
+              </div>
+            </div>
+
+            {/* PROTECT Plan Upsell */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8 border-2 border-primary-200 dark:border-primary-800">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mr-3">
+                  <Shield className="w-5 h-5 text-primary-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Add the PROTECT Plan</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Get the most out of your tag</p>
+                </div>
+              </div>
+
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Get instant SMS and email alerts when your tag is scanned, advanced location tracking, and a detailed medical profile for your pet.
+              </p>
+
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
+                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  Instant SMS &amp; Email scan alerts
+                </li>
+                <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
+                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  Advanced location tracking
+                </li>
+                <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
+                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  Detailed medical profile
+                </li>
               </ul>
-            </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button className="btn-primary flex-1">
-                View Profile
-              </button>
-              <button className="btn-outline flex-1">
-                Manage Account
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <button
+                  onClick={() => handleSubscribe('monthly')}
+                  disabled={subscribeLoading}
+                  className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70"
+                >
+                  {subscribeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '$3/month'}
+                </button>
+                <button
+                  onClick={() => handleSubscribe('yearly')}
+                  disabled={subscribeLoading}
+                  className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70"
+                >
+                  {subscribeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                    <span>$30/year <span className="text-primary-200 text-xs ml-1">Save $6</span></span>
+                  )}
+                </button>
+              </div>
+
+              <div className="text-center">
+                <Link href="/protect" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                  Learn more about the PROTECT plan &rarr;
+                </Link>
+              </div>
             </div>
           </div>
         )}
