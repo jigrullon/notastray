@@ -52,6 +52,12 @@ export async function POST(request: Request) {
                 plan,
                 type: 'protect_subscription',
             },
+            subscription_data: {
+                metadata: {
+                    userId: userId || '',
+                    plan,
+                },
+            },
         };
 
         if (userEmail && userEmail !== 'guest@example.com') {

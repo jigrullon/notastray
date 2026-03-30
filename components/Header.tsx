@@ -56,8 +56,8 @@ export default function Header() {
               Activate Tag
             </Link>
             {user && (
-              <Link href="/settings/notifications" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium">
-                Settings
+              <Link href="/dashboard" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium">
+                Dashboard
               </Link>
             )}
             <button
@@ -116,8 +116,8 @@ export default function Header() {
                 Activate Tag
               </Link>
               {user && (
-                <Link href="/settings/notifications" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium">
-                  Settings
+                <Link href="/dashboard" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium">
+                  Dashboard
                 </Link>
               )}
               <button
