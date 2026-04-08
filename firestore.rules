@@ -12,6 +12,17 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Tags - public read (QR code scanners need to see pet profiles), owner write
+    match /tags/{code} {
+      allow read: if true;
+      allow create, update: if request.auth != null && (
+        // Allow if tag is unassigned (first activation)
+        resource == null || resource.data.userId == null ||
+        // Allow if user owns the tag
+        resource.data.userId == request.auth.uid
+      );
+    }
+
     // Orders - created by webhook (server-side), readable for order verification
     // NOTE: For development/testing - relaxed rules. Tighten for production.
     match /orders/{orderId} {

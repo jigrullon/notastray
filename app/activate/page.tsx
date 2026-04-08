@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Camera, Upload, Check, ArrowLeft, Shield, Star, Loader2 } from 'lucide-react'
+import { Camera, Upload, Check, ArrowLeft, Shield, Star, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '../../lib/AuthContext'
+import { db } from '@/lib/firebase'
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore'
 
 export default function ActivatePage() {
   const { user } = useAuth()
@@ -42,18 +44,82 @@ export default function ActivatePage() {
     setPetData({ ...petData, phone: formatted })
   }
 
-  const handleCodeSubmit = (e: React.FormEvent) => {
+  const [activateError, setActivateError] = useState<string | null>(null)
+  const [activateLoading, setActivateLoading] = useState(false)
+
+  const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (tagCode.length >= 6) {
+    setActivateError(null)
+    if (tagCode.length < 6) return
+
+    // Validate tag exists in Firestore and is not already active
+    try {
+      const tagDoc = await getDoc(doc(db, 'tags', tagCode.toUpperCase()))
+      if (!tagDoc.exists()) {
+        setActivateError('Tag code not found. Please check and try again.')
+        return
+      }
+      if (tagDoc.data().isActive) {
+        setActivateError('This tag has already been activated.')
+        return
+      }
+      setTagCode(tagCode.toUpperCase())
       setStep(2)
+    } catch (err) {
+      console.error('Error validating tag:', err)
+      setActivateError('Unable to verify tag. Please try again.')
     }
   }
 
   const [subscribeLoading, setSubscribeLoading] = useState(false)
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStep(3)
+    if (!user) {
+      setActivateError('You must be logged in to activate a tag.')
+      return
+    }
+    setActivateLoading(true)
+    setActivateError(null)
+
+    try {
+      const tagRef = doc(db, 'tags', tagCode)
+      const userRef = doc(db, 'users', user.uid)
+
+      // Write pet profile to tag document
+      await updateDoc(tagRef, {
+        isActive: true,
+        userId: user.uid,
+        pet: {
+          name: petData.name,
+          photo: '', // TODO: upload to Firebase Storage
+          ownerName: petData.ownerName,
+          ownerAddress: petData.address,
+          ownerPhone: petData.phone,
+          vetName: petData.vetName,
+          vetAddress: petData.vetAddress,
+          allergies: petData.allergies,
+          goodWithDogs: petData.goodWithDogs,
+          goodWithCats: petData.goodWithCats,
+          goodWithChildren: petData.goodWithChildren,
+        },
+        activatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+
+      // Add tag code to user's tagCodes array
+      await updateDoc(userRef, {
+        tagCodes: arrayUnion(tagCode),
+        updatedAt: new Date().toISOString(),
+      })
+
+      setStep(3)
+    } catch (err) {
+      console.error('Error activating tag:', err)
+      setActivateError('Failed to activate tag. Please try again.')
+    } finally {
+      setActivateLoading(false)
+    }
   }
 
   const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
@@ -69,6 +135,10 @@ export default function ActivatePage() {
         }),
       })
       const data = await response.json()
+      if (!response.ok) {
+        alert(data.error || 'You already have an active subscription.')
+        return
+      }
       if (data.url) {
         window.location.href = data.url
       }
@@ -129,6 +199,12 @@ export default function ActivatePage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   This code is printed on your tag and looks like "ABC123"
                 </p>
+                {activateError && (
+                  <div className="mt-3 flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    {activateError}
+                  </div>
+                )}
               </div>
 
               <button
@@ -306,8 +382,20 @@ export default function ActivatePage() {
                 </div>
               </div>
 
-              <button type="submit" className="w-full btn-primary py-3 text-lg">
-                Create Profile
+              {activateError && (
+                <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  {activateError}
+                </div>
+              )}
+
+              <button type="submit" className="w-full btn-primary py-3 text-lg flex items-center justify-center" disabled={activateLoading}>
+                {activateLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Activating...
+                  </>
+                ) : 'Create Profile'}
               </button>
             </form>
           </div>

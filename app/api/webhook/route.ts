@@ -41,7 +41,7 @@ async function writeSubscriptionToFirestore(userId: string, subscription: any): 
         return;
     }
 
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/owners/${userId}`;
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
 
     // Check if document exists first
     const getResponse = await fetch(firestoreUrl, { method: 'GET' });
@@ -81,7 +81,7 @@ async function writeSubscriptionToFirestore(userId: string, subscription: any): 
 
         // If document doesn't exist, create it
         if (response.status === 404) {
-            const createUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/owners?documentId=${userId}`;
+            const createUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users?documentId=${userId}`;
             const createResponse = await fetch(createUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

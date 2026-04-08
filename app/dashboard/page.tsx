@@ -1,26 +1,50 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { db } from '@/lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
-import { Loader2, Package, Settings, Heart, Shield, Check, X } from 'lucide-react'
+import { doc, getDoc, collection, getDocs, query, where, documentId } from 'firebase/firestore'
+import { Loader2, Package, Settings, Heart, Shield, Check, QrCode } from 'lucide-react'
 import Link from 'next/link'
 
 interface SubscriptionData {
   status: 'active' | 'canceled' | 'past_due' | 'none'
   plan?: 'monthly' | 'yearly'
   stripeSubscriptionId?: string
+  currentPeriodEnd?: string
+}
+
+interface TagData {
+  code: string
+  petName: string
+  isActive: boolean
+  activatedAt?: string
 }
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-brand-cream dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
+  )
+}
+
+function DashboardContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, loading, logOut } = useAuth()
   const [subscribeLoading, setSubscribeLoading] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [subscription, setSubscription] = useState<SubscriptionData>({ status: 'none' })
   const [subLoading, setSubLoading] = useState(true)
+  const [subscribeError, setSubscribeError] = useState<string | null>(null)
+  const [tags, setTags] = useState<TagData[]>([])
+  const [tagsLoading, setTagsLoading] = useState(true)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -28,34 +52,102 @@ export default function DashboardPage() {
     }
   }, [user, loading, router])
 
-  // Fetch subscription status from Firestore
+  // Fetch user's tags from Firestore
+  useEffect(() => {
+    async function fetchTags() {
+      if (!user) return
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid))
+        const tagCodes: string[] = userDoc.exists() ? (userDoc.data().tagCodes || []) : []
+        if (tagCodes.length === 0) {
+          setTags([])
+          return
+        }
+
+        // Fetch tag documents in batches of 10 (Firestore 'in' query limit)
+        const allTags: TagData[] = []
+        for (let i = 0; i < tagCodes.length; i += 10) {
+          const batch = tagCodes.slice(i, i + 10)
+          const tagsQuery = query(collection(db, 'tags'), where(documentId(), 'in', batch))
+          const snapshot = await getDocs(tagsQuery)
+          snapshot.forEach(tagDoc => {
+            const data = tagDoc.data()
+            allTags.push({
+              code: tagDoc.id,
+              petName: data.pet?.name || 'Unnamed',
+              isActive: data.isActive || false,
+              activatedAt: data.activatedAt || undefined,
+            })
+          })
+        }
+        setTags(allTags)
+      } catch (err) {
+        console.error('Error fetching tags:', err)
+      } finally {
+        setTagsLoading(false)
+      }
+    }
+    if (user) fetchTags()
+  }, [user])
+
+  // Fetch subscription status via API (checks Firestore + Stripe)
   useEffect(() => {
     async function fetchSubscription() {
       if (!user) return
       try {
-        const docRef = doc(db, 'owners', user.uid)
-        const docSnap = await getDoc(docRef)
-        if (docSnap.exists()) {
-          const data = docSnap.data()
-          if (data.subscription && data.subscription.status === 'active') {
-            setSubscription({
-              status: 'active',
-              plan: data.subscription.plan || 'monthly',
-              stripeSubscriptionId: data.subscription.stripeSubscriptionId,
-            })
-          }
+        const response = await fetch('/api/subscribe/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: user.email,
+            userId: user.uid,
+          }),
+        })
+        const data = await response.json()
+        if (data.status === 'active') {
+          setSubscription({
+            status: 'active',
+            plan: data.plan || 'monthly',
+            stripeSubscriptionId: data.stripeSubscriptionId,
+            currentPeriodEnd: data.currentPeriodEnd,
+          })
+          return true
         }
+        return false
       } catch (err) {
         console.error('Error fetching subscription:', err)
+        return false
       } finally {
         setSubLoading(false)
       }
     }
-    if (user) fetchSubscription()
-  }, [user])
+
+    if (user) {
+      const justSubscribed = searchParams.get('subscribed') === 'true'
+      if (justSubscribed) {
+        // Webhook may not have fired yet — poll a few times
+        let attempts = 0
+        const poll = async () => {
+          const found = await fetchSubscription()
+          if (!found && attempts < 5) {
+            attempts++
+            setTimeout(poll, 2000)
+          }
+          if (found) {
+            router.replace('/dashboard', { scroll: false })
+          }
+        }
+        poll()
+      } else {
+        fetchSubscription()
+      }
+    }
+  }, [user, searchParams, router])
 
   const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
+    if (isSubscribed) return
     setSubscribeLoading(true)
+    setSubscribeError(null)
     try {
       const response = await fetch('/api/subscribe', {
         method: 'POST',
@@ -67,11 +159,16 @@ export default function DashboardPage() {
         }),
       })
       const data = await response.json()
+      if (!response.ok) {
+        setSubscribeError(data.error || 'Something went wrong. Please try again.')
+        return
+      }
       if (data.url) {
         window.location.href = data.url
       }
     } catch (err) {
       console.error('Subscribe error:', err)
+      setSubscribeError('Something went wrong. Please try again.')
     } finally {
       setSubscribeLoading(false)
     }
@@ -92,7 +189,23 @@ export default function DashboardPage() {
       })
       const data = await response.json()
       if (data.status === 'canceled') {
-        setSubscription({ status: 'none' })
+        // Re-fetch true status — other active subs may still exist
+        const statusRes = await fetch('/api/subscribe/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userEmail: user?.email, userId: user?.uid }),
+        })
+        const statusData = await statusRes.json()
+        if (statusData.status === 'active') {
+          setSubscription({
+            status: 'active',
+            plan: statusData.plan || 'monthly',
+            stripeSubscriptionId: statusData.stripeSubscriptionId,
+            currentPeriodEnd: statusData.currentPeriodEnd,
+          })
+        } else {
+          setSubscription({ status: 'none' })
+        }
       }
     } catch (err) {
       console.error('Cancel error:', err)
@@ -163,7 +276,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Tags</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">0</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">{tags.filter(t => t.isActive).length}</p>
               </div>
               <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
                 <Package className="w-6 h-6 text-primary-600" />
@@ -275,16 +388,23 @@ export default function DashboardPage() {
                       <Shield className="w-5 h-5 text-primary-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">PROTECT Plan</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        You&apos;re Subscribed!
+                      </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {subscription.plan === 'yearly' ? '$30/year' : '$3/month'} &middot; Active
+                        PROTECT Plan &middot; {subscription.plan === 'yearly' ? 'Annual ($30/year)' : 'Monthly ($3/month)'}
                       </p>
+                      {subscription.currentPeriodEnd && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          Next renewal: {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-xs font-medium">
                       <Check className="w-3 h-3" />
-                      Subscribed
+                      Active
                     </span>
                     <button
                       onClick={handleCancel}
@@ -329,6 +449,9 @@ export default function DashboardPage() {
                     </Link>
                   </div>
                   <div className="flex flex-col gap-2 md:min-w-[200px]">
+                    {subscribeError && (
+                      <p className="text-sm text-red-600 dark:text-red-400 text-center">{subscribeError}</p>
+                    )}
                     <button
                       onClick={() => handleSubscribe('monthly')}
                       disabled={subscribeLoading}
@@ -354,13 +477,8 @@ export default function DashboardPage() {
 
         {/* My Tags Section */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">My Pet Tags</h2>
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No tags yet</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Activate your first tag to start protecting your pet
-            </p>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Pet Tags</h2>
             <Link
               href="/activate"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-400 transition-colors"
@@ -368,6 +486,62 @@ export default function DashboardPage() {
               Activate a Tag
             </Link>
           </div>
+
+          {tagsLoading ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
+              <Loader2 className="w-8 h-8 text-primary-600 animate-spin mx-auto" />
+            </div>
+          ) : tags.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
+              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No tags yet</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Activate your first tag to start protecting your pet
+              </p>
+              <Link
+                href="/activate"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-400 transition-colors"
+              >
+                Activate a Tag
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tags.map(tag => (
+                <Link
+                  key={tag.code}
+                  href={`/pet/${tag.code}`}
+                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5 hover:border-primary-300 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                      <QrCode className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 transition-colors">
+                        {tag.petName}
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{tag.code}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      tag.isActive
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {tag.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                    {tag.activatedAt && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                        {new Date(tag.activatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -7,6 +7,23 @@ interface SubscribeRequest {
     userId?: string;
 }
 
+async function checkExistingSubscription(userId: string): Promise<boolean> {
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+    if (!projectId || !userId) return false;
+
+    try {
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
+        const response = await fetch(firestoreUrl, { method: 'GET' });
+        if (!response.ok) return false;
+
+        const doc = await response.json();
+        const subscriptionStatus = doc.fields?.subscription?.mapValue?.fields?.status?.stringValue;
+        return subscriptionStatus === 'active';
+    } catch {
+        return false;
+    }
+}
+
 export async function POST(request: Request) {
     if (!process.env.STRIPE_SECRET_KEY) {
         return NextResponse.json({ error: 'Stripe configuration missing' }, { status: 500 });
@@ -19,6 +36,36 @@ export async function POST(request: Request) {
     try {
         const body: SubscribeRequest = await request.json();
         const { plan, userEmail, userId } = body;
+
+        // Block if user already has an active subscription in Firestore
+        if (userId) {
+            const alreadySubscribed = await checkExistingSubscription(userId);
+            if (alreadySubscribed) {
+                return NextResponse.json(
+                    { error: 'You already have an active PROTECT Plan subscription.' },
+                    { status: 409 }
+                );
+            }
+        }
+
+        // Also check Stripe for active subscriptions by email to catch edge cases
+        // Use limit: 5 and iterate all customers — each checkout may create a separate customer
+        if (userEmail && userEmail !== 'guest@example.com') {
+            const existingCustomers = await stripe.customers.list({ email: userEmail, limit: 5 });
+            for (const customer of existingCustomers.data) {
+                const activeSubs = await stripe.subscriptions.list({
+                    customer: customer.id,
+                    status: 'active',
+                    limit: 1,
+                });
+                if (activeSubs.data.length > 0) {
+                    return NextResponse.json(
+                        { error: 'You already have an active PROTECT Plan subscription.' },
+                        { status: 409 }
+                    );
+                }
+            }
+        }
 
         const priceData = plan === 'yearly'
             ? { unit_amount: 3000, interval: 'year' as const }
