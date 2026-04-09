@@ -13,7 +13,8 @@ import {
     GoogleAuthProvider,
     signInWithPopup
 } from 'firebase/auth';
-import { auth } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 interface AuthContextType {
     user: User | null;
@@ -52,6 +53,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
         }
 
+        // Create Firestore user document with subscription defaults
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+            displayName,
+            email,
+            subscription: {
+                status: 'none',
+                plan: null,
+                stripeSubscriptionId: null,
+                stripeCustomerId: null,
+                currentPeriodEnd: null,
+                createdAt: null,
+            },
+            tagCodes: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }, { merge: true });
+
         // Send verification email
         await sendEmailVerification(userCredential.user);
 
@@ -62,9 +80,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return signInWithEmailAndPassword(auth, email, password);
     };
 
-    const signInWithGoogle = () => {
+    const signInWithGoogle = async () => {
         const provider = new GoogleAuthProvider();
-        return signInWithPopup(auth, provider);
+        const userCredential = await signInWithPopup(auth, provider);
+
+        // Create Firestore user document if it doesn't exist
+        const userDoc = doc(db, 'users', userCredential.user.uid);
+        const existing = await getDoc(userDoc);
+        if (!existing.exists()) {
+            await setDoc(userDoc, {
+                displayName: userCredential.user.displayName || '',
+                email: userCredential.user.email || '',
+                subscription: {
+                    status: 'none',
+                    plan: null,
+                    stripeSubscriptionId: null,
+                    stripeCustomerId: null,
+                    currentPeriodEnd: null,
+                    createdAt: null,
+                },
+                tagCodes: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            });
+        }
+
+        return userCredential;
     };
 
     const logOut = () => {

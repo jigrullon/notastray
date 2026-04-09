@@ -34,6 +34,70 @@ function addBusinessDays(startDate: Date, days: number): Date {
     return current;
 }
 
+async function writeSubscriptionToFirestore(userId: string, subscription: any): Promise<void> {
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+    if (!projectId) {
+        console.error('Firebase project ID not configured');
+        return;
+    }
+
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
+
+    // Check if document exists first
+    const getResponse = await fetch(firestoreUrl, { method: 'GET' });
+    const existingFields: Record<string, any> = {};
+
+    if (getResponse.ok) {
+        const existingDoc = await getResponse.json();
+        if (existingDoc.fields) {
+            Object.assign(existingFields, existingDoc.fields);
+        }
+    }
+
+    // Merge subscription data into existing document
+    existingFields.subscription = {
+        mapValue: {
+            fields: {
+                status: { stringValue: subscription.status },
+                plan: { stringValue: subscription.plan },
+                stripeSubscriptionId: { stringValue: subscription.stripeSubscriptionId },
+                stripeCustomerId: { stringValue: subscription.stripeCustomerId || '' },
+                currentPeriodEnd: { stringValue: subscription.currentPeriodEnd || '' },
+                createdAt: { stringValue: new Date().toISOString() },
+            }
+        }
+    };
+
+    const patchUrl = `${firestoreUrl}?updateMask.fieldPaths=subscription`;
+    const response = await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: existingFields }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Firestore subscription write error:', errorText);
+
+        // If document doesn't exist, create it
+        if (response.status === 404) {
+            const createUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users?documentId=${userId}`;
+            const createResponse = await fetch(createUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fields: existingFields }),
+            });
+            if (createResponse.ok) {
+                console.log('Owner document created with subscription for user:', userId);
+            } else {
+                console.error('Firestore create error:', await createResponse.text());
+            }
+        }
+    } else {
+        console.log('Subscription written to Firestore for user:', userId);
+    }
+}
+
 async function writeOrderToFirestore(order: any): Promise<void> {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
     if (!projectId) {
@@ -139,11 +203,19 @@ export async function POST(request: Request) {
                 const userId = session.metadata?.userId;
                 const isSubscription = session.mode === 'subscription';
 
-                if (userId) {
-                    console.log(`Processing ${isSubscription ? 'subscription' : 'purchase'} for user ${userId}`);
-
-                    if (isSubscription) {
-                        console.log(`[Mock Action] Granting 'plus' tier to user ${userId}`);
+                if (userId && isSubscription) {
+                    // Retrieve the subscription from Stripe
+                    const stripeSubscriptionId = session.subscription as string;
+                    if (stripeSubscriptionId) {
+                        const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+                        const plan = session.metadata?.plan || 'monthly';
+                        await writeSubscriptionToFirestore(userId, {
+                            status: 'active',
+                            plan,
+                            stripeSubscriptionId,
+                            stripeCustomerId: session.customer as string || '',
+                            currentPeriodEnd: new Date((stripeSub as any).current_period_end * 1000).toISOString(),
+                        });
                     }
                 }
 
@@ -211,6 +283,37 @@ export async function POST(request: Request) {
                 await writeOrderToFirestore(order);
 
                 break;
+
+            case 'customer.subscription.deleted': {
+                const canceledSub = event.data.object as Stripe.Subscription;
+                const canceledUserId = canceledSub.metadata?.userId;
+                if (canceledUserId) {
+                    await writeSubscriptionToFirestore(canceledUserId, {
+                        status: 'canceled',
+                        plan: canceledSub.metadata?.plan || '',
+                        stripeSubscriptionId: canceledSub.id,
+                        stripeCustomerId: canceledSub.customer as string || '',
+                        currentPeriodEnd: new Date((canceledSub as any).current_period_end * 1000).toISOString(),
+                    });
+                    console.log('Subscription canceled for user:', canceledUserId);
+                }
+                break;
+            }
+
+            case 'customer.subscription.updated': {
+                const updatedSub = event.data.object as Stripe.Subscription;
+                const updatedUserId = updatedSub.metadata?.userId;
+                if (updatedUserId) {
+                    await writeSubscriptionToFirestore(updatedUserId, {
+                        status: updatedSub.status === 'active' ? 'active' : updatedSub.status,
+                        plan: updatedSub.metadata?.plan || '',
+                        stripeSubscriptionId: updatedSub.id,
+                        stripeCustomerId: updatedSub.customer as string || '',
+                        currentPeriodEnd: new Date((updatedSub as any).current_period_end * 1000).toISOString(),
+                    });
+                }
+                break;
+            }
 
             default:
                 console.log(`Unhandled event type ${event.type}`);

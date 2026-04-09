@@ -7,6 +7,20 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Allow users to read and write their own owner profile (subscription, tags, etc.)
+    match /owners/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Tags - public read (QR code scanners need to see pet profiles), owner write
+    // NOTE: update allowed without auth for server-side operations (webhook, reset-test-tag)
+    // and for tag owners. Tighten with Firebase Admin SDK in production.
+    match /tags/{code} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+    }
+
     // Orders - created by webhook (server-side), readable for order verification
     // NOTE: For development/testing - relaxed rules. Tighten for production.
     match /orders/{orderId} {
