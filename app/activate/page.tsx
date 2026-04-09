@@ -1,19 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Camera, Upload, Check, ArrowLeft, Shield, Star, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '../../lib/AuthContext'
-import { db } from '@/lib/firebase'
+import { db, storage } from '@/lib/firebase'
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 export default function ActivatePage() {
   const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [tagCode, setTagCode] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [petData, setPetData] = useState({
     name: '',
     photo: null as File | null,
+    species: '',
+    breed: '',
     ownerName: '',
     address: '',
     phone: '',
@@ -24,6 +28,11 @@ export default function ActivatePage() {
     goodWithCats: false,
     goodWithChildren: false,
   })
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setPetData({ ...petData, photo: file })
+  }
 
   // Phone number formatting function
   const formatPhoneNumber = (value: string) => {
@@ -59,7 +68,7 @@ export default function ActivatePage() {
         setActivateError('Tag code not found. Please check and try again.')
         return
       }
-      if (tagDoc.data().isActive) {
+      if (tagDoc.data().isActive && !tagDoc.data().isTestTag) {
         setActivateError('This tag has already been activated.')
         return
       }
@@ -86,13 +95,23 @@ export default function ActivatePage() {
       const tagRef = doc(db, 'tags', tagCode)
       const userRef = doc(db, 'users', user.uid)
 
+      // Upload photo to Firebase Storage if provided
+      let photoUrl = ''
+      if (petData.photo) {
+        const storageRef = ref(storage, `pet-photos/${tagCode}/${Date.now()}-${petData.photo.name}`)
+        await uploadBytes(storageRef, petData.photo)
+        photoUrl = await getDownloadURL(storageRef)
+      }
+
       // Write pet profile to tag document
       await updateDoc(tagRef, {
         isActive: true,
         userId: user.uid,
         pet: {
           name: petData.name,
-          photo: '', // TODO: upload to Firebase Storage
+          photo: photoUrl,
+          species: petData.species,
+          breed: petData.breed,
           ownerName: petData.ownerName,
           ownerAddress: petData.address,
           ownerPhone: petData.phone,
@@ -103,6 +122,8 @@ export default function ActivatePage() {
           goodWithCats: petData.goodWithCats,
           goodWithChildren: petData.goodWithChildren,
         },
+        isLost: false,
+        foundReports: [],
         activatedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
@@ -231,13 +252,64 @@ export default function ActivatePage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Pet Photo
                 </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
                 <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-                  <Camera className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  {petData.photo ? (
+                    <img
+                      src={URL.createObjectURL(petData.photo)}
+                      alt="Pet preview"
+                      className="w-32 h-32 object-cover rounded-lg mx-auto mb-4"
+                    />
+                  ) : (
+                    <Camera className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  )}
                   <p className="text-gray-600 dark:text-gray-400 mb-2">Upload a clear photo of your pet</p>
-                  <button type="button" className="btn-outline">
+                  <button type="button" className="btn-outline" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="w-4 h-4 mr-2" />
                     Choose Photo
                   </button>
+                </div>
+              </div>
+
+              {/* Species & Breed */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="species" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Type of Animal *
+                  </label>
+                  <select
+                    id="species"
+                    value={petData.species}
+                    onChange={(e) => setPetData({ ...petData, species: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                    required
+                  >
+                    <option value="">Select...</option>
+                    <option value="Dog">Dog</option>
+                    <option value="Cat">Cat</option>
+                    <option value="Bird">Bird</option>
+                    <option value="Rabbit">Rabbit</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="breed" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Breed
+                  </label>
+                  <input
+                    type="text"
+                    id="breed"
+                    value={petData.breed}
+                    onChange={(e) => setPetData({ ...petData, breed: e.target.value })}
+                    placeholder="e.g., Golden Retriever, Tabby, Cockatiel"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  />
                 </div>
               </div>
 
@@ -423,12 +495,12 @@ export default function ActivatePage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <button className="btn-primary flex-1">
+                <Link href={`/pet/${tagCode}`} className="btn-primary flex-1 text-center">
                   View Profile
-                </button>
-                <button className="btn-outline flex-1">
+                </Link>
+                <Link href="/dashboard" className="btn-outline flex-1 text-center">
                   Manage Account
-                </button>
+                </Link>
               </div>
             </div>
 

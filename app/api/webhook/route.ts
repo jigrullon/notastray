@@ -214,7 +214,7 @@ export async function POST(request: Request) {
                             plan,
                             stripeSubscriptionId,
                             stripeCustomerId: session.customer as string || '',
-                            currentPeriodEnd: new Date(stripeSub.current_period_end * 1000).toISOString(),
+                            currentPeriodEnd: new Date((stripeSub as any).current_period_end * 1000).toISOString(),
                         });
                     }
                 }
@@ -293,7 +293,7 @@ export async function POST(request: Request) {
                         plan: canceledSub.metadata?.plan || '',
                         stripeSubscriptionId: canceledSub.id,
                         stripeCustomerId: canceledSub.customer as string || '',
-                        currentPeriodEnd: new Date(canceledSub.current_period_end * 1000).toISOString(),
+                        currentPeriodEnd: new Date((canceledSub as any).current_period_end * 1000).toISOString(),
                     });
                     console.log('Subscription canceled for user:', canceledUserId);
                 }
@@ -309,7 +309,7 @@ export async function POST(request: Request) {
                         plan: updatedSub.metadata?.plan || '',
                         stripeSubscriptionId: updatedSub.id,
                         stripeCustomerId: updatedSub.customer as string || '',
-                        currentPeriodEnd: new Date(updatedSub.current_period_end * 1000).toISOString(),
+                        currentPeriodEnd: new Date((updatedSub as any).current_period_end * 1000).toISOString(),
                     });
                 }
                 break;

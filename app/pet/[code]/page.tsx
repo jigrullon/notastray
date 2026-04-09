@@ -18,17 +18,23 @@ async function getPetData(code: string) {
 
     const pet = fields.pet.mapValue.fields;
     return {
-      name: pet.name?.stringValue || '',
-      photo: pet.photo?.stringValue || '/api/placeholder/300/300',
-      owner: pet.ownerName?.stringValue || '',
-      address: pet.ownerAddress?.stringValue || '',
-      phone: pet.ownerPhone?.stringValue || '',
-      vet: pet.vetName?.stringValue || '',
-      vetAddress: pet.vetAddress?.stringValue || '',
-      allergies: pet.allergies?.stringValue || '',
-      goodWithDogs: pet.goodWithDogs?.booleanValue || false,
-      goodWithCats: pet.goodWithCats?.booleanValue || false,
-      goodWithChildren: pet.goodWithChildren?.booleanValue || false,
+      petData: {
+        name: pet.name?.stringValue || '',
+        photo: pet.photo?.stringValue || '/api/placeholder/300/300',
+        owner: pet.ownerName?.stringValue || '',
+        address: pet.ownerAddress?.stringValue || '',
+        phone: pet.ownerPhone?.stringValue || '',
+        vet: pet.vetName?.stringValue || '',
+        vetAddress: pet.vetAddress?.stringValue || '',
+        allergies: pet.allergies?.stringValue || '',
+        goodWithDogs: pet.goodWithDogs?.booleanValue || false,
+        goodWithCats: pet.goodWithCats?.booleanValue || false,
+        goodWithChildren: pet.goodWithChildren?.booleanValue || false,
+      },
+      userId: fields.userId?.stringValue || undefined,
+      isLost: fields.isLost?.booleanValue || false,
+      species: pet.species?.stringValue || '',
+      breed: pet.breed?.stringValue || '',
     };
   } catch (err) {
     console.error('Error fetching pet data:', err);
@@ -42,9 +48,9 @@ export default async function PetProfilePage({
   params: Promise<{ code: string }>
 }) {
   const { code } = await params
-  const petData = await getPetData(code.toUpperCase())
+  const result = await getPetData(code.toUpperCase())
 
-  if (!petData) {
+  if (!result) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow text-center">
@@ -63,5 +69,7 @@ export default async function PetProfilePage({
     )
   }
 
-  return <PetProfileClient petData={petData} tagCode={code} />
+  const { petData, userId, isLost, species, breed } = result
+
+  return <PetProfileClient petData={petData} tagCode={code} userId={userId} isLost={isLost} species={species} breed={breed} />
 }
