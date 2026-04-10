@@ -118,6 +118,13 @@ export default function HomePage() {
               </p>
             </div>
           </div>
+
+          <div className="text-center mt-10">
+            <Link href="/resources/faq" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium inline-flex items-center gap-1">
+              Have questions? Check out our FAQ
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </Link>
+          </div>
         </div>
       </section>
 
