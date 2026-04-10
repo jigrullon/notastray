@@ -38,6 +38,15 @@ export default function Header() {
               width={180}
               height={60}
               priority
+              className="dark:hidden"
+            />
+            <Image
+              src="/logo-darkmode.jpeg"
+              alt="NotAStray - One scan brings them home"
+              width={180}
+              height={60}
+              priority
+              className="hidden dark:block"
             />
           </Link>
 
