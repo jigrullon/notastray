@@ -164,13 +164,30 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
 
   const handleSave = async () => {
     setSaving(true)
-    try {
-      let photoUrl = editData.photo
-      if (photoFile) {
+    let photoUrl = editData.photo
+    let photoError = false
+
+    // Upload new photo if one was selected — isolated so a storage failure
+    // doesn't block saving the rest of the profile.
+    if (photoFile) {
+      try {
         const storageRef = ref(storage, `pet-photos/${tagCode.toUpperCase()}/${Date.now()}-${photoFile.name}`)
-        await uploadBytes(storageRef, photoFile)
+
+        // Race the upload against a 30-second timeout so it fails fast
+        // instead of spinning indefinitely if storage is unreachable.
+        const uploadTimeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Photo upload timed out')), 30000)
+        )
+        await Promise.race([uploadBytes(storageRef, photoFile), uploadTimeout])
         photoUrl = await getDownloadURL(storageRef)
+      } catch (photoErr) {
+        console.error('Photo upload failed:', photoErr)
+        photoError = true
+        // Keep existing photo URL so the rest of the profile still saves.
       }
+    }
+
+    try {
       const upperCode = tagCode.toUpperCase()
       await updateDoc(doc(db, 'tags', upperCode), {
         pet: {
@@ -190,11 +207,19 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
         },
         updatedAt: new Date().toISOString(),
       })
-      window.location.reload()
+
+      if (photoError) {
+        alert('Profile saved, but the photo could not be uploaded. Please try changing the photo again.')
+        setPhotoFile(null)
+        setPhotoPreview(null)
+        setEditing(false)
+        setSaving(false)
+      } else {
+        window.location.reload()
+      }
     } catch (err) {
       console.error('Error saving profile:', err)
       alert('Failed to save changes. Please try again.')
-    } finally {
       setSaving(false)
     }
   }

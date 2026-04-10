@@ -281,14 +281,13 @@ export default function ActivatePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="species" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Type of Animal *
+                    Type of Animal
                   </label>
                   <select
                     id="species"
                     value={petData.species}
                     onChange={(e) => setPetData({ ...petData, species: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                    required
                   >
                     <option value="">Select...</option>
                     <option value="Dog">Dog</option>
@@ -316,7 +315,7 @@ export default function ActivatePage() {
               {/* Pet Name */}
               <div>
                 <label htmlFor="petName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Pet Name *
+                  Pet Name
                 </label>
                 <input
                   type="text"
@@ -324,7 +323,6 @@ export default function ActivatePage() {
                   value={petData.name}
                   onChange={(e) => setPetData({ ...petData, name: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                  required
                 />
               </div>
 
@@ -332,7 +330,7 @@ export default function ActivatePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Owner's First Name *
+                    Owner's First Name
                   </label>
                   <input
                     type="text"
@@ -340,12 +338,11 @@ export default function ActivatePage() {
                     value={petData.ownerName}
                     onChange={(e) => setPetData({ ...petData, ownerName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                    required
                   />
                 </div>
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Phone Number *
+                    Phone Number
                   </label>
                   <input
                     type="tel"
@@ -355,7 +352,6 @@ export default function ActivatePage() {
                     placeholder="123-456-7890"
                     maxLength={12}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                    required
                   />
                 </div>
               </div>
