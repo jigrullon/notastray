@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server'
-import sgMail from '@sendgrid/mail'
-import twilio from 'twilio'
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns'
+
+const sesClient = new SESClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    }
+})
+
+const snsClient = new SNSClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    }
+})
 
 export async function POST(request: Request) {
     try {
@@ -15,57 +31,57 @@ export async function POST(request: Request) {
         }
 
         if (type === 'email') {
-            const apiKey = process.env.SENDGRID_API_KEY
-            const fromEmail = process.env.SENDGRID_FROM_EMAIL
+            const fromEmail = process.env.AWS_SES_FROM_EMAIL || 'notifications@notastray.com'
 
-            if (!apiKey || !fromEmail) {
-                throw new Error('SendGrid configuration missing')
+            if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+                throw new Error('AWS credentials missing')
             }
 
-            sgMail.setApiKey(apiKey)
+            const command = new SendEmailCommand({
+                Source: fromEmail,
+                Destination: {
+                    ToAddresses: [to],
+                },
+                Message: {
+                    Subject: {
+                        Data: 'Test Notification from NotAStray',
+                    },
+                    Body: {
+                        Html: {
+                            Data: `
+                                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                                    <h1 style="color: #4F46E5;">It works!</h1>
+                                    <p>This is a test notification from your NotAStray pet tag settings.</p>
+                                    <p>If you received this, your email notifications are correctly configured.</p>
+                                    <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
+                                    <p style="color: #6B7280; font-size: 12px;">NotAStray Pet Safety System</p>
+                                </div>
+                            `,
+                        },
+                    },
+                },
+            })
 
-            const msg = {
-                to: to,
-                from: fromEmail,
-                subject: 'Test Notification from NotAStray',
-                text: 'This is a test notification to verify your settings.',
-                html: `
-          <div style="font-family: sans-serif; max-w-600px; margin: 0 auto;">
-            <h1 style="color: #4F46E5;">It works!</h1>
-            <p>This is a test notification from your NotAStray pet tag settings.</p>
-            <p>If you received this, your email notifications are correctly configured.</p>
-            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
-            <p style="color: #6B7280; font-size: 12px;">NotAStray Pet Safety System</p>
-          </div>
-        `,
-            }
-
-            await sgMail.send(msg)
+            await sesClient.send(command)
             return NextResponse.json({ success: true, message: 'Email sent successfully' })
 
         } else if (type === 'sms') {
-            const accountSid = process.env.TWILIO_ACCOUNT_SID
-            const authToken = process.env.TWILIO_AUTH_TOKEN
-            const fromNumber = process.env.TWILIO_PHONE_NUMBER
-
-            if (!accountSid || !authToken || !fromNumber) {
-                throw new Error('Twilio configuration missing')
+            if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+                throw new Error('AWS credentials missing')
             }
 
             // Normalize to E.164 format (+1XXXXXXXXXX) — strips spaces, dashes, parens, etc.
             const digits = to.replace(/\D/g, '')
             const toE164 = digits.startsWith('1') ? `+${digits}` : `+1${digits}`
 
-            const client = twilio(accountSid, authToken)
-
-            console.log(`[SMS Test] From: ${fromNumber} | To: ${toE164}`)
-
-            await client.messages.create({
-                body: 'NotAStray Test: This is a test notification. Your settings are working correctly!',
-                from: fromNumber,
-                to: toE164,
+            const command = new PublishCommand({
+                Message: 'NotAStray Test: This is a test notification. Your settings are working correctly!',
+                PhoneNumber: toE164,
             })
 
+            console.log(`[SMS Test] To: ${toE164}`)
+
+            await snsClient.send(command)
             return NextResponse.json({ success: true, message: 'SMS sent successfully' })
         }
 

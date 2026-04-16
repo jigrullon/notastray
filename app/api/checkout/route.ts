@@ -11,6 +11,14 @@ interface CheckoutRequest {
     }>;
     userEmail?: string;
     userId?: string;
+    shippingOption?: {
+        service: string;
+        cost: number;
+        minDays: number;
+        maxDays: number;
+        displayName: string;
+    };
+    shippingZipCode?: string;
 }
 
 export async function POST(request: Request) {
@@ -24,7 +32,7 @@ export async function POST(request: Request) {
 
     try {
         const body: CheckoutRequest = await request.json();
-        const { items, userEmail, userId } = body;
+        const { items, userEmail, userId, shippingOption, shippingZipCode } = body;
 
         const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item) => ({
             price_data: {
@@ -47,6 +55,8 @@ export async function POST(request: Request) {
                 userId: userId || '',
                 items: JSON.stringify(items.map(i => ({ name: i.name, color: i.color, size: i.size, quantity: i.quantity, price: i.price }))),
                 type: 'one_time_purchase',
+                shippingOption: shippingOption?.service || '',
+                shippingZipCode: shippingZipCode || '',
             },
         };
 
@@ -55,30 +65,37 @@ export async function POST(request: Request) {
             sessionParams.customer_email = userEmail;
         }
 
-        sessionParams.shipping_options = [
-            {
-                shipping_rate_data: {
-                    type: 'fixed_amount',
-                    fixed_amount: { amount: 499, currency: 'usd' },
-                    display_name: 'Standard Shipping (5-7 business days)',
-                    delivery_estimate: {
-                        minimum: { unit: 'business_day', value: 5 },
-                        maximum: { unit: 'business_day', value: 7 },
+        // Set shipping options
+        if (shippingOption) {
+            sessionParams.shipping_options = [
+                {
+                    shipping_rate_data: {
+                        type: 'fixed_amount',
+                        fixed_amount: { amount: Math.round(shippingOption.cost * 100), currency: 'usd' },
+                        display_name: shippingOption.displayName,
+                        delivery_estimate: {
+                            minimum: { unit: 'business_day', value: shippingOption.minDays },
+                            maximum: { unit: 'business_day', value: shippingOption.maxDays },
+                        },
                     },
                 },
-            },
-            {
-                shipping_rate_data: {
-                    type: 'fixed_amount',
-                    fixed_amount: { amount: 999, currency: 'usd' },
-                    display_name: 'Expedited Shipping (2-3 business days)',
-                    delivery_estimate: {
-                        minimum: { unit: 'business_day', value: 2 },
-                        maximum: { unit: 'business_day', value: 3 },
+            ];
+        } else {
+            // Fallback if no shipping option provided (shouldn't happen with new frontend)
+            sessionParams.shipping_options = [
+                {
+                    shipping_rate_data: {
+                        type: 'fixed_amount',
+                        fixed_amount: { amount: 499, currency: 'usd' },
+                        display_name: 'Standard Shipping',
+                        delivery_estimate: {
+                            minimum: { unit: 'business_day', value: 5 },
+                            maximum: { unit: 'business_day', value: 7 },
+                        },
                     },
                 },
-            },
-        ];
+            ];
+        }
 
         sessionParams.shipping_address_collection = {
             allowed_countries: ['US', 'CA'],

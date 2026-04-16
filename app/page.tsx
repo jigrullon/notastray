@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Shield, Smartphone, Heart, Users, Clock, MapPin } from 'lucide-react'
+import NewsletterSignup from '@/components/NewsletterSignup'
 
 export default function HomePage() {
   return (
@@ -125,6 +126,13 @@ export default function HomePage() {
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="py-20 bg-transparent">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <NewsletterSignup variant="full" />
         </div>
       </section>
 

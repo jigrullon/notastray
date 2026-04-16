@@ -1,6 +1,34 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
+async function subscribeToNewsletter(email: string, source: string): Promise<void> {
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+    if (!projectId || !email) return;
+
+    const docId = encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/newsletter_subscribers?documentId=${docId}`;
+
+    const doc = {
+        fields: {
+            email: { stringValue: email.toLowerCase().trim() },
+            source: { stringValue: source },
+            status: { stringValue: 'active' },
+            subscribedAt: { stringValue: new Date().toISOString() },
+        }
+    };
+
+    const response = await fetch(firestoreUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(doc),
+    });
+
+    if (!response.ok && response.status !== 409) {
+        console.error('Newsletter auto-enroll Firestore error:', await response.text());
+        return;
+    }
+}
+
 function generateOrderId(): string {
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -132,6 +160,8 @@ async function writeOrderToFirestore(order: any): Promise<void> {
             },
             subtotal: { doubleValue: order.subtotal },
             shippingMethod: { stringValue: order.shippingMethod },
+            shippingOption: { stringValue: order.shippingOption || '' },
+            shippingZipCode: { stringValue: order.shippingZipCode || '' },
             shippingCost: { doubleValue: order.shippingCost },
             total: { doubleValue: order.total },
             shippingAddress: {
@@ -231,6 +261,8 @@ export async function POST(request: Request) {
                 const shippingRate = fullSession.shipping_cost?.shipping_rate as Stripe.ShippingRate | undefined;
                 const shippingDisplayName = shippingRate?.display_name || '';
                 const shippingAmount = (fullSession.shipping_cost?.amount_total || 0) / 100;
+                const shippingOption = session.metadata?.shippingOption || '';
+                const shippingZipCode = session.metadata?.shippingZipCode || '';
 
                 // Calculate delivery dates based on shipping method
                 const now = new Date();
@@ -264,6 +296,8 @@ export async function POST(request: Request) {
                     items,
                     subtotal,
                     shippingMethod: shippingDisplayName,
+                    shippingOption,
+                    shippingZipCode,
                     shippingCost: shippingAmount,
                     total: subtotal + shippingAmount,
                     shippingAddress: {
@@ -281,6 +315,16 @@ export async function POST(request: Request) {
 
                 // Write order to Firestore
                 await writeOrderToFirestore(order);
+
+                // Auto-enroll buyer in newsletter mailing list
+                if (order.customerEmail) {
+                    try {
+                        await subscribeToNewsletter(order.customerEmail, 'purchase');
+                        console.log('Newsletter auto-enrolled buyer:', order.customerEmail);
+                    } catch (newsletterErr) {
+                        console.error('Newsletter auto-enroll failed (non-fatal):', newsletterErr);
+                    }
+                }
 
                 break;
 

@@ -1,6 +1,9 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import { Mail, Phone, Facebook } from 'lucide-react'
+import NewsletterSignup from '@/components/NewsletterSignup'
 
 export default function Footer() {
   return (
@@ -64,8 +67,13 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8 text-center text-gray-500 dark:text-gray-400">
-          <p>&copy; 2026 NotAStray. All rights reserved.</p>
+        <div className="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8">
+          <div className="mb-8">
+            <NewsletterSignup variant="compact" />
+          </div>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 text-center text-gray-500 dark:text-gray-400">
+            <p>&copy; 2026 NotAStray. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </footer>
