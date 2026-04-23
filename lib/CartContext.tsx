@@ -1,16 +1,17 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import {
+  CartItem,
+  MAX_QUANTITY,
+  addItemToCart,
+  removeItemFromCart,
+  updateItemQuantity,
+  calculateSubtotal,
+  calculateItemCount,
+} from './cart-operations'
 
-export interface CartItem {
-  id: string
-  name: string
-  color: string
-  size: string
-  quantity: number
-  price: number
-  image: string
-}
+export type { CartItem }
 
 interface CartContextType {
   items: CartItem[]
@@ -27,11 +28,6 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 const STORAGE_KEY = 'notastray-cart'
-const MAX_QUANTITY = 10
-
-function generateId(color: string, size: string): string {
-  return `${color}-${size}`
-}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
@@ -66,42 +62,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, isInitialized])
 
   const addItem = useCallback((item: Omit<CartItem, 'id'>) => {
-    const id = generateId(item.color, item.size)
-    setItems((prev) => {
-      const existing = prev.find((i) => i.id === id)
-      if (existing) {
-        return prev.map((i) =>
-          i.id === id
-            ? { ...i, quantity: Math.min(i.quantity + (item.quantity || 1), MAX_QUANTITY) }
-            : i
-        )
-      }
-      return [...prev, { ...item, id, quantity: Math.min(item.quantity || 1, MAX_QUANTITY) }]
-    })
+    setItems((prev) => addItemToCart(prev, item))
   }, [])
 
   const removeItem = useCallback((id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id))
+    setItems((prev) => removeItemFromCart(prev, id))
   }, [])
 
   const updateQuantity = useCallback((id: string, quantity: number) => {
-    if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.id !== id))
-      return
-    }
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, quantity: Math.min(quantity, MAX_QUANTITY) } : i
-      )
-    )
+    setItems((prev) => updateItemQuantity(prev, id, quantity))
   }, [])
 
   const clearCart = useCallback(() => {
     setItems([])
   }, [])
 
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const itemCount = calculateItemCount(items)
+  const subtotal = calculateSubtotal(items)
 
   return (
     <CartContext.Provider
