@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { adminDb } from '@/lib/firebaseAdmin';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -6,68 +7,21 @@ function encodeEmailId(email: string): string {
     return encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
 }
 
-async function writeSubscriberToFirestore(email: string, source: string): Promise<void> {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    if (!projectId) {
-        throw new Error('Firebase project ID not configured');
-    }
-
-    const docId = encodeEmailId(email);
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/newsletter_subscribers?documentId=${docId}`;
-
-    const doc = {
-        fields: {
-            email: { stringValue: email.toLowerCase().trim() },
-            source: { stringValue: source },
-            status: { stringValue: 'active' },
-            subscribedAt: { stringValue: new Date().toISOString() },
-        }
-    };
-
-    const response = await fetch(firestoreUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(doc),
-    });
-
-    if (!response.ok) {
-        // If document already exists (409), update it instead
-        if (response.status === 409) {
-            const patchUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/newsletter_subscribers/${docId}`;
-            const patchResponse = await fetch(patchUrl, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(doc),
-            });
-            if (!patchResponse.ok) {
-                const errText = await patchResponse.text();
-                console.error('Firestore newsletter patch error:', errText);
-            }
-        } else {
-            const errText = await response.text();
-            console.error('Firestore newsletter write error:', errText);
-            throw new Error('Failed to save subscriber');
-        }
-    }
-}
-
 async function checkAlreadySubscribed(email: string): Promise<boolean> {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    if (!projectId) return false;
-
     const docId = encodeEmailId(email);
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/newsletter_subscribers/${docId}`;
-
-    try {
-        const response = await fetch(firestoreUrl, { method: 'GET' });
-        if (!response.ok) return false;
-        const doc = await response.json();
-        return doc.fields?.status?.stringValue === 'active';
-    } catch {
-        return false;
-    }
+    const doc = await adminDb.collection('newsletter_subscribers').doc(docId).get();
+    return doc.exists && doc.data()?.status === 'active';
 }
 
+async function writeSubscriberToFirestore(email: string, source: string): Promise<void> {
+    const docId = encodeEmailId(email);
+    await adminDb.collection('newsletter_subscribers').doc(docId).set({
+        email: email.toLowerCase().trim(),
+        source,
+        status: 'active',
+        subscribedAt: new Date().toISOString(),
+    }, { merge: true });
+}
 
 export async function POST(request: Request) {
     try {

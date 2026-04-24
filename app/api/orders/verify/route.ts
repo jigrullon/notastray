@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { adminDb } from '@/lib/firebaseAdmin';
 
 function generateOrderId(): string {
     const now = new Date();
@@ -34,32 +35,6 @@ function addBusinessDays(startDate: Date, days: number): Date {
     return current;
 }
 
-function parseFirestoreValue(value: any): any {
-    if (value.stringValue !== undefined) return value.stringValue;
-    if (value.integerValue !== undefined) return parseInt(value.integerValue, 10);
-    if (value.doubleValue !== undefined) return value.doubleValue;
-    if (value.booleanValue !== undefined) return value.booleanValue;
-    if (value.arrayValue) {
-        return (value.arrayValue.values || []).map((v: any) => parseFirestoreValue(v));
-    }
-    if (value.mapValue) {
-        const result: any = {};
-        for (const [key, val] of Object.entries(value.mapValue.fields || {})) {
-            result[key] = parseFirestoreValue(val);
-        }
-        return result;
-    }
-    return null;
-}
-
-function parseFirestoreDocument(fields: any): any {
-    const result: any = {};
-    for (const [key, value] of Object.entries(fields)) {
-        result[key] = parseFirestoreValue(value);
-    }
-    return result;
-}
-
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('session_id');
@@ -77,53 +52,26 @@ export async function GET(request: Request) {
     });
 
     try {
-        // Retrieve the Stripe session with expanded data
         const fullSession = await stripe.checkout.sessions.retrieve(sessionId, {
             expand: ['line_items', 'shipping_cost.shipping_rate', 'payment_intent'],
         });
 
-        // Validate payment status
         if (fullSession.payment_status !== 'paid') {
             return NextResponse.json({ error: 'Payment not completed' }, { status: 400 });
         }
 
-        // Try to find order in Firestore
-        const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+        // Look up the order in Firestore by Stripe session ID
+        const snapshot = await adminDb
+            .collection('orders')
+            .where('stripeSessionId', '==', sessionId)
+            .limit(1)
+            .get();
 
-        if (projectId) {
-            const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
-            const queryBody = {
-                structuredQuery: {
-                    from: [{ collectionId: 'orders' }],
-                    where: {
-                        fieldFilter: {
-                            field: { fieldPath: 'stripeSessionId' },
-                            op: 'EQUAL',
-                            value: { stringValue: sessionId },
-                        },
-                    },
-                    limit: 1,
-                },
-            };
-
-            const queryResponse = await fetch(queryUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(queryBody),
-            });
-
-            if (queryResponse.ok) {
-                const queryResults = await queryResponse.json();
-                // Firestore returns an array; check if a document was found
-                if (queryResults.length > 0 && queryResults[0].document) {
-                    const doc = queryResults[0].document;
-                    const order = parseFirestoreDocument(doc.fields);
-                    return NextResponse.json(order);
-                }
-            }
+        if (!snapshot.empty) {
+            return NextResponse.json(snapshot.docs[0].data());
         }
 
-        // Fallback: construct order from Stripe session data (webhook race condition)
+        // Fallback: construct from Stripe session (handles webhook race condition)
         const items = JSON.parse(fullSession.metadata?.items || '[]');
         const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
 
