@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
+import { adminDb } from '@/lib/firebaseAdmin';
 
 /**
  * POST /api/import-tags
  * Body: { tags: [{ code, url }] }
  *
- * Bulk-imports tags into Firestore using the REST API (server-side, bypasses client security rules).
- * This is a one-time admin endpoint. Remove after use or add auth protection.
+ * Bulk-imports tags into Firestore via Firebase Admin SDK (server-side, bypasses security rules).
+ * Admin-only endpoint — protect or remove after use.
  */
 export async function POST(request: Request) {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    if (!projectId) {
-        return NextResponse.json({ error: 'Firebase project ID not configured' }, { status: 500 });
-    }
-
     try {
         const { tags } = await request.json();
         if (!Array.isArray(tags) || tags.length === 0) {
@@ -24,38 +20,45 @@ export async function POST(request: Request) {
         let skipped = 0;
         let errors = 0;
 
-        // Process in batches of 50 concurrent requests
+        // Process in batches of 50 (Firestore batch write limit is 500, but we check existence first)
         const BATCH_SIZE = 50;
         for (let i = 0; i < tags.length; i += BATCH_SIZE) {
-            const batch = tags.slice(i, i + BATCH_SIZE);
-            const results = await Promise.all(batch.map(async (tag: { code: string; url: string }) => {
-                const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/tags?documentId=${tag.code}`;
-                const response = await fetch(firestoreUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        fields: {
-                            code: { stringValue: tag.code },
-                            url: { stringValue: tag.url },
-                            isActive: { booleanValue: false },
-                            userId: { nullValue: null },
-                            pet: { nullValue: null },
-                            activatedAt: { nullValue: null },
-                            createdAt: { stringValue: now },
-                            updatedAt: { stringValue: now },
-                        }
-                    }),
-                });
+            const chunk = tags.slice(i, i + BATCH_SIZE) as { code: string; url: string }[];
 
-                if (response.ok) return 'created';
-                if (response.status === 409) return 'skipped'; // already exists
-                return 'error';
-            }));
+            // Check which docs already exist
+            const existingDocs = await Promise.all(
+                chunk.map(tag => adminDb.collection('tags').doc(tag.code).get())
+            );
 
-            for (const r of results) {
-                if (r === 'created') created++;
-                else if (r === 'skipped') skipped++;
-                else errors++;
+            const writeBatch = adminDb.batch();
+            let batchHasWrites = false;
+
+            existingDocs.forEach((doc, idx) => {
+                if (doc.exists) {
+                    skipped++;
+                } else {
+                    writeBatch.set(adminDb.collection('tags').doc(chunk[idx].code), {
+                        code: chunk[idx].code,
+                        url: chunk[idx].url,
+                        isActive: false,
+                        userId: null,
+                        pet: null,
+                        activatedAt: null,
+                        createdAt: now,
+                        updatedAt: now,
+                    });
+                    created++;
+                    batchHasWrites = true;
+                }
+            });
+
+            if (batchHasWrites) {
+                try {
+                    await writeBatch.commit();
+                } catch {
+                    errors += chunk.filter((_, idx) => !existingDocs[idx].exists).length;
+                    created -= chunk.filter((_, idx) => !existingDocs[idx].exists).length;
+                }
             }
         }
 

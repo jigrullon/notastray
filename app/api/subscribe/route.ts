@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { adminDb } from '@/lib/firebaseAdmin';
 
 interface SubscribeRequest {
     plan: 'monthly' | 'yearly';
@@ -8,17 +9,9 @@ interface SubscribeRequest {
 }
 
 async function checkExistingSubscription(userId: string): Promise<boolean> {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    if (!projectId || !userId) return false;
-
     try {
-        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
-        const response = await fetch(firestoreUrl, { method: 'GET' });
-        if (!response.ok) return false;
-
-        const doc = await response.json();
-        const subscriptionStatus = doc.fields?.subscription?.mapValue?.fields?.status?.stringValue;
-        return subscriptionStatus === 'active';
+        const doc = await adminDb.collection('users').doc(userId).get();
+        return doc.data()?.subscription?.status === 'active';
     } catch {
         return false;
     }
@@ -37,7 +30,6 @@ export async function POST(request: Request) {
         const body: SubscribeRequest = await request.json();
         const { plan, userEmail, userId } = body;
 
-        // Block if user already has an active subscription in Firestore
         if (userId) {
             const alreadySubscribed = await checkExistingSubscription(userId);
             if (alreadySubscribed) {
@@ -48,8 +40,6 @@ export async function POST(request: Request) {
             }
         }
 
-        // Also check Stripe for active subscriptions by email to catch edge cases
-        // Use limit: 5 and iterate all customers — each checkout may create a separate customer
         if (userEmail && userEmail !== 'guest@example.com') {
             const existingCustomers = await stripe.customers.list({ email: userEmail, limit: 5 });
             for (const customer of existingCustomers.data) {
