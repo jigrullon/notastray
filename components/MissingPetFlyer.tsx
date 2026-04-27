@@ -81,7 +81,6 @@ export default function MissingPetFlyer({
         scale: 2,
         backgroundColor: '#ffffff',
         logging: false,
-        timeout: 10000,
       })
 
       const canvas = await Promise.race([canvasPromise, timeoutPromise]) as HTMLCanvasElement

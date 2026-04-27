@@ -683,10 +683,10 @@ export default function ReportLostPage() {
               lastSeenLocation={`${report.street}, ${report.city}, ${report.state} ${report.postalCode}`}
               physicalDescription={profile.physicalDescription}
               medicalBehavioral={profile.medicalBehavioral}
-              ownerName={tagData?.pet?.ownerName}
-              ownerPhone={tagData?.pet?.ownerPhone}
-              vetName={tagData?.pet?.vetName}
-              vetAddress={tagData?.pet?.vetAddress}
+              ownerName={tagData?.pet?.ownerName as string | undefined}
+              ownerPhone={tagData?.pet?.ownerPhone as string | undefined}
+              vetName={tagData?.pet?.vetName as string | undefined}
+              vetAddress={tagData?.pet?.vetAddress as string | undefined}
               contactInfo={report.contactInfo}
               rewardOffered={report.rewardOffered}
               tagCode={upperCode}
