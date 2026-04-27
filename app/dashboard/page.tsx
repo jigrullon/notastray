@@ -19,6 +19,7 @@ interface TagData {
   code: string
   petName: string
   isActive: boolean
+  isLost: boolean
   activatedAt?: string
 }
 
@@ -76,6 +77,7 @@ function DashboardContent() {
               code: tagDoc.id,
               petName: data.pet?.name || 'Unnamed',
               isActive: data.isActive || false,
+              isLost: data.isLost || false,
               activatedAt: data.activatedAt || undefined,
             })
           })
@@ -508,13 +510,16 @@ function DashboardContent() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {tags.map(tag => (
-                <Link
+                <div
                   key={tag.code}
-                  href={`/pet/${tag.code}`}
-                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5 hover:border-primary-300 hover:shadow-md transition-all group"
+                  className={`bg-white dark:bg-gray-800 rounded-lg border p-5 transition-all flex flex-col ${
+                    tag.isLost
+                      ? 'border-orange-300 dark:border-orange-700'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:shadow-md'
+                  }`}
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                  <Link href={`/pet/${tag.code}`} className="group flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center shrink-0">
                       <QrCode className="w-5 h-5 text-primary-600" />
                     </div>
                     <div>
@@ -523,8 +528,9 @@ function DashboardContent() {
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{tag.code}</p>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
+                  </Link>
+
+                  <div className="flex items-center gap-2 mb-4">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                       tag.isActive
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
@@ -532,13 +538,34 @@ function DashboardContent() {
                     }`}>
                       {tag.isActive ? 'Active' : 'Inactive'}
                     </span>
+                    {tag.isLost && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
+                        Lost
+                      </span>
+                    )}
                     {tag.activatedAt && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
                         {new Date(tag.activatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     )}
                   </div>
-                </Link>
+
+                  <div className="mt-auto">
+                    {tag.isActive && !tag.isLost && (
+                      <Link
+                        href={`/report-lost/${tag.code}`}
+                        className="w-full text-center block px-3 py-1.5 rounded-md text-xs font-medium border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                      >
+                        Report Lost
+                      </Link>
+                    )}
+                    {tag.isLost && (
+                      <p className="text-xs text-center text-orange-600 dark:text-orange-400 font-medium">
+                        Marked as lost — visit the pet profile to mark found.
+                      </p>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           )}
