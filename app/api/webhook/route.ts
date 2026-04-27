@@ -1,32 +1,20 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { adminDb } from '@/lib/firebaseAdmin';
+
+function encodeEmailId(email: string): string {
+    return encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
+}
 
 async function subscribeToNewsletter(email: string, source: string): Promise<void> {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    if (!projectId || !email) return;
-
-    const docId = encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/newsletter_subscribers?documentId=${docId}`;
-
-    const doc = {
-        fields: {
-            email: { stringValue: email.toLowerCase().trim() },
-            source: { stringValue: source },
-            status: { stringValue: 'active' },
-            subscribedAt: { stringValue: new Date().toISOString() },
-        }
-    };
-
-    const response = await fetch(firestoreUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(doc),
-    });
-
-    if (!response.ok && response.status !== 409) {
-        console.error('Newsletter auto-enroll Firestore error:', await response.text());
-        return;
-    }
+    if (!email) return;
+    const docId = encodeEmailId(email);
+    await adminDb.collection('newsletter_subscribers').doc(docId).set({
+        email: email.toLowerCase().trim(),
+        source,
+        status: 'active',
+        subscribedAt: new Date().toISOString(),
+    }, { merge: true });
 }
 
 function generateOrderId(): string {
@@ -63,139 +51,41 @@ function addBusinessDays(startDate: Date, days: number): Date {
 }
 
 async function writeSubscriptionToFirestore(userId: string, subscription: any): Promise<void> {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    if (!projectId) {
-        console.error('Firebase project ID not configured');
-        return;
-    }
-
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
-
-    // Check if document exists first
-    const getResponse = await fetch(firestoreUrl, { method: 'GET' });
-    const existingFields: Record<string, any> = {};
-
-    if (getResponse.ok) {
-        const existingDoc = await getResponse.json();
-        if (existingDoc.fields) {
-            Object.assign(existingFields, existingDoc.fields);
-        }
-    }
-
-    // Merge subscription data into existing document
-    existingFields.subscription = {
-        mapValue: {
-            fields: {
-                status: { stringValue: subscription.status },
-                plan: { stringValue: subscription.plan },
-                stripeSubscriptionId: { stringValue: subscription.stripeSubscriptionId },
-                stripeCustomerId: { stringValue: subscription.stripeCustomerId || '' },
-                currentPeriodEnd: { stringValue: subscription.currentPeriodEnd || '' },
-                createdAt: { stringValue: new Date().toISOString() },
-            }
-        }
-    };
-
-    const patchUrl = `${firestoreUrl}?updateMask.fieldPaths=subscription`;
-    const response = await fetch(patchUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields: existingFields }),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Firestore subscription write error:', errorText);
-
-        // If document doesn't exist, create it
-        if (response.status === 404) {
-            const createUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users?documentId=${userId}`;
-            const createResponse = await fetch(createUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fields: existingFields }),
-            });
-            if (createResponse.ok) {
-                console.log('Owner document created with subscription for user:', userId);
-            } else {
-                console.error('Firestore create error:', await createResponse.text());
-            }
-        }
-    } else {
-        console.log('Subscription written to Firestore for user:', userId);
-    }
+    await adminDb.collection('users').doc(userId).set({
+        subscription: {
+            status: subscription.status,
+            plan: subscription.plan,
+            stripeSubscriptionId: subscription.stripeSubscriptionId,
+            stripeCustomerId: subscription.stripeCustomerId || '',
+            currentPeriodEnd: subscription.currentPeriodEnd || '',
+            createdAt: new Date().toISOString(),
+        },
+    }, { merge: true });
+    console.log('Subscription written to Firestore for user:', userId);
 }
 
 async function writeOrderToFirestore(order: any): Promise<void> {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    if (!projectId) {
-        console.error('Firebase project ID not configured');
-        return;
-    }
-
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/orders?documentId=${order.orderId}`;
-
-    const firestoreDoc = {
-        fields: {
-            orderId: { stringValue: order.orderId },
-            confirmationCode: { stringValue: order.confirmationCode },
-            stripeSessionId: { stringValue: order.stripeSessionId },
-            stripePaymentIntentId: { stringValue: order.stripePaymentIntentId || '' },
-            userId: { stringValue: order.userId || '' },
-            customerEmail: { stringValue: order.customerEmail || '' },
-            items: {
-                arrayValue: {
-                    values: order.items.map((item: any) => ({
-                        mapValue: {
-                            fields: {
-                                name: { stringValue: item.name },
-                                color: { stringValue: item.color },
-                                size: { stringValue: item.size },
-                                quantity: { integerValue: String(item.quantity) },
-                                unitPrice: { doubleValue: item.price },
-                            }
-                        }
-                    }))
-                }
-            },
-            subtotal: { doubleValue: order.subtotal },
-            shippingMethod: { stringValue: order.shippingMethod },
-            shippingOption: { stringValue: order.shippingOption || '' },
-            shippingZipCode: { stringValue: order.shippingZipCode || '' },
-            shippingCost: { doubleValue: order.shippingCost },
-            total: { doubleValue: order.total },
-            shippingAddress: {
-                mapValue: {
-                    fields: {
-                        name: { stringValue: order.shippingAddress?.name || '' },
-                        line1: { stringValue: order.shippingAddress?.line1 || '' },
-                        line2: { stringValue: order.shippingAddress?.line2 || '' },
-                        city: { stringValue: order.shippingAddress?.city || '' },
-                        state: { stringValue: order.shippingAddress?.state || '' },
-                        postalCode: { stringValue: order.shippingAddress?.postalCode || '' },
-                        country: { stringValue: order.shippingAddress?.country || '' },
-                    }
-                }
-            },
-            estimatedDeliveryMin: { stringValue: order.estimatedDeliveryMin },
-            estimatedDeliveryMax: { stringValue: order.estimatedDeliveryMax },
-            status: { stringValue: 'confirmed' },
-            createdAt: { stringValue: new Date().toISOString() },
-        }
-    };
-
-    const response = await fetch(firestoreUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(firestoreDoc),
+    await adminDb.collection('orders').doc(order.orderId).set({
+        orderId: order.orderId,
+        confirmationCode: order.confirmationCode,
+        stripeSessionId: order.stripeSessionId,
+        stripePaymentIntentId: order.stripePaymentIntentId || '',
+        userId: order.userId || '',
+        customerEmail: order.customerEmail || '',
+        items: order.items,
+        subtotal: order.subtotal,
+        shippingMethod: order.shippingMethod,
+        shippingOption: order.shippingOption || '',
+        shippingZipCode: order.shippingZipCode || '',
+        shippingCost: order.shippingCost,
+        total: order.total,
+        shippingAddress: order.shippingAddress,
+        estimatedDeliveryMin: order.estimatedDeliveryMin,
+        estimatedDeliveryMax: order.estimatedDeliveryMax,
+        status: 'confirmed',
+        createdAt: new Date().toISOString(),
     });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Firestore write error:', errorText);
-    } else {
-        console.log('Order written to Firestore:', order.orderId);
-    }
+    console.log('Order written to Firestore:', order.orderId);
 }
 
 export async function POST(request: Request) {
@@ -217,24 +107,17 @@ export async function POST(request: Request) {
 
     try {
         const bodyText = await request.text();
-        const event = stripe.webhooks.constructEvent(
-            bodyText,
-            signature,
-            webhookSecret
-        );
+        const event = stripe.webhooks.constructEvent(bodyText, signature, webhookSecret);
 
-        // Handle the event
         switch (event.type) {
-            case 'checkout.session.completed':
+            case 'checkout.session.completed': {
                 const session = event.data.object as Stripe.Checkout.Session;
                 console.log('Payment successful for session:', session.id);
 
-                // Retrieve userId from metadata
                 const userId = session.metadata?.userId;
                 const isSubscription = session.mode === 'subscription';
 
                 if (userId && isSubscription) {
-                    // Retrieve the subscription from Stripe
                     const stripeSubscriptionId = session.subscription as string;
                     if (stripeSubscriptionId) {
                         const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
@@ -249,12 +132,10 @@ export async function POST(request: Request) {
                     }
                 }
 
-                // Retrieve full session with expanded data for order creation
                 const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
                     expand: ['line_items', 'shipping_cost.shipping_rate', 'payment_intent'],
                 });
 
-                // Extract shipping details
                 const sessionAny = fullSession as any;
                 const shippingAddress = sessionAny.shipping_details?.address;
                 const shippingName = sessionAny.shipping_details?.name;
@@ -264,7 +145,6 @@ export async function POST(request: Request) {
                 const shippingOption = session.metadata?.shippingOption || '';
                 const shippingZipCode = session.metadata?.shippingZipCode || '';
 
-                // Calculate delivery dates based on shipping method
                 const now = new Date();
                 let deliveryMin: Date;
                 let deliveryMax: Date;
@@ -273,19 +153,14 @@ export async function POST(request: Request) {
                     deliveryMin = addBusinessDays(now, 2);
                     deliveryMax = addBusinessDays(now, 3);
                 } else {
-                    // Default to standard shipping
                     deliveryMin = addBusinessDays(now, 5);
                     deliveryMax = addBusinessDays(now, 7);
                 }
 
-                // Parse items from metadata
                 const items = JSON.parse(session.metadata?.items || '[]');
-
-                // Calculate subtotal from items
                 const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-
-                // Build order object
                 const paymentIntent = fullSession.payment_intent as Stripe.PaymentIntent | null;
+
                 const order = {
                     orderId: generateOrderId(),
                     confirmationCode: generateConfirmationCode(),
@@ -313,10 +188,8 @@ export async function POST(request: Request) {
                     estimatedDeliveryMax: deliveryMax.toISOString().slice(0, 10),
                 };
 
-                // Write order to Firestore
                 await writeOrderToFirestore(order);
 
-                // Auto-enroll buyer in newsletter mailing list
                 if (order.customerEmail) {
                     try {
                         await subscribeToNewsletter(order.customerEmail, 'purchase');
@@ -327,6 +200,7 @@ export async function POST(request: Request) {
                 }
 
                 break;
+            }
 
             case 'customer.subscription.deleted': {
                 const canceledSub = event.data.object as Stripe.Subscription;

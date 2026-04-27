@@ -2,31 +2,39 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write their own documents
+
+    // Users — own data only
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow users to read and write their own owner profile (subscription, tags, etc.)
+    // Owners — own data only
     match /owners/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Tags - public read (QR code scanners need to see pet profiles), owner write
-    // NOTE: update allowed without auth for server-side operations (webhook, reset-test-tag)
-    // and for tag owners. Tighten with Firebase Admin SDK in production.
+    // Tags — public read (QR code scanners need this without auth)
+    // create: server-side only via Firebase Admin SDK (tag import scripts)
+    // update: authenticated users can activate an unclaimed tag or update their own
     match /tags/{code} {
       allow read: if true;
-      allow create: if true;
-      allow update: if true;
+      allow create: if false;
+      allow update: if request.auth != null && (
+        resource.data.userId == null ||
+        resource.data.userId == request.auth.uid
+      );
     }
 
-    // Orders - created by webhook (server-side), readable for order verification
-    // NOTE: For development/testing - relaxed rules. Tighten for production.
+    // Orders — written by Stripe webhook via Admin SDK (server-side)
+    // Clients can only read their own orders
     match /orders/{orderId} {
-      allow create: if true;
-      allow update: if true;
-      allow read: if true;
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if false;
+    }
+
+    // Newsletter subscribers — server-side only via Admin SDK
+    match /newsletter_subscribers/{docId} {
+      allow read, write: if false;
     }
   }
 }

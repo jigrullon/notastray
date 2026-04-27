@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { adminDb } from '@/lib/firebaseAdmin';
 
 export async function POST(request: Request) {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -13,23 +14,18 @@ export async function POST(request: Request) {
     try {
         const { userEmail, userId } = await request.json();
 
-        // First check Firestore
-        const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-        if (projectId && userId) {
+        // Check Firestore first (fastest path)
+        if (userId) {
             try {
-                const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
-                const fsResponse = await fetch(firestoreUrl, { method: 'GET' });
-                if (fsResponse.ok) {
-                    const doc = await fsResponse.json();
-                    const subFields = doc.fields?.subscription?.mapValue?.fields;
-                    if (subFields?.status?.stringValue === 'active') {
-                        return NextResponse.json({
-                            status: 'active',
-                            plan: subFields.plan?.stringValue || 'monthly',
-                            stripeSubscriptionId: subFields.stripeSubscriptionId?.stringValue || '',
-                            currentPeriodEnd: subFields.currentPeriodEnd?.stringValue || '',
-                        });
-                    }
+                const doc = await adminDb.collection('users').doc(userId).get();
+                const sub = doc.data()?.subscription;
+                if (sub?.status === 'active') {
+                    return NextResponse.json({
+                        status: 'active',
+                        plan: sub.plan || 'monthly',
+                        stripeSubscriptionId: sub.stripeSubscriptionId || '',
+                        currentPeriodEnd: sub.currentPeriodEnd || '',
+                    });
                 }
             } catch (e) {
                 console.error('Firestore check failed, falling back to Stripe:', e);
@@ -51,29 +47,18 @@ export async function POST(request: Request) {
                         (sub.items.data[0]?.price?.recurring?.interval === 'year' ? 'yearly' : 'monthly');
 
                     // Sync back to Firestore if userId is available
-                    if (projectId && userId) {
+                    if (userId) {
                         try {
-                            const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription`;
-                            await fetch(firestoreUrl, {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    fields: {
-                                        subscription: {
-                                            mapValue: {
-                                                fields: {
-                                                    status: { stringValue: 'active' },
-                                                    plan: { stringValue: plan },
-                                                    stripeSubscriptionId: { stringValue: sub.id },
-                                                    stripeCustomerId: { stringValue: customer.id },
-                                                    currentPeriodEnd: { stringValue: new Date((sub as any).current_period_end * 1000).toISOString() },
-                                                    createdAt: { stringValue: new Date(sub.created * 1000).toISOString() },
-                                                }
-                                            }
-                                        }
-                                    }
-                                }),
-                            });
+                            await adminDb.collection('users').doc(userId).set({
+                                subscription: {
+                                    status: 'active',
+                                    plan,
+                                    stripeSubscriptionId: sub.id,
+                                    stripeCustomerId: customer.id,
+                                    currentPeriodEnd: new Date((sub as any).current_period_end * 1000).toISOString(),
+                                    createdAt: new Date(sub.created * 1000).toISOString(),
+                                },
+                            }, { merge: true });
                         } catch (e) {
                             console.error('Failed to sync subscription to Firestore:', e);
                         }
