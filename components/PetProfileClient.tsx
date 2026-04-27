@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle, Edit3, Save, X, Camera, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
@@ -328,9 +329,15 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                   <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 transition-colors">
                     <Edit3 className="w-3.5 h-3.5" /> Edit Profile
                   </button>
-                  <button onClick={handleToggleLost} className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${lostStatus ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200'}`}>
-                    {lostStatus ? 'Report Found' : 'Report Lost'}
-                  </button>
+                  {lostStatus ? (
+                    <button onClick={handleToggleLost} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 transition-colors">
+                      Report Found
+                    </button>
+                  ) : (
+                    <Link href={`/report-lost/${tagCode}`} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 transition-colors">
+                      Report Lost
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -601,9 +608,15 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                 </a>
               )}
               {isOwner && !editing && (
-                <button onClick={handleToggleLost} className={`flex-1 py-3 rounded-lg font-medium transition-colors ${lostStatus ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}`}>
-                  {lostStatus ? 'Mark as Found' : 'Report Lost'}
-                </button>
+                lostStatus ? (
+                  <button onClick={handleToggleLost} className="flex-1 py-3 rounded-lg font-medium bg-green-600 hover:bg-green-500 text-white transition-colors">
+                    Mark as Found
+                  </button>
+                ) : (
+                  <Link href={`/report-lost/${tagCode}`} className="flex-1 py-3 rounded-lg font-medium bg-red-600 hover:bg-red-500 text-white transition-colors text-center block">
+                    Report Lost
+                  </Link>
+                )
               )}
               {!isOwner && (reportedFound ? (
                 <div className="flex-1 py-3 text-center text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-lg font-medium">

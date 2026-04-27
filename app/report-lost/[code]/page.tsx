@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
@@ -11,6 +11,7 @@ import {
   Loader2, AlertCircle, ArrowLeft, Check, Camera, Upload,
   MapPin, Calendar, Phone, AlertTriangle,
 } from 'lucide-react'
+import MissingPetFlyer from '@/components/MissingPetFlyer'
 
 interface TagDoc {
   userId: string
@@ -50,8 +51,9 @@ interface ReportState {
   reportTitle: string
 }
 
-export default function ReportLostPage({ params }: { params: { code: string } }) {
-  const { code } = params
+export default function ReportLostPage() {
+  const params = useParams()
+  const code = params.code as string
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -145,9 +147,14 @@ export default function ReportLostPage({ params }: { params: { code: string } })
     try {
       let photoUrl = profile.photoUrl
       if (profile.photo) {
-        const storageRef = ref(storage, `pet-photos/${upperCode}/${Date.now()}-${profile.photo.name}`)
-        await uploadBytes(storageRef, profile.photo)
-        photoUrl = await getDownloadURL(storageRef)
+        try {
+          const storageRef = ref(storage, `pet-photos/${upperCode}/${Date.now()}-${profile.photo.name}`)
+          await uploadBytes(storageRef, profile.photo)
+          photoUrl = await getDownloadURL(storageRef)
+        } catch (photoErr) {
+          console.error('Photo upload failed:', photoErr)
+          // Continue without new photo
+        }
       }
 
       const tagRef = doc(db, 'tags', upperCode)
@@ -185,8 +192,10 @@ export default function ReportLostPage({ params }: { params: { code: string } })
         updatedAt: new Date().toISOString(),
       })
       setStep(4)
-    } catch {
-      setError('Something went wrong. Please try again.')
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error('Report submission failed:', errorMsg, err)
+      setError(`Failed to submit report: ${errorMsg}`)
     } finally {
       setSubmitting(false)
     }
@@ -647,18 +656,44 @@ export default function ReportLostPage({ params }: { params: { code: string } })
           </div>
         )}
 
-        {/* ── Step 4: Confirmation ── */}
+        {/* ── Step 4: Missing Pet Flyer ── */}
         {step === 4 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-8 h-8 text-green-600" />
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Check className="w-8 h-8 text-green-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Report Submitted!</h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Your missing pet report has been filed. Download and share the flyer below to help find {petName}.
+              </p>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">Report Submitted</h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
-              <strong>{petName}</strong> has been marked as lost. Anyone who scans their tag will see the lost status and your contact information.
-            </p>
 
-            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-8 text-left">
+            {/* Flyer Component */}
+            <MissingPetFlyer
+              petName={profile.name}
+              species={profile.species}
+              gender={profile.gender}
+              breed={profile.primaryBreed}
+              breedMix={profile.breedMix}
+              weight={profile.weight}
+              weightUnit={profile.weightUnit}
+              photo={profile.photoUrl}
+              lastSeenDate={report.lastSeenDate}
+              lastSeenLocation={`${report.street}, ${report.city}, ${report.state} ${report.postalCode}`}
+              physicalDescription={profile.physicalDescription}
+              medicalBehavioral={profile.medicalBehavioral}
+              ownerName={tagData?.pet?.ownerName}
+              ownerPhone={tagData?.pet?.ownerPhone}
+              vetName={tagData?.pet?.vetName}
+              vetAddress={tagData?.pet?.vetAddress}
+              contactInfo={report.contactInfo}
+              rewardOffered={report.rewardOffered}
+              tagCode={upperCode}
+            />
+
+            {/* Next Steps */}
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
               <p className="text-sm font-semibold text-orange-800 dark:text-orange-200 mb-2">Next steps:</p>
               <ul className="space-y-1.5 text-sm text-orange-700 dark:text-orange-300">
                 <li>• Post on local Facebook groups and Nextdoor</li>
@@ -668,6 +703,7 @@ export default function ReportLostPage({ params }: { params: { code: string } })
               </ul>
             </div>
 
+            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/dashboard" className="flex-1 text-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium">
                 Back to Dashboard
