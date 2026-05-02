@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { getOrderConfirmationEmail } from '@/lib/emailTemplates';
+import { sendEmail } from '@/lib/sendEmail';
 
 function encodeEmailId(email: string): string {
     return encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
@@ -189,6 +191,60 @@ export async function POST(request: Request) {
                 };
 
                 await writeOrderToFirestore(order);
+
+                // Send order confirmation email
+                if (order.customerEmail) {
+                    try {
+                        const confirmationEmailData = getOrderConfirmationEmail({
+                            orderId: order.orderId,
+                            confirmationCode: order.confirmationCode,
+                            customerName: order.shippingAddress.name,
+                            items: order.items,
+                            subtotal: order.subtotal,
+                            shippingCost: order.shippingCost,
+                            total: order.total,
+                            estimatedDeliveryMin: order.estimatedDeliveryMin,
+                            estimatedDeliveryMax: order.estimatedDeliveryMax,
+                            shippingAddress: order.shippingAddress,
+                        });
+
+                        await sendEmail({
+                            to: order.customerEmail,
+                            subject: confirmationEmailData.subject,
+                            html: confirmationEmailData.html,
+                            text: confirmationEmailData.text,
+                        });
+                        console.log(`Order confirmation email sent to ${order.customerEmail}`);
+                    } catch (emailErr) {
+                        console.error('Order confirmation email failed (non-fatal):', emailErr);
+                    }
+                }
+
+                // Create shipment and generate label
+                try {
+                    const shipmentResponse = await fetch(
+                        `${new URL(request.url).origin}/api/orders/create-and-ship`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(order),
+                        }
+                    );
+
+                    if (!shipmentResponse.ok) {
+                        const error = await shipmentResponse.text();
+                        console.error('Shipment creation failed:', error);
+                    } else {
+                        const result = await shipmentResponse.json();
+                        console.log(
+                            `Shipment created for order ${order.orderId}: tracking ${result.trackingNumber}`
+                        );
+                    }
+                } catch (shipmentErr) {
+                    console.error('Shipment creation failed (non-fatal):', shipmentErr);
+                }
 
                 if (order.customerEmail) {
                     try {

@@ -1,37 +1,38 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { MailDataRequired } from '@sendgrid/mail';
 
-const sesClient = new SESClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+const sgMail = require('@sendgrid/mail');
 
 export interface EmailOptions {
   to: string;
   subject: string;
-  htmlBody: string;
-  textBody?: string;
+  html?: string;
+  text?: string;
+  from?: string;
 }
 
-export async function sendEmail({ to, subject, htmlBody, textBody }: EmailOptions): Promise<void> {
-  try {
-    const command = new SendEmailCommand({
-      Source: process.env.AWS_SES_FROM_EMAIL || 'notifications@notastray.com',
-      Destination: { ToAddresses: [to] },
-      Message: {
-        Subject: { Data: subject, Charset: 'UTF-8' },
-        Body: {
-          Html: { Data: htmlBody, Charset: 'UTF-8' },
-          Text: textBody ? { Data: textBody, Charset: 'UTF-8' } : undefined,
-        },
-      },
-    });
+export async function sendEmail(options: EmailOptions): Promise<void> {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('SENDGRID_API_KEY not configured, skipping email');
+    return;
+  }
 
-    await sesClient.send(command);
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+  const from = options.from || process.env.FROM_EMAIL || 'noreply@notastray.com';
+
+  const msg: MailDataRequired = {
+    to: options.to,
+    from,
+    subject: options.subject,
+    text: options.text || '',
+    html: options.html || '',
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`Email sent to ${options.to}: ${options.subject}`);
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('SendGrid error:', error);
     throw error;
   }
 }
