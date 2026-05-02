@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { createShipment, ShippingAddress } from '@/lib/easypost';
-import { getShippingEmail, getMerchantOrderEmail } from '@/lib/emailTemplates';
+import { getMerchantOrderEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
 
 interface Order {
@@ -62,33 +62,6 @@ export async function POST(request: Request) {
       });
 
     console.log(`Label created for order ${order.orderId}: ${shipmentResponse.tracking_number}`);
-
-    // Send customer shipping email
-    const trackingUrl = `https://tracking.usps.com/?tracknumbers=${shipmentResponse.tracking_number}`;
-    const shippingEmailData = getShippingEmail({
-      orderId: order.orderId,
-      confirmationCode: order.confirmationCode,
-      customerName: order.shippingAddress.name,
-      trackingNumber: shipmentResponse.tracking_number,
-      carrier: shipmentResponse.carrier,
-      trackingUrl,
-      estimatedDeliveryMin: order.estimatedDeliveryMin,
-      estimatedDeliveryMax: order.estimatedDeliveryMax,
-      shippingAddress: order.shippingAddress,
-    });
-
-    try {
-      await sendEmail({
-        to: order.customerEmail,
-        subject: shippingEmailData.subject,
-        html: shippingEmailData.html,
-        text: shippingEmailData.text,
-      });
-      console.log(`Shipping email sent to ${order.customerEmail}`);
-    } catch (emailError) {
-      console.error('Failed to send shipping email:', emailError);
-      // Don't fail the order if email fails
-    }
 
     // Send merchant notification
     const merchantEmail = process.env.MERCHANT_EMAIL;

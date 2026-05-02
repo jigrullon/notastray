@@ -88,7 +88,7 @@ export async function POST(request: Request) {
 
         const { subject, htmlBody } = generateConfirmationEmail(email);
         try {
-            await sendEmail({ to: email, subject, htmlBody });
+            await sendEmail({ to: email, subject, html: htmlBody });
         } catch (emailError) {
             console.error('Failed to send confirmation email:', emailError);
             // Don't fail the subscription if email fails to send
