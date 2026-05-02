@@ -137,10 +137,17 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           error: 'Invalid email type',
-          available: ['confirmation', 'shipping', 'in_transit', 'out_for_delivery', 'delivered', 'merchant'],
+          available: ['confirmation', 'shipping', 'delivered', 'merchant'],
         },
         { status: 400 }
       );
+  }
+
+  if (!emailData) {
+    return NextResponse.json(
+      { error: 'Failed to generate email template' },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({

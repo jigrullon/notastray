@@ -151,13 +151,11 @@ export async function createShipment(options: {
     }
 
     // Buy the label
-    const label = await client.Shipment.buy(shipment.id, {
-      rate: groundRate,
-    });
+    const label: any = await client.Shipment.buy(shipment.id, groundRate);
 
     return {
       tracking_number: label.tracking_code,
-      label_url: label.label_url,
+      label_url: label.label_download?.url || '',
       label_pdf_url: label.label_download?.pdf,
       shipment_id: label.id,
       carrier: 'USPS',

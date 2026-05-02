@@ -333,7 +333,7 @@ Keeping pets safe, one tag at a time.
   };
 }
 
-export function getTrackingUpdateEmail(data: TrackingUpdateEmailData) {
+export function getTrackingUpdateEmail(data: TrackingUpdateEmailData): { subject: string; html: string; text: string } | null {
   const statusMessages: Record<string, string> = {
     delivered: 'Your Order Arrived! ✅',
     out_for_delivery: 'Out for Delivery Today! 🚚',
