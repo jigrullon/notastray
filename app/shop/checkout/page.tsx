@@ -230,7 +230,12 @@ function CheckoutContent() {
               {/* Shipping Options */}
               {shippingZipCode && (
                 <div className="mb-6">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Shipping Method</h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Shipping Method</h4>
+                    <Link href="/shipping-returns" className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline">
+                      Learn more
+                    </Link>
+                  </div>
                   {loadingRates ? (
                     <div className="flex items-center justify-center py-6">
                       <Loader2 className="w-4 h-4 animate-spin text-primary-600 mr-2" />

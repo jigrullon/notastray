@@ -162,8 +162,38 @@ export async function createShipment(options: {
       throw new Error('No USPS Ground rate available for this address');
     }
 
-    // Buy the label
-    const label: any = await getClient().Shipment.buy(shipment.id, groundRate);
+    console.log('Ground rate ID:', groundRate.id);
+    console.log('Shipment ID:', shipment.id);
+
+    // Use HTTP request directly to buy the shipment
+    const apiKey = process.env.EASYPOST_API_KEY;
+    if (!apiKey) {
+      throw new Error('EASYPOST_API_KEY is not configured');
+    }
+
+    const buyResponse = await fetch(
+      `https://api.easypost.com/v2/shipments/${shipment.id}/buy`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rate: {
+            id: groundRate.id,
+          },
+        }),
+      }
+    );
+
+    if (!buyResponse.ok) {
+      const error = await buyResponse.text();
+      console.error('EasyPost buy response error:', error);
+      throw new Error(`Failed to buy shipment: ${error}`);
+    }
+
+    const label: any = await buyResponse.json();
 
     return {
       tracking_number: label.tracking_code,

@@ -109,7 +109,7 @@ export function getOrderConfirmationEmail(data: OrderConfirmationEmailData) {
 
           <!-- Header with Logo -->
           <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
-            <img src="https://notastray.com/logo-darkmode.jpg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
             <p style="margin: 8px 0 0 0; font-size: 16px;">Order Confirmation</p>
           </div>
 
@@ -235,7 +235,7 @@ export function getShippingEmail(data: ShippingEmailData) {
 
           <!-- Header with Logo -->
           <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
-            <img src="https://notastray.com/logo-darkmode.jpg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
             <p style="margin: 8px 0 0 0; font-size: 18px;">Your Order is on the Way! 🚚</p>
           </div>
 
@@ -360,7 +360,7 @@ export function getTrackingUpdateEmail(data: TrackingUpdateEmailData): { subject
 
           <!-- Header with Logo -->
           <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
-            <img src="https://notastray.com/logo-darkmode.jpg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
             <p style="margin: 8px 0 0 0; font-size: 18px;">${statusMessage}</p>
           </div>
 
@@ -490,7 +490,7 @@ export function getMerchantOrderEmail(data: MerchantOrderEmailData) {
 
           <!-- Header with Logo -->
           <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
-            <img src="https://notastray.com/logo-darkmode.jpg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
             <p style="margin: 8px 0 0 0; font-size: 18px;">New Order Received 📦</p>
           </div>
 

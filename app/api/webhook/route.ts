@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { getOrderConfirmationEmail } from '@/lib/emailTemplates';
+import { getOrderConfirmationEmail, getMerchantOrderEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
 
 function encodeEmailId(email: string): string {
@@ -220,31 +220,36 @@ export async function POST(request: Request) {
                     }
                 }
 
-                // Create shipment and generate label
-                try {
-                    const shipmentResponse = await fetch(
-                        `${new URL(request.url).origin}/api/orders/create-and-ship`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(order),
-                        }
-                    );
+                // Send merchant fulfillment email
+                const merchantEmail = process.env.MERCHANT_EMAIL;
+                if (merchantEmail) {
+                    try {
+                        const merchantEmailData = getMerchantOrderEmail({
+                            orderId: order.orderId,
+                            confirmationCode: order.confirmationCode,
+                            customerEmail: order.customerEmail,
+                            customerName: order.shippingAddress.name,
+                            items: order.items,
+                            total: order.total,
+                            shippingAddress: order.shippingAddress,
+                            dashboardUrl: `${new URL(request.url).origin}/dashboard/orders`,
+                        });
 
-                    if (!shipmentResponse.ok) {
-                        const error = await shipmentResponse.text();
-                        console.error('Shipment creation failed:', error);
-                    } else {
-                        const result = await shipmentResponse.json();
-                        console.log(
-                            `Shipment created for order ${order.orderId}: tracking ${result.trackingNumber}`
-                        );
+                        await sendEmail({
+                            to: merchantEmail,
+                            subject: merchantEmailData.subject,
+                            html: merchantEmailData.html,
+                            text: merchantEmailData.text,
+                        });
+                        console.log(`Merchant notification sent to ${merchantEmail}`);
+                    } catch (emailErr) {
+                        console.error('Merchant email failed (non-fatal):', emailErr);
                     }
-                } catch (shipmentErr) {
-                    console.error('Shipment creation failed (non-fatal):', shipmentErr);
                 }
+
+                // NOTE: Shipment creation removed - manually create labels in EasyPost dashboard
+                // Simply log the order for fulfillment
+                console.log(`Order ${order.orderId} ready for fulfillment. Manually create label in EasyPost dashboard.`);
 
                 if (order.customerEmail) {
                     try {
