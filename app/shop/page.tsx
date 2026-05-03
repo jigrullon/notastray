@@ -245,6 +245,21 @@ export default function ShopPage() {
           </div>
         </div>
       </section>
+
+      {/* Shipping Info CTA */}
+      <section className="py-12 bg-gray-50 dark:bg-gray-800">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Questions about shipping or returns?
+          </p>
+          <Link
+            href="/shipping-returns"
+            className="inline-block text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium underline"
+          >
+            View our shipping and returns policy
+          </Link>
+        </div>
+      </section>
     </div>
   )
 }

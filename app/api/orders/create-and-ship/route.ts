@@ -97,13 +97,13 @@ export async function POST(request: Request) {
       labelUrl: shipmentResponse.label_url,
     });
   } catch (error) {
-    console.error('Error creating shipment:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error creating shipment:', errorMessage);
+    console.error('Full error:', error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to create shipment. Order stored but label generation failed.',
+        error: errorMessage,
+        details: 'Order stored but label generation failed. Check server logs for details.',
       },
       { status: 500 }
     );
