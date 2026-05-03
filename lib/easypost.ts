@@ -1,6 +1,18 @@
 import EasyPost from '@easypost/api';
 
-const client = new EasyPost(process.env.EASYPOST_API_KEY || '');
+// Lazy initialization - only create client when actually needed
+let client: any = null;
+
+function getClient(): any {
+  if (!client) {
+    const apiKey = process.env.EASYPOST_API_KEY;
+    if (!apiKey) {
+      throw new Error('EASYPOST_API_KEY environment variable is not set');
+    }
+    client = new EasyPost(apiKey);
+  }
+  return client;
+}
 
 // Your home address (origin for all shipments)
 const FROM_ADDRESS = {
@@ -58,7 +70,7 @@ export async function getRates(
     }
 
     // Create shipment to get rates (don't buy yet)
-    const shipment = await client.Shipment.create({
+    const shipment = await getClient().Shipment.create({
       to_address: {
         zip: toZip,
         country: destinationCountry,
@@ -124,7 +136,7 @@ export async function createShipment(options: {
     }
 
     // Create shipment
-    const shipment = await client.Shipment.create({
+    const shipment = await getClient().Shipment.create({
       to_address: {
         name: toAddress.name,
         street1: toAddress.street1,
@@ -151,7 +163,7 @@ export async function createShipment(options: {
     }
 
     // Buy the label
-    const label: any = await client.Shipment.buy(shipment.id, groundRate);
+    const label: any = await getClient().Shipment.buy(shipment.id, groundRate);
 
     return {
       tracking_number: label.tracking_code,
@@ -195,7 +207,7 @@ export function verifyWebhookSignature(
 
 export async function getTrackerByCode(trackingCode: string) {
   try {
-    const tracker = await client.Tracker.retrieve(trackingCode);
+    const tracker = await getClient().Tracker.retrieve(trackingCode);
     return tracker;
   } catch (error) {
     console.error('Error retrieving tracker:', error);
