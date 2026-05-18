@@ -9,7 +9,7 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.google.com https://www.gstatic.com",
+      `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === 'development' ? "'unsafe-eval'" : ''} https://js.stripe.com https://www.google.com https://www.gstatic.com`,
       "frame-src https://js.stripe.com https://hooks.stripe.com https://www.google.com",
       "connect-src 'self' https://api.stripe.com https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
       "img-src 'self' data: https: blob:",
@@ -22,9 +22,6 @@ const securityHeaders = [
 const nextConfig = {
   images: {
     unoptimized: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: false,

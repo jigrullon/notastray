@@ -38,7 +38,7 @@ export default function Header() {
               width={180}
               height={60}
               priority
-              className="dark:hidden"
+              className="dark:hidden w-auto h-16"
             />
             <Image
               src="/logo-darkmode.jpeg"
@@ -46,7 +46,7 @@ export default function Header() {
               width={180}
               height={60}
               priority
-              className="hidden dark:block"
+              className="hidden dark:block w-auto h-16"
             />
           </Link>
 
