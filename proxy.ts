@@ -13,7 +13,7 @@ const ratelimit = new Ratelimit({
   analytics: false,
 })
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Rate limit all API routes except the Stripe webhook

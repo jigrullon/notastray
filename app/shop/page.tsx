@@ -19,7 +19,6 @@ const sizeOptions = ['Choose One', 'Small', 'Medium', 'Large']
 
 const featureBullets = [
   'Waterproof',
-  'Durable & scratch-resistant',
   'QR code technology',
   'No batteries or charging needed',
   'Instant SMS/Email alerts (with Protect plan)',
@@ -172,7 +171,7 @@ export default function ShopPage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Built to Last</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Waterproof, scratch-resistant, and designed for active pets
+                Waterproof and designed for active pets
               </p>
             </div>
 

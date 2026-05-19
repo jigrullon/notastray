@@ -18,14 +18,14 @@ export default function Footer() {
                 alt="NotAStray - One scan brings them home"
                 width={180}
                 height={60}
-                className="dark:hidden"
+                className="dark:hidden w-auto h-16"
               />
               <Image
                 src="/logo-darkmode.jpeg"
                 alt="NotAStray - One scan brings them home"
                 width={180}
                 height={60}
-                className="hidden dark:block"
+                className="hidden dark:block w-auto h-16"
               />
             </Link>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
