@@ -187,6 +187,7 @@ function DashboardContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subscriptionId: subscription.stripeSubscriptionId,
+          userId: user?.uid,
         }),
       })
       const data = await response.json()
@@ -207,6 +208,8 @@ function DashboardContent() {
           })
         } else {
           setSubscription({ status: 'none' })
+          // Refresh page to clear caches and show fresh subscribe options
+          router.refresh()
         }
       }
     } catch (err) {

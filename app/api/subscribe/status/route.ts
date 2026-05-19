@@ -19,13 +19,28 @@ export async function POST(request: Request) {
             try {
                 const doc = await adminDb.collection('users').doc(userId).get();
                 const sub = doc.data()?.subscription;
-                if (sub?.status === 'active') {
-                    return NextResponse.json({
-                        status: 'active',
-                        plan: sub.plan || 'monthly',
-                        stripeSubscriptionId: sub.stripeSubscriptionId || '',
-                        currentPeriodEnd: sub.currentPeriodEnd || '',
-                    });
+                if (sub?.status === 'active' && sub?.stripeSubscriptionId) {
+                    // Verify this subscription still exists in Stripe
+                    try {
+                        const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
+                        if (stripeSub.status === 'active') {
+                            return NextResponse.json({
+                                status: 'active',
+                                plan: sub.plan || 'monthly',
+                                stripeSubscriptionId: sub.stripeSubscriptionId || '',
+                                currentPeriodEnd: sub.currentPeriodEnd || '',
+                            });
+                        }
+                    } catch (e) {
+                        // Subscription doesn't exist in Stripe - clear from Firestore
+                        console.log('Subscription not found in Stripe, clearing from Firestore');
+                        await adminDb.collection('users').doc(userId).set({
+                            subscription: {
+                                status: 'canceled',
+                                canceledAt: new Date().toISOString(),
+                            },
+                        }, { merge: true });
+                    }
                 }
             } catch (e) {
                 console.error('Firestore check failed, falling back to Stripe:', e);

@@ -455,6 +455,247 @@ Keeping pets safe, one tag at a time.
   };
 }
 
+export interface ActivationReminderEmailData {
+  customerName?: string;
+  activationUrl: string;
+  petTagsCount: number;
+  orderId: string;
+}
+
+export interface RenewalReminderEmailData {
+  customerName?: string;
+  renewalDate: string;
+  planType: 'monthly' | 'annual';
+  planPrice: number;
+  manageSubscriptionUrl: string;
+  cancelUrl: string;
+}
+
+export function getActivationReminderEmail(data: ActivationReminderEmailData) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+      </head>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+
+          <!-- Header with Logo -->
+          <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <p style="margin: 8px 0 0 0; font-size: 18px;">Your Tags Have Arrived! 🎉</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 32px;">
+            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+
+            <p style="font-size: 16px;">Great news! Your NotAStray pet tag${data.petTagsCount > 1 ? 's have' : ' has'} arrived and are ready to protect your furry friend. Now comes the important part—let's activate it!</p>
+
+            <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">How to Activate Your Tag</h3>
+            <ol style="margin: 0 0 24px 0; padding-left: 20px; color: #666; line-height: 1.8;">
+              <li style="margin-bottom: 8px;">Scan the QR code on your tag with your phone camera</li>
+              <li style="margin-bottom: 8px;">Fill in your pet's information and photo</li>
+              <li style="margin-bottom: 8px;">Add your contact details (someone will scan if your pet is found)</li>
+              <li>Choose your notification plan to enable alerts</li>
+            </ol>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${data.activationUrl}" style="background-color: #047857; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Activate Your Tag Now</a>
+            </div>
+
+            <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: #92400e;">
+                <strong>💡 Tip:</strong> Your tag is already registered under your email. When someone scans it, they'll see your pet's profile with your contact information—no app needed!
+              </p>
+            </div>
+
+            <p style="color: #666; font-size: 14px; margin: 24px 0;">
+              Not ready yet? Your tag won't expire, so you can activate anytime. But the sooner you activate, the sooner your pet is protected! 🐾
+            </p>
+
+            <p style="margin-top: 32px; color: #999; font-size: 13px;">
+              Order #: ${data.orderId}
+            </p>
+
+            <div style="text-align: center; margin-top: 32px;">
+              <a href="https://notastray.com/resources/setup" style="color: #047857; text-decoration: none; font-weight: bold;">Need help? View our activation guide →</a>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 12px 0;">
+              <a href="https://notastray.com" style="color: #047857; text-decoration: none; font-weight: bold;">NotAStray.com</a>
+            </p>
+            <p style="margin: 0; font-size: 11px; color: #999;">
+              Keeping pets safe, one tag at a time.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+Your Tags Have Arrived! 🎉
+
+Hi ${data.customerName || 'there'},
+
+Great news! Your NotAStray pet tag${data.petTagsCount > 1 ? 's have' : ' has'} arrived. Now comes the important part—let's activate it!
+
+YOUR TAG${data.petTagsCount > 1 ? 'S ARE' : ' IS'} READY
+Once activated, your pet is protected with instant SMS & email alerts if they're ever lost.
+
+HOW TO ACTIVATE YOUR TAG
+1. Scan the QR code on your tag with your phone camera
+2. Fill in your pet's information and photo
+3. Add your contact details
+4. Choose your notification plan to enable alerts
+
+👉 Activate Your Tag: ${data.activationUrl}
+
+💡 HELPFUL TIP
+Your tag is already registered under your email. When someone scans it, they'll see your pet's profile with your contact information—no app needed!
+
+You can activate anytime—your tag won't expire. But the sooner you activate, the sooner your pet is protected! 🐾
+
+Questions? View our activation guide: https://notastray.com/resources
+
+Order #: ${data.orderId}
+
+NotAStray Smart Pet Tags
+Keeping pets safe, one tag at a time.
+  `;
+
+  return {
+    subject: `Your NotAStray Tag${data.petTagsCount > 1 ? 's' : ''} Have Arrived - Activate Now`,
+    html,
+    text,
+  };
+}
+
+export function getRenewalReminderEmail(data: RenewalReminderEmailData) {
+  const planLabel = data.planType === 'monthly' ? 'Monthly' : 'Annual';
+  const planPrice = data.planType === 'monthly' ? '$3' : '$30';
+  const billingPeriod = data.planType === 'monthly' ? '/month' : '/year';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+      </head>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+
+          <!-- Header with Logo -->
+          <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <p style="margin: 8px 0 0 0; font-size: 18px;">Subscription Renewal Reminder</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 32px;">
+            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+
+            <p style="font-size: 16px;">We wanted to give you a heads up—your NotAStray subscription renews in 3 days.</p>
+
+            <div style="background-color: #f3f4f6; border: 1px solid #d1d5db; padding: 20px; margin: 24px 0; border-radius: 6px;">
+              <p style="margin: 0 0 12px 0; font-size: 14px; color: #666;">RENEWAL DETAILS</p>
+              <div style="margin: 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
+                  <span>Plan:</span>
+                  <strong style="color: #047857;">${planLabel}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0; font-size: 15px;">
+                  <span>Renewal Date:</span>
+                  <strong style="color: #047857;">${data.renewalDate}</strong>
+                </div>
+              </div>
+              <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 12px;">
+                <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: bold;">
+                  <span>Amount to be charged:</span>
+                  <span style="color: #047857;">${planPrice}${billingPeriod}</span>
+                </div>
+              </div>
+            </div>
+
+            <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">What You Get</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 15px;">
+              <strong>Instant Alerts:</strong> Get SMS & email notifications whenever someone scans your pet's tag. This is how you'll know if your pet is lost and found.
+            </p>
+
+            <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: #92400e;">
+                <strong>Want to change your plan?</strong> You can manage your subscription in your dashboard.
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${data.manageSubscriptionUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
+            </div>
+
+            <p style="color: #666; font-size: 14px; margin: 24px 0;">
+              If you no longer want to subscribe, you can cancel anytime from your dashboard. No questions asked—we'll process it right away.
+            </p>
+
+            <p style="color: #999; font-size: 13px; margin: 24px 0 0 0;">
+              You're receiving this reminder because you have an active NotAStray subscription. If you didn't sign up for this, please contact us at support@notastray.com
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 12px 0;">
+              <a href="https://notastray.com" style="color: #047857; text-decoration: none; font-weight: bold;">NotAStray.com</a>
+            </p>
+            <p style="margin: 0; font-size: 11px; color: #999;">
+              Keeping pets safe, one tag at a time.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+Subscription Renewal Reminder
+
+Hi ${data.customerName || 'there'},
+
+We wanted to give you a heads up—your NotAStray subscription renews in 3 days.
+
+RENEWAL DETAILS
+Plan: ${planLabel}
+Renewal Date: ${data.renewalDate}
+Amount to be charged: ${planPrice}${billingPeriod}
+
+WHAT YOU GET
+✓ Instant Alerts: Get SMS & email notifications whenever someone scans your pet's tag. This is how you'll know if your pet is lost and found.
+
+MANAGE YOUR SUBSCRIPTION
+Visit your dashboard to change your plan or cancel:
+${data.manageSubscriptionUrl}
+
+If you no longer want to subscribe, you can cancel anytime from your dashboard. No questions asked—we'll process it right away.
+
+Questions? Contact us at support@notastray.com
+
+NotAStray Smart Pet Tags
+Keeping pets safe, one tag at a time.
+  `;
+
+  return {
+    subject: `Subscription Renewal in 3 Days - ${planLabel} Plan`,
+    html,
+    text,
+  };
+}
+
 export function getMerchantOrderEmail(data: MerchantOrderEmailData) {
   // Group items by color/size
   const groupedItems = data.items.reduce((acc: Record<string, number>, item) => {
