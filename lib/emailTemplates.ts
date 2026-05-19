@@ -471,6 +471,15 @@ export interface RenewalReminderEmailData {
   cancelUrl: string;
 }
 
+export interface ActivationConfirmationEmailData {
+  customerName?: string;
+  petName: string;
+  tagCode: string;
+  petSpecies?: string;
+  petPhotoUrl?: string;
+  dashboardUrl: string;
+}
+
 export function getActivationReminderEmail(data: ActivationReminderEmailData) {
   const html = `
     <!DOCTYPE html>
@@ -572,6 +581,122 @@ Keeping pets safe, one tag at a time.
 
   return {
     subject: `Your NotAStray Tag${data.petTagsCount > 1 ? 's' : ''} Have Arrived - Activate Now`,
+    html,
+    text,
+  };
+}
+
+export function getActivationConfirmationEmail(data: ActivationConfirmationEmailData) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+      </head>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+
+          <!-- Header with Logo -->
+          <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <p style="margin: 8px 0 0 0; font-size: 18px;">Tag Activated! ✅</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 32px;">
+            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+
+            <p style="font-size: 16px;">Great news! Your NotAStray pet tag has been successfully activated and registered for <strong>${data.petName}</strong>.</p>
+
+            <div style="background-color: #f0fdf4; border-left: 4px solid #047857; padding: 20px; margin: 24px 0; border-radius: 4px;">
+              <p style="margin: 0 0 12px 0; font-size: 14px; color: #666;"><strong>TAG DETAILS</strong></p>
+              <div style="margin: 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
+                  <span>Pet Name:</span>
+                  <strong style="color: #047857;">${data.petName}</strong>
+                </div>
+                ${data.petSpecies ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
+                  <span>Species:</span>
+                  <strong style="color: #047857;">${data.petSpecies}</strong>
+                </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; font-size: 15px;">
+                  <span>Tag Code:</span>
+                  <strong style="color: #047857; font-family: monospace;">${data.tagCode}</strong>
+                </div>
+              </div>
+            </div>
+
+            <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">Your Pet is Now Protected</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 15px;">
+              Anyone who finds your pet and scans the QR code on the tag will be directed to ${data.petName}'s profile page with your contact information. You'll receive instant SMS and email alerts if someone scans the tag.
+            </p>
+
+            <p style="margin: 0; color: #666; font-size: 15px;">
+              Your pet's profile is now live and ready to bring them home if they ever get lost. 🐾
+            </p>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${data.dashboardUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Your Pet's Profile</a>
+            </div>
+
+            <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: #92400e;">
+                <strong>💡 Keep your info updated:</strong> If your phone number, email, or address changes, you can update it anytime in your dashboard. Changes take effect immediately.
+              </p>
+            </div>
+
+            <p style="color: #999; font-size: 13px; margin: 24px 0 0 0;">
+              Questions? Visit our help center or reply to this email for support.
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 12px 0;">
+              <a href="https://notastray.com" style="color: #047857; text-decoration: none; font-weight: bold;">NotAStray.com</a>
+            </p>
+            <p style="margin: 0; font-size: 11px; color: #999;">
+              Keeping pets safe, one tag at a time.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+Tag Activated! ✅
+
+Hi ${data.customerName || 'there'},
+
+Great news! Your NotAStray pet tag has been successfully activated and registered for ${data.petName}.
+
+TAG DETAILS
+Pet Name: ${data.petName}
+${data.petSpecies ? `Species: ${data.petSpecies}` : ''}
+Tag Code: ${data.tagCode}
+
+YOUR PET IS NOW PROTECTED
+Anyone who finds your pet and scans the QR code on the tag will be directed to ${data.petName}'s profile with your contact information. You'll receive instant SMS and email alerts if someone scans the tag.
+
+Your pet's profile is now live and ready to bring them home if they ever get lost. 🐾
+
+View Your Pet's Profile: ${data.dashboardUrl}
+
+💡 KEEP YOUR INFO UPDATED
+If your phone number, email, or address changes, you can update it anytime in your dashboard. Changes take effect immediately.
+
+Questions? Visit our help center or reply to this email for support.
+
+NotAStray.com
+Keeping pets safe, one tag at a time.
+  `;
+
+  return {
+    subject: `${data.petName}'s Tag is Now Active!`,
     html,
     text,
   };
