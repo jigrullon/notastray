@@ -8,10 +8,34 @@ interface SubscribeRequest {
     userId?: string;
 }
 
-async function checkExistingSubscription(userId: string): Promise<boolean> {
+async function checkExistingSubscription(userId: string, stripe: Stripe): Promise<boolean> {
     try {
         const doc = await adminDb.collection('users').doc(userId).get();
-        return doc.data()?.subscription?.status === 'active';
+        const firestoreSub = doc.data()?.subscription;
+
+        // If Firestore says canceled, it's definitely not active
+        if (firestoreSub?.status === 'canceled') {
+            return false;
+        }
+
+        // If Firestore says active, verify it still exists in Stripe
+        if (firestoreSub?.status === 'active' && firestoreSub?.stripeSubscriptionId) {
+            try {
+                const stripeSub = await stripe.subscriptions.retrieve(firestoreSub.stripeSubscriptionId);
+                return stripeSub.status === 'active';
+            } catch (e) {
+                // Subscription doesn't exist in Stripe anymore, clear it
+                await adminDb.collection('users').doc(userId).set({
+                    subscription: {
+                        status: 'canceled',
+                        canceledAt: new Date().toISOString(),
+                    },
+                }, { merge: true });
+                return false;
+            }
+        }
+
+        return false;
     } catch {
         return false;
     }
@@ -31,7 +55,7 @@ export async function POST(request: Request) {
         const { plan, userEmail, userId } = body;
 
         if (userId) {
-            const alreadySubscribed = await checkExistingSubscription(userId);
+            const alreadySubscribed = await checkExistingSubscription(userId, stripe);
             if (alreadySubscribed) {
                 return NextResponse.json(
                     { error: 'You already have an active PROTECT Plan subscription.' },
