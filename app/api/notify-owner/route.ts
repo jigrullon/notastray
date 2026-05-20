@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { sendEmail } from '@/lib/sendEmail';
 
 interface NotificationRequest {
     tagCode: string
@@ -13,27 +15,40 @@ interface NotificationRequest {
     locationMethod?: 'gps' | 'ip'
 }
 
-// Mock owner data - this would come from your database
-const mockOwnerData = {
-    'ABC123': {
-        name: 'Sarah Johnson',
-        email: 'sarah.johnson@email.com',
-        phone: '+15551234567',
-        smsEnabled: true,
-        emailEnabled: true,
-        petName: 'Buddy'
-    }
-}
-
 export async function POST(request: Request) {
     try {
         const body: NotificationRequest = await request.json()
         const { tagCode, location, timestamp, userAgent, locationMethod = 'gps' } = body
 
-        // Get owner information from database
-        const owner = mockOwnerData[tagCode as keyof typeof mockOwnerData]
-        if (!owner) {
+        // Get tag from Firestore
+        const tagDoc = await adminDb.collection('tags').doc(tagCode.toUpperCase()).get()
+        if (!tagDoc.exists) {
             return NextResponse.json({ error: 'Tag not found' }, { status: 404 })
+        }
+
+        const tagData = tagDoc.data()
+        if (!tagData?.userId) {
+            return NextResponse.json({ error: 'Tag not activated' }, { status: 404 })
+        }
+
+        // Get owner information from Firestore
+        const userDoc = await adminDb.collection('users').doc(tagData.userId).get()
+        if (!userDoc.exists) {
+            return NextResponse.json({ error: 'Owner not found' }, { status: 404 })
+        }
+
+        const userData = userDoc.data()
+        const owner = {
+            name: tagData.pet?.ownerName || 'Pet Owner',
+            email: tagData.pet?.ownerEmail || userData?.email,
+            phone: tagData.pet?.ownerPhone,
+            petName: tagData.pet?.name || 'Your pet',
+            smsEnabled: userData?.preferences?.sms?.optIn ?? true, // Default to true if not set
+            emailEnabled: userData?.preferences?.email?.optIn ?? true, // Default to true if not set
+        }
+
+        if (!owner.email && !owner.phone) {
+            return NextResponse.json({ error: 'No contact information available' }, { status: 400 })
         }
 
         // Format location information
@@ -88,48 +103,72 @@ export async function POST(request: Request) {
       <p><em>This is an automated notification from NotAStray. The location is ${locationMethod === 'ip' ? 'approximate based on internet connection' : 'based on the scanner\'s device GPS'}.</em></p>
     `
 
+        const notificationsSent = {
+            sms: false,
+            email: false,
+        }
+
         // Send SMS notification
-        if (owner.smsEnabled) {
-            await sendSMS(owner.phone, smsMessage)
+        if (owner.smsEnabled && owner.phone) {
+            try {
+                await sendSMS(owner.phone, smsMessage)
+                notificationsSent.sms = true
+                console.log(`SMS sent to ${owner.phone}`)
+            } catch (smsError) {
+                console.error('Failed to send SMS:', smsError)
+            }
         }
 
         // Send email notification
-        if (owner.emailEnabled) {
-            await sendEmail(owner.email, emailSubject, emailBody)
+        if (owner.emailEnabled && owner.email) {
+            try {
+                await sendEmail({
+                    to: owner.email,
+                    subject: emailSubject,
+                    html: emailBody,
+                    text: emailBody,
+                })
+                notificationsSent.email = true
+                console.log(`Email sent to ${owner.email}`)
+            } catch (emailError) {
+                console.error('Failed to send email:', emailError)
+            }
         }
 
         // Log the scan event
-        console.log('Pet tag scanned:', {
+        await adminDb.collection('scan_events').add({
             tagCode,
+            userId: tagData.userId,
             ownerName: owner.name,
             petName: owner.petName,
-            location: locationText,
-            timestamp,
-            userAgent
+            location: location ? {
+                latitude: location.latitude,
+                longitude: location.longitude,
+                accuracy: location.accuracy,
+                address: location.address,
+            } : null,
+            timestamp: new Date(timestamp).toISOString(),
+            userAgent,
+            locationMethod,
+            notificationsSent,
+            createdAt: new Date().toISOString(),
         })
 
         return NextResponse.json({
             success: true,
             message: 'Owner notified successfully',
-            notificationsSent: {
-                sms: owner.smsEnabled,
-                email: owner.emailEnabled
-            }
+            notificationsSent,
         })
-
     } catch (error) {
         console.error('Notification error:', error)
         return NextResponse.json(
-            { error: 'Failed to send notification' },
+            { error: error instanceof Error ? error.message : 'Failed to send notification' },
             { status: 500 }
         )
     }
 }
 
 async function sendSMS(phoneNumber: string, message: string) {
-    console.log(`SMS to ${phoneNumber}: ${message}`)
-}
-
-async function sendEmail(email: string, subject: string, htmlBody: string) {
-    console.log(`Email to ${email}: ${subject}`)
+    // TODO: Integrate Twilio or other SMS provider
+    console.log(`[SMS] to ${phoneNumber}: ${message}`)
 }

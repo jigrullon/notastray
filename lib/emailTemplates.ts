@@ -469,6 +469,7 @@ export interface RenewalReminderEmailData {
   planPrice: number;
   manageSubscriptionUrl: string;
   cancelUrl: string;
+  userEmail?: string;
 }
 
 export interface ActivationConfirmationEmailData {
@@ -478,6 +479,7 @@ export interface ActivationConfirmationEmailData {
   petSpecies?: string;
   petPhotoUrl?: string;
   dashboardUrl: string;
+  userEmail?: string;
 }
 
 export function getActivationReminderEmail(data: ActivationReminderEmailData) {
@@ -648,6 +650,15 @@ export function getActivationConfirmationEmail(data: ActivationConfirmationEmail
               </p>
             </div>
 
+            <div style="background-color: #f0f9ff; border: 1px solid #cffafe; padding: 16px; margin: 24px 0; border-radius: 4px; font-size: 12px;">
+              <p style="margin: 0 0 8px 0; color: #0369a1; font-weight: bold;">📱 SMS Notifications (if enabled)</p>
+              <p style="margin: 0; color: #0c4a6e; line-height: 1.5;">
+                By opting in to SMS notifications, you agree to receive alerts when your pet's tag is scanned.
+                <strong>Message frequency:</strong> Variable depending on scan activity (estimated 1-10 per month).
+                <strong>Message and data rates may apply.</strong> Reply STOP to unsubscribe anytime.
+              </p>
+            </div>
+
             <p style="color: #999; font-size: 13px; margin: 24px 0 0 0;">
               Questions? Visit our help center or reply to this email for support.
             </p>
@@ -658,6 +669,11 @@ export function getActivationConfirmationEmail(data: ActivationConfirmationEmail
             <p style="margin: 0 0 12px 0;">
               <a href="https://notastray.com" style="color: #047857; text-decoration: none; font-weight: bold;">NotAStray.com</a>
             </p>
+            ${data.userEmail ? `
+            <p style="margin: 0 0 8px 0; font-size: 11px; color: #999;">
+              <a href="https://notastray.com/api/unsubscribe/email?email=${encodeURIComponent(data.userEmail)}" style="color: #999; text-decoration: none;">Unsubscribe from emails</a>
+            </p>
+            ` : ''}
             <p style="margin: 0; font-size: 11px; color: #999;">
               Keeping pets safe, one tag at a time.
             </p>
@@ -689,10 +705,18 @@ View Your Pet's Profile: ${data.dashboardUrl}
 💡 KEEP YOUR INFO UPDATED
 If your phone number, email, or address changes, you can update it anytime in your dashboard. Changes take effect immediately.
 
+📱 SMS NOTIFICATIONS (if enabled)
+By opting in to SMS notifications, you agree to receive alerts when your pet's tag is scanned.
+Message frequency: Variable depending on scan activity (estimated 1-10 per month).
+Message and data rates may apply. Reply STOP to unsubscribe anytime.
+
 Questions? Visit our help center or reply to this email for support.
 
+---
 NotAStray.com
 Keeping pets safe, one tag at a time.
+
+${data.userEmail ? `Unsubscribe from emails: https://notastray.com/api/unsubscribe/email?email=${encodeURIComponent(data.userEmail)}` : ''}
   `;
 
   return {
@@ -778,6 +802,11 @@ export function getRenewalReminderEmail(data: RenewalReminderEmailData) {
             <p style="margin: 0 0 12px 0;">
               <a href="https://notastray.com" style="color: #047857; text-decoration: none; font-weight: bold;">NotAStray.com</a>
             </p>
+            ${data.userEmail ? `
+            <p style="margin: 0 0 8px 0; font-size: 11px; color: #999;">
+              <a href="https://notastray.com/api/unsubscribe/email?email=${encodeURIComponent(data.userEmail)}" style="color: #999; text-decoration: none;">Unsubscribe from emails</a>
+            </p>
+            ` : ''}
             <p style="margin: 0; font-size: 11px; color: #999;">
               Keeping pets safe, one tag at a time.
             </p>
@@ -810,8 +839,11 @@ If you no longer want to subscribe, you can cancel anytime from your dashboard. 
 
 Questions? Contact us at support@notastray.com
 
+---
 NotAStray Smart Pet Tags
 Keeping pets safe, one tag at a time.
+
+${data.userEmail ? `Unsubscribe: https://notastray.com/api/unsubscribe/email?email=${encodeURIComponent(data.userEmail)}` : ''}
   `;
 
   return {

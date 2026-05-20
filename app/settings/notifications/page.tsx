@@ -51,9 +51,16 @@ export default function NotificationSettingsPage() {
               phone: data.phone || ''
             })
 
-            // Check for existing consent
-            if (data.consent?.smsOptIn) {
-              setSmsConsentAccepted(true)
+            // Load preferences from Firestore
+            if (data.preferences) {
+              setSettings(prev => ({
+                ...prev,
+                smsEnabled: data.preferences.sms?.optIn ?? true,
+                emailEnabled: data.preferences.email?.optIn ?? true
+              }))
+              if (data.preferences.sms?.optIn) {
+                setSmsConsentAccepted(true)
+              }
             }
           } else {
             setContactInfo(prev => ({ ...prev, email: user.email || '' }))
@@ -128,7 +135,6 @@ export default function NotificationSettingsPage() {
   }
 
   const handleConsentConfirm = async () => {
-    // Save consent immediately when confirmed
     try {
       if (user) {
         const response = await fetch('/api/user/consent', {
@@ -136,27 +142,26 @@ export default function NotificationSettingsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: user.uid,
-            phone: contactInfo.phone,
-            email: contactInfo.email,
-            consentIp: 'client-ip'
+            smsOptIn: true,
+            emailOptIn: settings.emailEnabled,
+            consentMethod: 'user_selection'
           }),
         })
 
         const data = await response.json()
-        if (data.success && data.data) {
-          const docRef = doc(db, 'users', user.uid)
-          await setDoc(docRef, {
-            ...data.data,
-            updatedAt: new Date().toISOString()
-          }, { merge: true })
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to save consent')
         }
       }
     } catch (err) {
       console.error("Failed to save consent record", err)
+      alert('Failed to save SMS consent. Please try again.')
+      return
     }
 
     setSmsConsentAccepted(true)
     setShowSMSConsent(false)
+    setSettings(prev => ({ ...prev, smsEnabled: true }))
     handleTestNotification('sms')
   }
 
@@ -166,7 +171,6 @@ export default function NotificationSettingsPage() {
     setSuccessMessage('')
 
     try {
-      // Use the secure API route to get encrypted data
       const response = await fetch('/api/user/consent', {
         method: 'POST',
         headers: {
@@ -174,27 +178,19 @@ export default function NotificationSettingsPage() {
         },
         body: JSON.stringify({
           userId: user.uid,
-          phone: contactInfo.phone,
-          email: contactInfo.email,
-          consentIp: 'client-ip',
+          smsOptIn: settings.smsEnabled,
+          emailOptIn: settings.emailEnabled,
+          consentMethod: 'user_selection',
         }),
       })
 
       const data = await response.json()
 
-      if (data.success && data.data) {
-        // Save the Encrypted Data to Firestore using Client SDK
-        // This works because the user is authenticated and rules allow write to own doc
-        const docRef = doc(db, 'users', user.uid)
-        await setDoc(docRef, {
-          ...data.data,
-          updatedAt: new Date().toISOString()
-        }, { merge: true })
-
+      if (data.success) {
         setSuccessMessage('Settings saved successfully!')
         setTimeout(() => setSuccessMessage(''), 3000)
       } else {
-        throw new Error(data.error || 'Failed to encrypt data')
+        throw new Error(data.error || 'Failed to save settings')
       }
     } catch (error) {
       console.error('Error saving settings:', error)
