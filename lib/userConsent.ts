@@ -42,6 +42,21 @@ interface SaveConsentParams {
     consentIp?: string;
 }
 
+interface UserPreferences {
+    sms: {
+        optIn: boolean;
+        consentTimestamp: string;
+        consentIp: string | null;
+        consentMethod: string;
+    };
+    email: {
+        optIn: boolean;
+        consentTimestamp: string;
+        consentIp: string | null;
+        consentMethod: string;
+    };
+}
+
 interface UserContact {
     userId: string;
     phone: string;

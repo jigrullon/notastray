@@ -1,40 +1,60 @@
 import { NextResponse } from 'next/server'
-import { encryptUserContact } from '@/lib/userConsent'
+import { adminDb } from '@/lib/firebaseAdmin'
 
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { userId, phone, email, consentIp } = body
+        const {
+            userId,
+            smsOptIn = true,
+            emailOptIn = true,
+            consentIp,
+            consentMethod = 'user_selection',
+        } = body
 
-        if (!userId || !phone || !email) {
+        if (!userId) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields' },
+                { success: false, error: 'User ID is required' },
                 { status: 400 }
             )
         }
 
-        // Encrypt data server-side
-        const encryptedData = encryptUserContact(phone, email)
+        const now = new Date().toISOString()
 
-        // Return encrypted data to client for saving
-        // This leverages the authenticated client's permission to write to their own doc
+        // Update user preferences in Firestore
+        await adminDb.collection('users').doc(userId).set(
+            {
+                preferences: {
+                    sms: {
+                        optIn: smsOptIn,
+                        consentTimestamp: now,
+                        consentIp: consentIp || null,
+                        consentMethod,
+                    },
+                    email: {
+                        optIn: emailOptIn,
+                        consentTimestamp: now,
+                        consentIp: consentIp || null,
+                        consentMethod,
+                    },
+                },
+            },
+            { merge: true }
+        )
+
         return NextResponse.json({
             success: true,
-            data: {
-                ...encryptedData,
-                consent: {
-                    smsOptIn: true,
-                    consentTimestamp: new Date().toISOString(),
-                    consentIp: consentIp || null,
-                    consentMethod: "checkbox",
-                }
-            }
+            message: 'Preferences saved successfully',
+            preferences: {
+                smsOptIn,
+                emailOptIn,
+                consentTimestamp: now,
+            },
         })
-
     } catch (error: any) {
-        console.error('Encryption error:', error)
+        console.error('Consent error:', error)
         return NextResponse.json(
-            { success: false, error: error.message || 'Failed to encrypt data' },
+            { success: false, error: error.message || 'Failed to save preferences' },
             { status: 500 }
         )
     }
