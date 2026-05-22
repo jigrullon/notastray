@@ -144,6 +144,8 @@ export default function NotificationSettingsPage() {
             userId: user.uid,
             smsOptIn: true,
             emailOptIn: settings.emailEnabled,
+            phone: contactInfo.phone,
+            email: contactInfo.email,
             consentMethod: 'user_selection'
           }),
         })
@@ -180,6 +182,8 @@ export default function NotificationSettingsPage() {
           userId: user.uid,
           smsOptIn: settings.smsEnabled,
           emailOptIn: settings.emailEnabled,
+          phone: contactInfo.phone,
+          email: contactInfo.email,
           consentMethod: 'user_selection',
         }),
       })
