@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sendEmail } from '@/lib/sendEmail';
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
 interface NotificationRequest {
     tagCode: string
@@ -169,6 +170,26 @@ export async function POST(request: Request) {
 }
 
 async function sendSMS(phoneNumber: string, message: string) {
-    // TODO: Integrate Twilio or other SMS provider
-    console.log(`[SMS] to ${phoneNumber}: ${message}`)
+    try {
+        const smsClient = new SNSClient({
+            region: process.env.AWS_REGION || 'us-east-1',
+            credentials: {
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+            },
+        })
+
+        const response = await smsClient.send(
+            new PublishCommand({
+                Message: message,
+                PhoneNumber: phoneNumber,
+            })
+        )
+
+        console.log(`SMS sent successfully to ${phoneNumber}. Message ID: ${response.MessageId}`)
+        return response.MessageId
+    } catch (error) {
+        console.error(`Failed to send SMS to ${phoneNumber}:`, error)
+        throw error
+    }
 }

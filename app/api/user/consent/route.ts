@@ -8,6 +8,8 @@ export async function POST(request: Request) {
             userId,
             smsOptIn = true,
             emailOptIn = true,
+            phone,
+            email,
             consentIp,
             consentMethod = 'user_selection',
         } = body
@@ -21,26 +23,30 @@ export async function POST(request: Request) {
 
         const now = new Date().toISOString()
 
-        // Update user preferences in Firestore
-        await adminDb.collection('users').doc(userId).set(
-            {
-                preferences: {
-                    sms: {
-                        optIn: smsOptIn,
-                        consentTimestamp: now,
-                        consentIp: consentIp || null,
-                        consentMethod,
-                    },
-                    email: {
-                        optIn: emailOptIn,
-                        consentTimestamp: now,
-                        consentIp: consentIp || null,
-                        consentMethod,
-                    },
+        // Build update object
+        const updateData: any = {
+            preferences: {
+                sms: {
+                    optIn: smsOptIn,
+                    consentTimestamp: now,
+                    consentIp: consentIp || null,
+                    consentMethod,
+                },
+                email: {
+                    optIn: emailOptIn,
+                    consentTimestamp: now,
+                    consentIp: consentIp || null,
+                    consentMethod,
                 },
             },
-            { merge: true }
-        )
+        }
+
+        // Include phone and email if provided
+        if (phone) updateData.phone = phone
+        if (email) updateData.email = email
+
+        // Update user document in Firestore
+        await adminDb.collection('users').doc(userId).set(updateData, { merge: true })
 
         return NextResponse.json({
             success: true,
@@ -48,6 +54,8 @@ export async function POST(request: Request) {
             preferences: {
                 smsOptIn,
                 emailOptIn,
+                phone,
+                email,
                 consentTimestamp: now,
             },
         })

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const tagCodes = ['PLZH9E', 'KS53T3', 'KVY645']
+    const tagCodes = ['PUZH9E', 'KSS3T3', 'K7V645']
     const petNames = ['Britt', 'Brittany', 'Brit']
     const owners = ['Sarah Johnson', 'Emily Chen', 'Jessica Martinez']
     const phones = ['(555) 123-4567', '(555) 234-5678', '(555) 345-6789']
