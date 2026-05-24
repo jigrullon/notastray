@@ -39,7 +39,12 @@ export async function POST(request: Request) {
     // Parse body
     const event = JSON.parse(bodyText);
 
-    // Handle tracker.updated events
+    // Handle tracker.updated events (ignore other event types)
+    if (event.type !== 'tracker.updated') {
+      console.log(`EasyPost webhook: Ignoring event type ${event.type}`);
+      return NextResponse.json({ received: true });
+    }
+
     if (event.type === 'tracker.updated') {
       const tracker = event.data;
       const trackingNumber = tracker.tracking_code;

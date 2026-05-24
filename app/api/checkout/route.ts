@@ -49,6 +49,7 @@ export async function POST(request: Request) {
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
+            automatic_tax: { enabled: true },
             success_url: `${new URL(request.url).origin}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${new URL(request.url).origin}/shop/checkout`,
             metadata: {
