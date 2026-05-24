@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { getOrderConfirmationEmail, getMerchantOrderEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
+import { createShipment } from '@/lib/easypost';
 
 function encodeEmailId(email: string): string {
     return encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
@@ -192,6 +193,35 @@ export async function POST(request: Request) {
 
                 await writeOrderToFirestore(order);
 
+                // Create shipment in EasyPost
+                try {
+                    const shipmentResponse = await createShipment({
+                        toAddress: {
+                            name: order.shippingAddress.name,
+                            street1: order.shippingAddress.line1,
+                            street2: order.shippingAddress.line2,
+                            city: order.shippingAddress.city,
+                            state: order.shippingAddress.state,
+                            zip: order.shippingAddress.postalCode,
+                            country: order.shippingAddress.country || 'US',
+                        },
+                    });
+
+                    // Update order with shipment info
+                    await adminDb.collection('orders').doc(order.orderId).update({
+                        tracking_number: shipmentResponse.tracking_number,
+                        shipment_id: shipmentResponse.shipment_id,
+                        label_url: shipmentResponse.label_url,
+                        shipment_status: 'label_created',
+                        updated_at: new Date().toISOString(),
+                    });
+
+                    console.log(`EasyPost shipment created for order ${order.orderId}: ${shipmentResponse.tracking_number}`);
+                } catch (easypostErr) {
+                    console.error(`EasyPost shipment creation failed for order ${order.orderId}:`, easypostErr);
+                    // Don't fail the webhook if EasyPost fails - order is still valid
+                }
+
                 // Send order confirmation email
                 if (order.customerEmail) {
                     try {
@@ -247,9 +277,6 @@ export async function POST(request: Request) {
                     }
                 }
 
-                // NOTE: Shipment creation removed - manually create labels in EasyPost dashboard
-                // Simply log the order for fulfillment
-                console.log(`Order ${order.orderId} ready for fulfillment. Manually create label in EasyPost dashboard.`);
 
                 if (order.customerEmail) {
                     try {
