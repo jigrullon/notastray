@@ -121,7 +121,7 @@ export default function ReportLostPage() {
         setReport(prev => ({
           ...prev,
           contactInfo: (pet.ownerPhone as string) || '',
-          reportTitle: `Missing ${pet.species || 'Pet'}! Answers to '${pet.name || ''}'`.slice(0, 20),
+          reportTitle: `Missing ${pet.species || 'Pet'}!`,
         }))
       } catch {
         router.push('/dashboard')
@@ -177,6 +177,7 @@ export default function ReportLostPage() {
         'pet.medicalBehavioral': profile.medicalBehavioral,
         isLost: true,
         lostAt: new Date().toISOString(),
+        lostNotificationSent: false,
         lostReport: {
           street: report.street,
           city: report.city,
@@ -612,16 +613,15 @@ export default function ReportLostPage() {
                   </label>
 
                   <div>
-                    <label className={labelClass}>Report Title</label>
+                    <label className={labelClass}>Report Title (Optional)</label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">A short title for the missing pet poster (e.g., "Missing Dog! - Reward Offered")</p>
                     <input
                       type="text"
                       value={report.reportTitle}
-                      onChange={e => setReport(p => ({ ...p, reportTitle: e.target.value.slice(0, 20) }))}
-                      placeholder={`Missing ${profile.species || 'Pet'}! Answers to '${petName}'`}
-                      maxLength={20}
+                      onChange={e => setReport(p => ({ ...p, reportTitle: e.target.value }))}
+                      placeholder={`Missing ${profile.species || 'Pet'}!`}
                       className={inputClass}
                     />
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{report.reportTitle.length}/20 characters</p>
                   </div>
                 </div>
               </div>

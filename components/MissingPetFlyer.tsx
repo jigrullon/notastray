@@ -3,10 +3,10 @@
 import { useRef } from 'react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
-import { Download, Share2, Copy, Check, Link as LinkIcon } from 'lucide-react'
+import { Download, Share2 } from 'lucide-react'
 import { useState } from 'react'
-import { storage } from '@/lib/firebase'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+// Firebase is no longer needed for upload (using backend API instead)
+import { useAuth } from '@/lib/AuthContext'
 
 interface MissingPetFlyerProps {
   petName: string
@@ -51,43 +51,28 @@ export default function MissingPetFlyer({
   rewardOffered,
   tagCode,
 }: MissingPetFlyerProps) {
+  const { user } = useAuth()
   const flyerRef = useRef<HTMLDivElement>(null)
   const [downloading, setDownloading] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
 
   const primaryContact = ownerName && ownerPhone ? `${ownerName} - ${ownerPhone}` : ownerName || ownerPhone || contactInfo || (vetName ? `${vetName}${vetAddress ? ` - ${vetAddress}` : ''}` : '')
 
   const handleDownloadPDF = async () => {
-    if (!flyerRef.current) return
+    if (!flyerRef.current || !user) {
+      alert('Please log in to download the PDF')
+      return
+    }
     setDownloading(true)
     try {
       console.log('Starting PDF generation...')
 
-      // Hide images temporarily (they have CORS issues on localhost)
-      const imageElements = flyerRef.current.querySelectorAll('img')
-      const originalDisplays: string[] = []
-      imageElements.forEach((img) => {
-        originalDisplays.push(img.style.display)
-        img.style.display = 'none'
-      })
-
-      // Create a timeout promise that rejects after 15 seconds
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('PDF generation timeout')), 15000)
-      )
-
-      const canvasPromise = html2canvas(flyerRef.current, {
+      const canvas = await html2canvas(flyerRef.current, {
         scale: 2,
         backgroundColor: '#ffffff',
         logging: false,
-      })
-
-      const canvas = await Promise.race([canvasPromise, timeoutPromise]) as HTMLCanvasElement
-
-      // Restore images
-      imageElements.forEach((img, idx) => {
-        img.style.display = originalDisplays[idx]
+        useCORS: true,
+        allowTaint: true,
       })
 
       console.log('Canvas generated, creating PDF...')
@@ -107,25 +92,43 @@ export default function MissingPetFlyer({
       // Get PDF as blob
       const pdfBlob = pdf.output('blob') as Blob
 
-      // Upload to Firebase Storage
-      console.log('Uploading PDF to Firebase...')
+      // Upload via backend API with admin privileges
+      console.log('Uploading PDF via backend API...')
       const fileName = `missing-pet-${petName.replace(/\s+/g, '-')}-${Date.now()}.pdf`
-      const storageRef = ref(storage, `missing-pet-flyers/${tagCode}/${fileName}`)
-      await uploadBytes(storageRef, pdfBlob)
-      const downloadUrl = await getDownloadURL(storageRef)
+      const idToken = await user.getIdToken()
 
-      console.log('PDF uploaded, setting URL...')
+      // Use FormData to send binary data
+      const formData = new FormData()
+      formData.append('tagCode', tagCode)
+      formData.append('fileName', fileName)
+      formData.append('pdf', pdfBlob, fileName)
+
+      const uploadResponse = await fetch('/api/upload-missing-flyer', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json()
+        throw new Error(error.error || 'Failed to upload PDF')
+      }
+
+      const uploadData = await uploadResponse.json()
+      const downloadUrl = uploadData.downloadUrl
+
+      console.log('PDF uploaded, triggering download...')
       setPdfUrl(downloadUrl)
 
-      // Also trigger browser download
-      const url = window.URL.createObjectURL(pdfBlob)
+      // Trigger browser download using the signed URL
       const link = document.createElement('a')
-      link.href = url
+      link.href = downloadUrl
       link.download = fileName
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
     } catch (err) {
       console.error('PDF generation failed:', err)
       alert(`Failed to generate PDF: ${err instanceof Error ? err.message : String(err)}`)
@@ -134,12 +137,6 @@ export default function MissingPetFlyer({
     }
   }
 
-  const handleSharePDF = () => {
-    if (!pdfUrl) return
-    navigator.clipboard.writeText(pdfUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
 
   return (
     <div className="space-y-6">
@@ -259,23 +256,6 @@ export default function MissingPetFlyer({
         >
           <Download className="w-5 h-5" />
           {downloading ? 'Generating PDF...' : 'Download PDF'}
-        </button>
-        <button
-          onClick={handleSharePDF}
-          disabled={!pdfUrl || copied}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
-        >
-          {copied ? (
-            <>
-              <Check className="w-5 h-5" />
-              Copied!
-            </>
-          ) : (
-            <>
-              <LinkIcon className="w-5 h-5" />
-              Copy PDF Link
-            </>
-          )}
         </button>
       </div>
     </div>
