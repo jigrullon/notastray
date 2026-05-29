@@ -257,7 +257,10 @@ export default function MissingPetFlyer({
       {/* Action Buttons */}
       <div className="flex gap-3 justify-center">
         <button
-          onClick={handleDownloadPDF}
+          onClick={() => {
+            console.log('BUTTON CLICKED!', { downloading, user, tagCode })
+            handleDownloadPDF()
+          }}
           disabled={downloading}
           className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
         >
