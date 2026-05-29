@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       try {
         // Check if pet is still marked as lost (might have been found/unmarked)
         const freshDoc = await db.collection('tags').doc(doc.id).get()
-        if (!freshDoc.exists() || !freshDoc.get('isLost')) {
+        if (!freshDoc.exists || !freshDoc.get('isLost')) {
           console.log(`[Lost Pet Notifications] Skipping ${doc.id}: Pet no longer marked as lost`)
           continue
         }

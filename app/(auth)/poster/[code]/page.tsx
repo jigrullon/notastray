@@ -115,7 +115,7 @@ export default function PosterPage() {
             Missing Pet Poster
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Download and share the poster to help find {pet.name || 'your pet'}.
+            Download and share the poster to help find {(pet.name as string) || 'your pet'}.
           </p>
         </div>
 
@@ -151,7 +151,7 @@ export default function PosterPage() {
         {/* Info Section */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
           <p className="text-sm text-blue-700 dark:text-blue-300">
-            <strong>💡 Tip:</strong> You can download this poster anytime by returning to this page. Share it on social media, local Facebook groups, and Nextdoor to reach more people who can help find {pet.name || 'your pet'}.
+            <strong>💡 Tip:</strong> You can download this poster anytime by returning to this page. Share it on social media, local Facebook groups, and Nextdoor to reach more people who can help find {(pet.name as string) || 'your pet'}.
           </p>
         </div>
 
