@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle, Edit3, Save, X, Camera, Loader2 } from 'lucide-react'
+import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle, Edit3, Save, X, Camera, Loader2, Download } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'
@@ -330,9 +330,14 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                     <Edit3 className="w-3.5 h-3.5" /> Edit Profile
                   </button>
                   {lostStatus ? (
-                    <button onClick={handleToggleLost} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 transition-colors">
-                      Report Found
-                    </button>
+                    <>
+                      <Link href={`/poster/${tagCode}`} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 transition-colors">
+                        <Download className="w-3.5 h-3.5" /> Download Poster
+                      </Link>
+                      <button onClick={handleToggleLost} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 transition-colors">
+                        Report Found
+                      </button>
+                    </>
                   ) : (
                     <Link href={`/report-lost/${tagCode}`} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 transition-colors">
                       Report Lost
