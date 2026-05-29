@@ -41,8 +41,8 @@ export async function POST(request: Request) {
         const userData = userDoc.data()
         const owner = {
             name: tagData.pet?.ownerName || 'Pet Owner',
-            email: tagData.pet?.ownerEmail || userData?.email,
-            phone: tagData.pet?.ownerPhone,
+            email: userData?.email || tagData.pet?.ownerEmail,
+            phone: userData?.phone || tagData.pet?.ownerPhone,
             petName: tagData.pet?.name || 'Your pet',
             smsEnabled: userData?.preferences?.sms?.optIn ?? true, // Default to true if not set
             emailEnabled: userData?.preferences?.email?.optIn ?? true, // Default to true if not set
@@ -110,14 +110,18 @@ export async function POST(request: Request) {
         }
 
         // Send SMS notification
+        console.log(`SMS check - enabled: ${owner.smsEnabled}, phone: ${owner.phone}`)
         if (owner.smsEnabled && owner.phone) {
             try {
+                console.log(`Attempting to send SMS to ${owner.phone}`)
                 await sendSMS(owner.phone, smsMessage)
                 notificationsSent.sms = true
-                console.log(`SMS sent to ${owner.phone}`)
+                console.log(`SMS sent successfully to ${owner.phone}`)
             } catch (smsError) {
                 console.error('Failed to send SMS:', smsError)
             }
+        } else {
+            console.log(`SMS not sent - smsEnabled: ${owner.smsEnabled}, phone exists: ${!!owner.phone}`)
         }
 
         // Send email notification
@@ -137,17 +141,19 @@ export async function POST(request: Request) {
         }
 
         // Log the scan event
+        const locationData = location ? {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            accuracy: location.accuracy,
+            ...(location.address && { address: location.address }),
+        } : null
+
         await adminDb.collection('scan_events').add({
             tagCode,
             userId: tagData.userId,
             ownerName: owner.name,
             petName: owner.petName,
-            location: location ? {
-                latitude: location.latitude,
-                longitude: location.longitude,
-                accuracy: location.accuracy,
-                address: location.address,
-            } : null,
+            location: locationData,
             timestamp: new Date(timestamp).toISOString(),
             userAgent,
             locationMethod,
@@ -171,6 +177,15 @@ export async function POST(request: Request) {
 
 async function sendSMS(phoneNumber: string, message: string) {
     try {
+        // Format phone number to E.164 format (+1XXXXXXXXXX for US numbers)
+        let formattedNumber = phoneNumber.replace(/\D/g, '') // Remove all non-digits
+        if (formattedNumber.length === 10) {
+            formattedNumber = '1' + formattedNumber // Add country code if missing
+        }
+        if (!formattedNumber.startsWith('+')) {
+            formattedNumber = '+' + formattedNumber
+        }
+
         const smsClient = new SNSClient({
             region: process.env.AWS_REGION || 'us-east-1',
             credentials: {
@@ -182,11 +197,11 @@ async function sendSMS(phoneNumber: string, message: string) {
         const response = await smsClient.send(
             new PublishCommand({
                 Message: message,
-                PhoneNumber: phoneNumber,
+                PhoneNumber: formattedNumber,
             })
         )
 
-        console.log(`SMS sent successfully to ${phoneNumber}. Message ID: ${response.MessageId}`)
+        console.log(`SMS sent successfully to ${formattedNumber}. Message ID: ${response.MessageId}`)
         return response.MessageId
     } catch (error) {
         console.error(`Failed to send SMS to ${phoneNumber}:`, error)
