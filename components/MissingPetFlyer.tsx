@@ -59,6 +59,7 @@ export default function MissingPetFlyer({
   const primaryContact = ownerName && ownerPhone ? `${ownerName} - ${ownerPhone}` : ownerName || ownerPhone || contactInfo || (vetName ? `${vetName}${vetAddress ? ` - ${vetAddress}` : ''}` : '')
 
   const handleDownloadPDF = async () => {
+    console.log('Download button clicked, user:', user)
     if (!flyerRef.current || !user) {
       alert('Please log in to download the PDF')
       return
@@ -66,11 +67,13 @@ export default function MissingPetFlyer({
     setDownloading(true)
     try {
       console.log('Starting PDF generation...')
+      console.log('Flyer ref:', flyerRef.current)
 
+      console.log('Calling html2canvas...')
       const canvas = await html2canvas(flyerRef.current, {
         scale: 2,
         backgroundColor: '#ffffff',
-        logging: false,
+        logging: true, // Enable logging to see what html2canvas is doing
         useCORS: true,
         allowTaint: true,
       })
@@ -95,13 +98,16 @@ export default function MissingPetFlyer({
       // Upload via backend API with admin privileges
       console.log('Uploading PDF via backend API...')
       const fileName = `missing-pet-${petName.replace(/\s+/g, '-')}-${Date.now()}.pdf`
+      console.log('Getting ID token...')
       const idToken = await user.getIdToken()
+      console.log('ID token obtained, creating FormData...')
 
       // Use FormData to send binary data
       const formData = new FormData()
       formData.append('tagCode', tagCode)
       formData.append('fileName', fileName)
       formData.append('pdf', pdfBlob, fileName)
+      console.log('FormData created, calling upload API...')
 
       const uploadResponse = await fetch('/api/upload-missing-flyer', {
         method: 'POST',
@@ -110,6 +116,7 @@ export default function MissingPetFlyer({
         },
         body: formData,
       })
+      console.log('Upload response received:', uploadResponse.status)
 
       if (!uploadResponse.ok) {
         const error = await uploadResponse.json()
@@ -250,7 +257,10 @@ export default function MissingPetFlyer({
       {/* Action Buttons */}
       <div className="flex gap-3 justify-center">
         <button
-          onClick={handleDownloadPDF}
+          onClick={() => {
+            console.log('BUTTON CLICKED!', { downloading, user, tagCode })
+            handleDownloadPDF()
+          }}
           disabled={downloading}
           className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
         >
