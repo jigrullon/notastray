@@ -79,6 +79,9 @@ export interface MerchantOrderEmailData {
     size: string;
     quantity: number;
   }>;
+  subtotal: number;
+  shippingCost: number;
+  tax: number;
   total: number;
   shippingAddress: {
     name: string;
@@ -936,8 +939,25 @@ export function getMerchantOrderEmail(data: MerchantOrderEmailData) {
               ${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.postalCode}
             </p>
 
-            <h3 style="color: #047857; font-size: 16px; margin: 24px 0 8px 0;">Order Total</h3>
-            <p style="margin: 0; font-size: 16px; font-weight: bold;">$${data.total.toFixed(2)}</p>
+            <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">Order Summary</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr style="background-color: #f9fafb;">
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 15px;">Subtotal</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 15px;">$${data.subtotal.toFixed(2)}</td>
+              </tr>
+              <tr style="background-color: #f9fafb;">
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 15px;">Shipping</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 15px;">$${data.shippingCost.toFixed(2)}</td>
+              </tr>
+              <tr style="background-color: #f9fafb;">
+                <td style="padding: 12px; border-bottom: 2px solid #d1d5db; font-size: 15px;">Tax</td>
+                <td style="padding: 12px; border-bottom: 2px solid #d1d5db; text-align: right; font-size: 15px;">$${data.tax.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; font-size: 16px; font-weight: bold;">Total</td>
+                <td style="padding: 12px; text-align: right; font-size: 16px; font-weight: bold; color: #047857;">$${data.total.toFixed(2)}</td>
+              </tr>
+            </table>
 
             <div style="background-color: #f0fdf4; border-left: 4px solid #047857; padding: 16px; margin-top: 32px;">
               <p style="margin: 0; font-size: 14px;">
@@ -982,8 +1002,12 @@ ${data.shippingAddress.name}
 ${data.shippingAddress.line1}${data.shippingAddress.line2 ? '\n' + data.shippingAddress.line2 : ''}
 ${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.postalCode}
 
-ORDER TOTAL
-$${data.total.toFixed(2)}
+ORDER SUMMARY
+Subtotal: $${data.subtotal.toFixed(2)}
+Shipping: $${data.shippingCost.toFixed(2)}
+Tax: $${data.tax.toFixed(2)}
+---
+Total: $${data.total.toFixed(2)}
 
 NEXT STEPS
 1. Print the shipping label from EasyPost (link in dashboard)

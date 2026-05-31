@@ -11,6 +11,7 @@ interface Order {
   items: Array<{ name: string; color: string; size: string; quantity: number; price: number }>;
   subtotal: number;
   shippingCost: number;
+  tax: number;
   total: number;
   shippingAddress: {
     name: string;
@@ -72,6 +73,9 @@ export async function POST(request: Request) {
         customerEmail: order.customerEmail,
         customerName: order.shippingAddress.name,
         items: order.items,
+        subtotal: order.subtotal || order.total,
+        shippingCost: order.shippingCost || 0,
+        tax: order.tax || 0,
         total: order.total,
         shippingAddress: order.shippingAddress,
         dashboardUrl: `${new URL(request.url).origin}/dashboard/orders`,

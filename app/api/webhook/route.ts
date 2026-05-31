@@ -81,6 +81,7 @@ async function writeOrderToFirestore(order: any): Promise<void> {
         shippingOption: order.shippingOption || '',
         shippingZipCode: order.shippingZipCode || '',
         shippingCost: order.shippingCost,
+        tax: order.tax || 0,
         total: order.total,
         shippingAddress: order.shippingAddress,
         estimatedDeliveryMin: order.estimatedDeliveryMin,
@@ -162,6 +163,7 @@ export async function POST(request: Request) {
 
                 const items = JSON.parse(session.metadata?.items || '[]');
                 const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+                const taxAmount = (sessionAny.total_details?.amount_tax || 0) / 100;
                 const paymentIntent = fullSession.payment_intent as Stripe.PaymentIntent | null;
 
                 const order = {
@@ -177,7 +179,8 @@ export async function POST(request: Request) {
                     shippingOption,
                     shippingZipCode,
                     shippingCost: shippingAmount,
-                    total: subtotal + shippingAmount,
+                    tax: taxAmount,
+                    total: subtotal + shippingAmount + taxAmount,
                     shippingAddress: {
                         name: shippingName || '',
                         line1: shippingAddress?.line1 || '',
@@ -260,6 +263,9 @@ export async function POST(request: Request) {
                             customerEmail: order.customerEmail,
                             customerName: order.shippingAddress.name,
                             items: order.items,
+                            subtotal: order.subtotal || order.total,
+                            shippingCost: order.shippingCost || 0,
+                            tax: order.tax || 0,
                             total: order.total,
                             shippingAddress: order.shippingAddress,
                             dashboardUrl: `${new URL(request.url).origin}/dashboard/orders`,
