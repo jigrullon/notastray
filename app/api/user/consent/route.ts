@@ -12,6 +12,8 @@ export async function POST(request: Request) {
             email,
             consentIp,
             consentMethod = 'user_selection',
+            maxNotificationsPerHour = 3,
+            locationSharing = true,
         } = body
 
         if (!userId) {
@@ -38,6 +40,8 @@ export async function POST(request: Request) {
                     consentIp: consentIp || null,
                     consentMethod,
                 },
+                maxNotificationsPerHour,
+                locationSharing,
             },
         }
 

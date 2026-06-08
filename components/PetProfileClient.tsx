@@ -59,8 +59,18 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
     // Don't notify when owner views their own pet
     if (isOwner) return
 
+    // Check sessionStorage for duplicate notification in same session
+    const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
+    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) {
+      return // Already notified in this session today
+    }
+
     const sendNotification = async () => {
       try {
+        // Get source from URL params
+        const srcParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('src') : null
+        const source: 'qr' | 'unknown' = srcParam === 'qr' ? 'qr' : 'unknown'
+
         // Get location if available
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
@@ -83,12 +93,12 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               }
 
               setLocation(locationData)
-              await sendNotificationWithLocation(locationData)
+              await sendNotificationWithLocation(locationData, source)
             },
             async (error) => {
               console.log('Location error:', error.message)
               // Send notification without precise location, use IP-based location
-              await sendNotificationWithIPLocation()
+              await sendNotificationWithIPLocation(source)
             },
             {
               enableHighAccuracy: true,
@@ -98,7 +108,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           )
         } else {
           // Geolocation not supported, use IP-based location
-          await sendNotificationWithIPLocation()
+          await sendNotificationWithIPLocation(source)
         }
       } catch (error) {
         console.error('Failed to send notification:', error)
@@ -108,7 +118,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
     sendNotification()
   }, [tagCode, isOwner])
 
-  const sendNotificationWithLocation = async (locationData: LocationData) => {
+  const sendNotificationWithLocation = async (locationData: LocationData, source: 'qr' | 'unknown' = 'unknown') => {
     try {
       const response = await fetch('/api/notify-owner', {
         method: 'POST',
@@ -119,19 +129,25 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           tagCode: tagCode,
           location: locationData,
           timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent
+          userAgent: navigator.userAgent,
+          source
         }),
       })
 
       if (response.ok) {
         setNotificationSent(true)
+        // Mark as notified in session after successful send
+        if (typeof window !== 'undefined') {
+          const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
+          sessionStorage.setItem(sessionKey, '1')
+        }
       }
     } catch (error) {
       console.error('Failed to send notification:', error)
     }
   }
 
-  const sendNotificationWithIPLocation = async () => {
+  const sendNotificationWithIPLocation = async (source: 'qr' | 'unknown' = 'unknown') => {
     try {
       // Get approximate location from IP
       const ipResponse = await fetch('/api/ip-location')
@@ -151,12 +167,18 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           location: ipLocation,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
-          locationMethod: 'ip'
+          locationMethod: 'ip',
+          source
         }),
       })
 
       if (response.ok) {
         setNotificationSent(true)
+        // Mark as notified in session after successful send
+        if (typeof window !== 'undefined') {
+          const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
+          sessionStorage.setItem(sessionKey, '1')
+        }
       }
     } catch (error) {
       console.error('Failed to send notification:', error)

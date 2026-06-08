@@ -14,12 +14,13 @@ interface NotificationRequest {
     timestamp: string
     userAgent: string
     locationMethod?: 'gps' | 'ip'
+    source?: 'qr' | 'unknown'
 }
 
 export async function POST(request: Request) {
     try {
         const body: NotificationRequest = await request.json()
-        const { tagCode, location, timestamp, userAgent, locationMethod = 'gps' } = body
+        const { tagCode, location, timestamp, userAgent, locationMethod = 'gps', source = 'unknown' } = body
 
         // Get tag from Firestore
         const tagDoc = await adminDb.collection('tags').doc(tagCode.toUpperCase()).get()
@@ -52,6 +53,53 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No contact information available' }, { status: 400 })
         }
 
+        // Apply rate limiting
+        let maxPerHour = userData?.preferences?.maxNotificationsPerHour ?? 3
+        // When pet is lost, increase the rate limit to at least 5/hour
+        const effectiveMaxPerHour = tagData.isLost ? Math.max(maxPerHour, 5) : maxPerHour
+
+        if (effectiveMaxPerHour !== -1) { // -1 means Unlimited
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+            try {
+                const recentScansSnapshot = await adminDb
+                    .collection('scan_events')
+                    .where('tagCode', '==', tagCode.toUpperCase())
+                    .where('createdAt', '>=', oneHourAgo)
+                    .get()
+
+                const recentNotificationCount = recentScansSnapshot.docs.filter(
+                    doc => doc.data().notificationsSent?.sms || doc.data().notificationsSent?.email
+                ).length
+
+                if (recentNotificationCount >= effectiveMaxPerHour) {
+                    // Still log the scan event, just skip sending notifications
+                    await adminDb.collection('scan_events').add({
+                        tagCode: tagCode.toUpperCase(),
+                        userId: tagData.userId,
+                        ownerName: owner.name,
+                        petName: owner.petName,
+                        location: location ? {
+                            latitude: location.latitude,
+                            longitude: location.longitude,
+                            accuracy: location.accuracy,
+                            ...(location.address && { address: location.address }),
+                        } : null,
+                        timestamp: new Date(timestamp).toISOString(),
+                        userAgent,
+                        locationMethod,
+                        source,
+                        notificationsSent: { sms: false, email: false },
+                        rateLimited: true,
+                        createdAt: new Date().toISOString(),
+                    })
+                    return NextResponse.json({ success: true, message: 'Rate limited', rateLimited: true })
+                }
+            } catch (queryError) {
+                console.error('Error querying recent scans:', queryError)
+                // Continue with notification if rate limit query fails
+            }
+        }
+
         // Format location information
         let locationText = 'Location not available'
         if (location) {
@@ -76,21 +124,30 @@ export async function POST(request: Request) {
             minute: '2-digit'
         })
 
-        // Prepare notification messages
-        const smsMessage = `🐾 FOUND PET ALERT: ${owner.petName}'s tag was just scanned! Location: ${locationText}. Time: ${scanTime}. Someone may have found your pet. Check your email for more details.`
+        // Prepare notification messages with source-aware wording
+        const eventLabel = source === 'qr' ? "tag was scanned" : "profile was accessed"
+        const urgencyPrefix = tagData.isLost ? '🚨 LOST PET ALERT' : '🐾 FOUND PET ALERT'
+        const contextText = tagData.isLost
+            ? 'Your pet is marked as lost. This is an urgent alert!'
+            : 'Someone may have found your pet.'
 
-        const emailSubject = `🐾 ${owner.petName}'s tag was scanned - Someone may have found your pet!`
+        const smsMessage = `${urgencyPrefix}: ${owner.petName}'s ${eventLabel}! Location: ${locationText}. Time: ${scanTime}. ${contextText} Check your email for more details.`
+
+        const emailSubject = `${urgencyPrefix}: ${owner.petName}'s tag was ${source === 'qr' ? 'scanned' : 'accessed'}!`
         const emailBody = `
-      <h2>Your pet's tag was just scanned!</h2>
-      <p><strong>${owner.petName}'s</strong> QR code tag was scanned by someone who may have found your pet.</p>
-      
+      <h2>Your pet's tag was just ${source === 'qr' ? 'scanned' : 'accessed'}!</h2>
+      <p><strong>${owner.petName}'s</strong> ${source === 'qr' ? 'QR code tag was scanned' : 'profile was accessed'} by someone${source === 'qr' ? ' who may have found your pet' : ''}.</p>
+
+      ${tagData.isLost ? '<p style="color: red; font-weight: bold;">⚠️ Your pet is marked as LOST. This is an urgent alert!</p>' : ''}
+
       <h3>Scan Details:</h3>
       <ul>
+        <li><strong>Event:</strong> ${source === 'qr' ? 'QR code scanned' : 'Profile accessed'}</li>
         <li><strong>Time:</strong> ${scanTime}</li>
         <li><strong>Location:</strong> ${locationText}</li>
         <li><strong>Tag Code:</strong> ${tagCode}</li>
       </ul>
-      
+
       <h3>What to do next:</h3>
       <ol>
         <li>Check your phone for missed calls or texts</li>
@@ -98,9 +155,9 @@ export async function POST(request: Request) {
         <li>Consider posting on local lost pet groups with this location</li>
         <li>Head to the scan location if it's nearby</li>
       </ol>
-      
-      <p>The person who scanned the tag can see ${owner.petName}'s profile with your contact information.</p>
-      
+
+      <p>The person who ${source === 'qr' ? 'scanned' : 'accessed'} your pet's profile can see ${owner.petName}'s information with your contact details.</p>
+
       <p><em>This is an automated notification from NotAStray. The location is ${locationMethod === 'ip' ? 'approximate based on internet connection' : 'based on the scanner\'s device GPS'}.</em></p>
     `
 
@@ -149,7 +206,7 @@ export async function POST(request: Request) {
         } : null
 
         await adminDb.collection('scan_events').add({
-            tagCode,
+            tagCode: tagCode.toUpperCase(),
             userId: tagData.userId,
             ownerName: owner.name,
             petName: owner.petName,
@@ -157,6 +214,7 @@ export async function POST(request: Request) {
             timestamp: new Date(timestamp).toISOString(),
             userAgent,
             locationMethod,
+            source,
             notificationsSent,
             createdAt: new Date().toISOString(),
         })
