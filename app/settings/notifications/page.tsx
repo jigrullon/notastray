@@ -50,6 +50,7 @@ export default function NotificationSettingsPage() {
               email: data.email || user.email || '',
               phone: data.phone || ''
             })
+            setOriginalPhone(data.phone || '')
 
             // Load preferences from Firestore
             if (data.preferences) {
@@ -78,12 +79,17 @@ export default function NotificationSettingsPage() {
   const [showSMSConsent, setShowSMSConsent] = useState(false)
   const [smsConsentAccepted, setSmsConsentAccepted] = useState(false)
   const [consentChecked, setConsentChecked] = useState(false)
+  const [originalPhone, setOriginalPhone] = useState('')
+  const [pendingAction, setPendingAction] = useState<'save' | 'test' | null>(null)
+
+  const phoneChanged = () => contactInfo.phone.trim() !== originalPhone.trim()
 
   const handleTestNotification = async (type: 'email' | 'sms') => {
     if (!user) return
 
-    // SMS Consent Check
-    if (type === 'sms' && !smsConsentAccepted) {
+    // SMS Consent Check — require consent for new or changed phone numbers
+    if (type === 'sms' && (!smsConsentAccepted || phoneChanged())) {
+      setPendingAction('test')
       setShowSMSConsent(true)
       return
     }
@@ -163,14 +169,62 @@ export default function NotificationSettingsPage() {
       return
     }
 
+    const action = pendingAction
+    const phone = contactInfo.phone.trim()
+
     setSmsConsentAccepted(true)
+    setOriginalPhone(phone)
     setShowSMSConsent(false)
+    setConsentChecked(false)
     setSettings(prev => ({ ...prev, smsEnabled: true }))
-    handleTestNotification('sms')
+    setPendingAction(null)
+
+    if (action === 'save') {
+      // Consent API already saved the phone + smsOptIn — just surface success to user
+      setSuccessMessage('Settings saved successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } else {
+      // 'test' or legacy null path — send the test SMS directly to avoid stale-closure issues
+      if (!phone) {
+        alert('Please enter a valid phone number first.')
+        return
+      }
+      setTestStatus(prev => ({ ...prev, sms: 'sending' }))
+      setSuccessMessage('')
+      try {
+        const response = await fetch('/api/notifications/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'sms', to: phone }),
+        })
+        const data = await response.json()
+        if (data.success) {
+          setTestStatus(prev => ({ ...prev, sms: 'sent' }))
+          setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
+        } else {
+          alert(`Failed to send test: ${data.error}`)
+          setTestStatus(prev => ({ ...prev, sms: 'error' }))
+          setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
+        }
+      } catch (error) {
+        console.error('Test notification error:', error)
+        alert('An error occurred while sending the test notification.')
+        setTestStatus(prev => ({ ...prev, sms: 'error' }))
+        setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
+      }
+    }
   }
 
   const handleSave = async () => {
     if (!user) return
+
+    // Require consent if SMS is enabled and phone number has been added or changed
+    if (settings.smsEnabled && contactInfo.phone.trim() && phoneChanged()) {
+      setPendingAction('save')
+      setShowSMSConsent(true)
+      return
+    }
+
     setSaving(true)
     setSuccessMessage('')
 
@@ -459,16 +513,6 @@ export default function NotificationSettingsPage() {
           </div>
         </div>
 
-        {/* Test Notification */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Test Your Notifications</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Send yourself a test notification to make sure everything is working correctly.
-          </p>
-          <button className="btn-outline">
-            Send Test Notification
-          </button>
-        </div>
       </div>
 
       {/* SMS Consent Modal */}
