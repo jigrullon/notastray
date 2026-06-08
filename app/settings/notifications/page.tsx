@@ -56,7 +56,9 @@ export default function NotificationSettingsPage() {
               setSettings(prev => ({
                 ...prev,
                 smsEnabled: data.preferences.sms?.optIn ?? true,
-                emailEnabled: data.preferences.email?.optIn ?? true
+                emailEnabled: data.preferences.email?.optIn ?? true,
+                maxNotificationsPerHour: data.preferences.maxNotificationsPerHour ?? 3,
+                locationSharing: data.preferences.locationSharing ?? true
               }))
               if (data.preferences.sms?.optIn) {
                 setSmsConsentAccepted(true)
@@ -185,6 +187,8 @@ export default function NotificationSettingsPage() {
           phone: contactInfo.phone,
           email: contactInfo.email,
           consentMethod: 'user_selection',
+          maxNotificationsPerHour: settings.maxNotificationsPerHour,
+          locationSharing: settings.locationSharing,
         }),
       })
 
@@ -404,7 +408,7 @@ export default function NotificationSettingsPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                 <Clock className="w-5 h-5 mr-2 text-primary-600" />
-                Rate Limiting
+                Notification Frequency
               </h2>
 
               <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
