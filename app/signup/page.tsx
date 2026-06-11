@@ -21,13 +21,13 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showSMSConsent, setShowSMSConsent] = useState(false)
   const [fromActivate, setFromActivate] = useState(false)
   const [activationCode, setActivationCode] = useState<string | null>(null)
   const [notificationPrefs, setNotificationPrefs] = useState({
     wantsSMS: false,
     wantsEmail: true,
   })
-  const [showSMSConsent, setShowSMSConsent] = useState(false)
   const [smsConsentAgreed, setSmsConsentAgreed] = useState(false)
 
   useEffect(() => {
@@ -63,6 +63,15 @@ export default function SignupPage() {
       }
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (success && fromActivate && activationCode) {
+      const timer = setTimeout(() => {
+        router.push(`/activate?code=${activationCode}`)
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [success, router, fromActivate, activationCode])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,6 +113,18 @@ export default function SignupPage() {
     }
   }
 
+  const handleSMSConsent = (agreed: boolean) => {
+    if (agreed) {
+      setSmsConsentAgreed(true)
+      setShowSMSConsent(false)
+      // SMS stays enabled
+    } else {
+      setSmsConsentAgreed(false)
+      setShowSMSConsent(false)
+      setNotificationPrefs({ ...notificationPrefs, wantsSMS: false })
+    }
+  }
+
   const handleSaveNotificationPrefs = async () => {
     if (notificationPrefs.wantsSMS && !phone) {
       setError('Please enter a phone number to enable SMS notifications')
@@ -112,6 +133,7 @@ export default function SignupPage() {
 
     try {
       setLoading(true)
+      setError(null)
 
       if (user) {
         const userRef = doc(db, 'users', user.uid)
@@ -138,17 +160,6 @@ export default function SignupPage() {
   }
 
   if (success) {
-    useEffect(() => {
-      const redirect = sessionStorage.getItem('activationRedirect')
-      if (redirect) {
-        sessionStorage.removeItem('activationRedirect')
-        const timer = setTimeout(() => {
-          router.push(`/activate?code=${redirect}`)
-        }, 2000)
-        return () => clearTimeout(timer)
-      }
-    }, [router])
-
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -174,9 +185,8 @@ export default function SignupPage() {
     )
   }
 
-  if (showNotifications) {
-    if (showSMSConsent) {
-      return (
+  if (showNotifications && showSMSConsent) {
+    return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
           <div className="sm:mx-auto sm:w-full sm:max-w-md">
             <Link href="/" className="flex items-center justify-center space-x-2 mb-8">
@@ -234,26 +244,18 @@ export default function SignupPage() {
               <div className="mt-6 flex gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowSMSConsent(false)
-                    setNotificationPrefs({ ...notificationPrefs, wantsSMS: false })
-                    setSmsConsentAgreed(false)
-                  }}
+                  onClick={() => handleSMSConsent(false)}
                   className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (smsConsentAgreed) {
-                      setShowSMSConsent(false)
-                    }
-                  }}
+                  onClick={() => handleSMSConsent(smsConsentAgreed)}
                   disabled={!smsConsentAgreed}
                   className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-400 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Continue
+                  I Agree
                 </button>
               </div>
             </div>
@@ -262,6 +264,7 @@ export default function SignupPage() {
       )
     }
 
+    if (showNotifications && !showSMSConsent) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -329,7 +332,10 @@ export default function SignupPage() {
                         name="sms"
                         value="yes"
                         checked={notificationPrefs.wantsSMS}
-                        onChange={() => setShowSMSConsent(true)}
+                        onChange={() => {
+                          setNotificationPrefs({ ...notificationPrefs, wantsSMS: true })
+                          setShowSMSConsent(true)
+                        }}
                         className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                       />
                       <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
@@ -388,7 +394,7 @@ export default function SignupPage() {
         </div>
       </div>
     )
-  }
+    }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
