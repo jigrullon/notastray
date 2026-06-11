@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { Suspense, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Camera, Upload, Check, ArrowLeft, Shield, Star, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -10,6 +10,18 @@ import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 export default function ActivatePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-brand-cream dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+      </div>
+    }>
+      <ActivateContent />
+    </Suspense>
+  )
+}
+
+function ActivateContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
