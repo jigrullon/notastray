@@ -24,7 +24,7 @@ export default function NotificationSettingsPage() {
   })
 
   const [settings, setSettings] = useState({
-    smsEnabled: true,
+    smsEnabled: false,
     emailEnabled: true,
     instantNotifications: true,
     locationSharing: true,
@@ -56,7 +56,7 @@ export default function NotificationSettingsPage() {
             if (data.preferences) {
               setSettings(prev => ({
                 ...prev,
-                smsEnabled: data.preferences.sms?.optIn ?? true,
+                smsEnabled: data.preferences.sms?.optIn ?? false,
                 emailEnabled: data.preferences.email?.optIn ?? true,
                 maxNotificationsPerHour: data.preferences.maxNotificationsPerHour ?? 3,
                 locationSharing: data.preferences.locationSharing ?? true

@@ -26,23 +26,36 @@ export default function SignupPage() {
   const [notificationPrefs, setNotificationPrefs] = useState({
     wantsSMS: false,
     wantsEmail: true,
-    agreedToTerms: false,
   })
+  const [showSMSConsent, setShowSMSConsent] = useState(false)
+  const [smsConsentAgreed, setSmsConsentAgreed] = useState(false)
 
   useEffect(() => {
     const from = searchParams.get('from')
     const code = searchParams.get('code')
+    const ownerName = searchParams.get('ownerName')
+    const phoneNum = searchParams.get('phone')
 
     if (from === 'activate' && code) {
       setFromActivate(true)
       setActivationCode(code)
 
+      if (ownerName) {
+        setName(ownerName)
+      }
+      if (phoneNum) {
+        setPhone(phoneNum)
+      }
+
       const savedData = sessionStorage.getItem('activationData')
       if (savedData) {
         try {
           const { petData } = JSON.parse(savedData)
-          if (petData?.ownerName) {
+          if (petData?.ownerName && !ownerName) {
             setName(petData.ownerName)
+          }
+          if (petData?.phone && !phoneNum) {
+            setPhone(petData.phone)
           }
         } catch (err) {
           console.error('Failed to load activation data:', err)
@@ -92,8 +105,8 @@ export default function SignupPage() {
   }
 
   const handleSaveNotificationPrefs = async () => {
-    if (!notificationPrefs.agreedToTerms) {
-      setError('You must agree to the Terms of Service to continue')
+    if (notificationPrefs.wantsSMS && !phone) {
+      setError('Please enter a phone number to enable SMS notifications')
       return
     }
 
@@ -162,6 +175,93 @@ export default function SignupPage() {
   }
 
   if (showNotifications) {
+    if (showSMSConsent) {
+      return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+          <div className="sm:mx-auto sm:w-full sm:max-w-md">
+            <Link href="/" className="flex items-center justify-center space-x-2 mb-8">
+              <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
+                <Heart className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">NotAStray</span>
+            </Link>
+
+            <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-sm sm:rounded-lg sm:px-10 border border-gray-200 dark:border-gray-700">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">SMS Notification Consent</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Enable instant SMS alerts when your pet's tag is scanned. Standard message rates apply.
+              </p>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  By enabling SMS notifications, you consent to receive text messages at the phone number you provide. You can disable SMS notifications anytime in your settings.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <label className="flex items-start cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={smsConsentAgreed}
+                    onChange={(e) => setSmsConsentAgreed(e.target.checked)}
+                    className="mt-1 rounded border-gray-300 dark:border-gray-600 text-primary-600"
+                  />
+                  <div className="ml-3">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      I consent to receive SMS notifications at {phone || 'my phone number'} and understand standard message rates apply.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={smsConsentAgreed}
+                    onChange={(e) => setSmsConsentAgreed(e.target.checked)}
+                    className="mt-1 rounded border-gray-300 dark:border-gray-600 text-primary-600"
+                  />
+                  <div className="ml-3">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      I have read and agree to the{' '}
+                      <Link href="/privacy" className="text-primary-600 hover:text-primary-500 font-medium">
+                        Privacy Policy
+                      </Link>
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSMSConsent(false)
+                    setNotificationPrefs({ ...notificationPrefs, wantsSMS: false })
+                    setSmsConsentAgreed(false)
+                  }}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (smsConsentAgreed) {
+                      setShowSMSConsent(false)
+                    }
+                  }}
+                  disabled={!smsConsentAgreed}
+                  className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-400 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -204,21 +304,41 @@ export default function SignupPage() {
 
               {/* SMS Notifications */}
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <label className="flex items-start cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notificationPrefs.wantsSMS}
-                    onChange={(e) => setNotificationPrefs({ ...notificationPrefs, wantsSMS: e.target.checked })}
-                    className="mt-1 rounded border-gray-300 dark:border-gray-600 text-primary-600"
-                  />
-                  <div className="ml-3">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">SMS Notifications</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Get instant text alerts (requires phone number)</p>
+                <div className="mb-3">
+                  <p className="font-medium text-gray-900 dark:text-gray-100 mb-3">SMS Notifications</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Get instant text alerts when your tag is scanned</p>
+
+                  <div className="flex gap-4">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="sms"
+                        value="no"
+                        checked={!notificationPrefs.wantsSMS}
+                        onChange={() => {
+                          setNotificationPrefs({ ...notificationPrefs, wantsSMS: false })
+                          setSmsConsentAgreed(false)
+                        }}
+                        className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                      />
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">No</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="sms"
+                        value="yes"
+                        checked={notificationPrefs.wantsSMS}
+                        onChange={() => setShowSMSConsent(true)}
+                        className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                      />
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
+                    </label>
                   </div>
-                </label>
+                </div>
 
                 {notificationPrefs.wantsSMS && (
-                  <div className="mt-4 ml-7">
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Phone Number
                     </label>
@@ -238,29 +358,12 @@ export default function SignupPage() {
                 )}
               </div>
 
-              {/* Terms & Conditions */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <label className="flex items-start cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notificationPrefs.agreedToTerms}
-                    onChange={(e) => setNotificationPrefs({ ...notificationPrefs, agreedToTerms: e.target.checked })}
-                    className="mt-1 rounded border-gray-300 dark:border-gray-600 text-primary-600"
-                  />
-                  <div className="ml-3">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      I agree to the{' '}
-                      <Link href="/terms" className="text-primary-600 hover:text-primary-500 font-medium">
-                        Terms of Service
-                      </Link>
-                      {' '}and{' '}
-                      <Link href="/privacy" className="text-primary-600 hover:text-primary-500 font-medium">
-                        Privacy Policy
-                      </Link>
-                    </p>
-                  </div>
-                </label>
-              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Read our{' '}
+                <Link href="/privacy" className="text-primary-600 hover:text-primary-500 font-medium">
+                  Privacy Policy
+                </Link>
+              </p>
 
               <button
                 type="button"

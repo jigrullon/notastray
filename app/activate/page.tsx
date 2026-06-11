@@ -174,6 +174,17 @@ export default function ActivatePage() {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) {
+      const params = new URLSearchParams({
+        from: 'activate',
+        code: tagCode,
+        ownerName: petData.ownerName || '',
+        phone: petData.phone || '',
+      })
+      sessionStorage.setItem('activationData', JSON.stringify({ tagCode, petData }))
+      window.location.href = `/signup?${params.toString()}`
+      return
+    }
     await submitActivation(tagCode, petData)
   }
 
