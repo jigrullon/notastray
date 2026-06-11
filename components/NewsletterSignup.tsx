@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Mail, CheckCircle, Loader2 } from 'lucide-react'
+import { useAuth } from '@/lib/AuthContext'
 
 type Variant = 'full' | 'compact'
 type Status = 'idle' | 'loading' | 'success' | 'error'
@@ -11,9 +12,15 @@ interface NewsletterSignupProps {
 }
 
 export default function NewsletterSignup({ variant = 'full' }: NewsletterSignupProps) {
+    const { user } = useAuth()
     const [email, setEmail] = useState('')
     const [status, setStatus] = useState<Status>('idle')
     const [errorMessage, setErrorMessage] = useState('')
+
+    // Hide newsletter signup for signed-in users
+    if (user) {
+        return null
+    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
