@@ -102,6 +102,8 @@ export async function POST(request: Request) {
 
         // Format location information
         let locationText = 'Location not available'
+        let mapsUrl: string | null = null
+
         if (location) {
             if (location.address) {
                 locationText = location.address
@@ -111,6 +113,11 @@ export async function POST(request: Request) {
 
             if (locationMethod === 'ip') {
                 locationText += ' (approximate)'
+            }
+
+            // Build Google Maps URL if coordinates are available
+            if (location.latitude && location.longitude) {
+                mapsUrl = `https://maps.google.com/?q=${location.latitude},${location.longitude}`
             }
         }
 
@@ -131,7 +138,22 @@ export async function POST(request: Request) {
             ? 'Your pet is marked as lost. This is an urgent alert!'
             : 'Someone may have found your pet.'
 
-        const smsMessage = `${urgencyPrefix}: ${owner.petName}'s ${eventLabel}! Location: ${locationText}. Time: ${scanTime}. ${contextText} Check your email for more details.`
+        // Build SMS with actionable map link on own line for auto-linking
+        const locationLine = mapsUrl
+            ? `📍 ${locationText}\n${mapsUrl}`
+            : `📍 ${locationText}`
+
+        const smsMessage = [
+            `${urgencyPrefix}: ${owner.petName}'s ${eventLabel}!`,
+            locationLine,
+            scanTime,
+            'See email for full details.'
+        ].join('\n')
+
+        // Build location HTML with map link for email
+        const locationHtml = mapsUrl
+            ? `${locationText} &mdash; <a href="${mapsUrl}" style="color: #2563eb; text-decoration: none;"><strong>View on Google Maps →</strong></a>`
+            : locationText
 
         const emailSubject = `${urgencyPrefix}: ${owner.petName}'s tag was ${source === 'qr' ? 'scanned' : 'accessed'}!`
         const emailBody = `
@@ -144,7 +166,7 @@ export async function POST(request: Request) {
       <ul>
         <li><strong>Event:</strong> ${source === 'qr' ? 'QR code scanned' : 'Profile accessed'}</li>
         <li><strong>Time:</strong> ${scanTime}</li>
-        <li><strong>Location:</strong> ${locationText}</li>
+        <li><strong>Location:</strong> ${locationHtml}</li>
         <li><strong>Tag Code:</strong> ${tagCode}</li>
       </ul>
 
