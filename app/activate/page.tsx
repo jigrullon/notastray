@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { Suspense, useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Camera, Upload, Check, ArrowLeft, Shield, Star, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '../../lib/AuthContext'
@@ -9,8 +10,22 @@ import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 export default function ActivatePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-brand-cream dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+      </div>
+    }>
+      <ActivateContent />
+    </Suspense>
+  )
+}
+
+function ActivateContent() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
+  const [autoSubmitReady, setAutoSubmitReady] = useState(false)
   const [tagCode, setTagCode] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [petData, setPetData] = useState({
@@ -24,10 +39,30 @@ export default function ActivatePage() {
     vetName: '',
     vetAddress: '',
     allergies: '',
-    goodWithDogs: false,
-    goodWithCats: false,
-    goodWithChildren: false,
+    goodWithDogs: '' as '' | 'yes' | 'no' | 'unsure',
+    goodWithCats: '' as '' | 'yes' | 'no' | 'unsure',
+    goodWithChildren: '' as '' | 'yes' | 'no' | 'unsure',
   })
+
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (code && user && !autoSubmitReady) {
+      const savedData = sessionStorage.getItem('activationData')
+      if (savedData) {
+        try {
+          const { tagCode: savedTagCode, petData: savedPetData } = JSON.parse(savedData)
+          if (savedTagCode === code) {
+            setTagCode(code)
+            setPetData(savedPetData)
+            setStep(2)
+            setAutoSubmitReady(true)
+          }
+        } catch (err) {
+          console.error('Failed to load activation data:', err)
+        }
+      }
+    }
+  }, [searchParams, user, autoSubmitReady])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
@@ -55,6 +90,73 @@ export default function ActivatePage() {
 
   const [activateError, setActivateError] = useState<string | null>(null)
   const [activateLoading, setActivateLoading] = useState(false)
+
+  const submitActivation = async (code: string, data: typeof petData) => {
+    try {
+      if (!user) {
+        sessionStorage.setItem('activationData', JSON.stringify({ tagCode: code, petData: data }))
+        window.location.href = `/signup?from=activate&code=${code}`
+        return
+      }
+
+      setActivateLoading(true)
+      setActivateError(null)
+
+      const tagRef = doc(db, 'tags', code)
+      const userRef = doc(db, 'users', user.uid)
+
+      let photoUrl = ''
+      if (data.photo) {
+        const storageRef = ref(storage, `pet-photos/${code}/${Date.now()}-${data.photo.name}`)
+        await uploadBytes(storageRef, data.photo)
+        photoUrl = await getDownloadURL(storageRef)
+      }
+
+      await updateDoc(tagRef, {
+        isActive: true,
+        userId: user.uid,
+        pet: {
+          name: data.name,
+          photo: photoUrl,
+          species: data.species,
+          breed: data.breed,
+          ownerName: data.ownerName,
+          ownerAddress: data.address,
+          ownerPhone: data.phone,
+          vetName: data.vetName,
+          vetAddress: data.vetAddress,
+          allergies: data.allergies,
+          goodWithDogs: data.goodWithDogs,
+          goodWithCats: data.goodWithCats,
+          goodWithChildren: data.goodWithChildren,
+        },
+        isLost: false,
+        foundReports: [],
+        activatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+
+      await updateDoc(userRef, {
+        tagCodes: arrayUnion(code),
+        updatedAt: new Date().toISOString(),
+      })
+
+      setStep(3)
+      sessionStorage.removeItem('activationData')
+    } catch (err) {
+      console.error('Error activating tag:', err)
+      setActivateError('Failed to activate tag. Please try again.')
+    } finally {
+      setActivateLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (autoSubmitReady && user && step === 2 && tagCode) {
+      submitActivation(tagCode, petData)
+      setAutoSubmitReady(false)
+    }
+  }, [autoSubmitReady, user, step, tagCode, petData])
 
   const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,62 +187,17 @@ export default function ActivatePage() {
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) {
-      setActivateError('You must be logged in to activate a tag.')
+      const params = new URLSearchParams({
+        from: 'activate',
+        code: tagCode,
+        ownerName: petData.ownerName || '',
+        phone: petData.phone || '',
+      })
+      sessionStorage.setItem('activationData', JSON.stringify({ tagCode, petData }))
+      window.location.href = `/signup?${params.toString()}`
       return
     }
-    setActivateLoading(true)
-    setActivateError(null)
-
-    try {
-      const tagRef = doc(db, 'tags', tagCode)
-      const userRef = doc(db, 'users', user.uid)
-
-      // Upload photo to Firebase Storage if provided
-      let photoUrl = ''
-      if (petData.photo) {
-        const storageRef = ref(storage, `pet-photos/${tagCode}/${Date.now()}-${petData.photo.name}`)
-        await uploadBytes(storageRef, petData.photo)
-        photoUrl = await getDownloadURL(storageRef)
-      }
-
-      // Write pet profile to tag document
-      await updateDoc(tagRef, {
-        isActive: true,
-        userId: user.uid,
-        pet: {
-          name: petData.name,
-          photo: photoUrl,
-          species: petData.species,
-          breed: petData.breed,
-          ownerName: petData.ownerName,
-          ownerAddress: petData.address,
-          ownerPhone: petData.phone,
-          vetName: petData.vetName,
-          vetAddress: petData.vetAddress,
-          allergies: petData.allergies,
-          goodWithDogs: petData.goodWithDogs,
-          goodWithCats: petData.goodWithCats,
-          goodWithChildren: petData.goodWithChildren,
-        },
-        isLost: false,
-        foundReports: [],
-        activatedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
-
-      // Add tag code to user's tagCodes array
-      await updateDoc(userRef, {
-        tagCodes: arrayUnion(tagCode),
-        updatedAt: new Date().toISOString(),
-      })
-
-      setStep(3)
-    } catch (err) {
-      console.error('Error activating tag:', err)
-      setActivateError('Failed to activate tag. Please try again.')
-    } finally {
-      setActivateLoading(false)
-    }
+    await submitActivation(tagCode, petData)
   }
 
   const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
@@ -419,34 +476,123 @@ export default function ActivatePage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   Pet is good with:
                 </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={petData.goodWithDogs}
-                      onChange={(e) => setPetData({ ...petData, goodWithDogs: e.target.checked })}
-                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="ml-2 text-gray-700 dark:text-gray-300">Dogs</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={petData.goodWithCats}
-                      onChange={(e) => setPetData({ ...petData, goodWithCats: e.target.checked })}
-                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="ml-2 text-gray-700 dark:text-gray-300">Cats</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={petData.goodWithChildren}
-                      onChange={(e) => setPetData({ ...petData, goodWithChildren: e.target.checked })}
-                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="ml-2 text-gray-700 dark:text-gray-300">Children</span>
-                  </label>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Dogs</p>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithDogs"
+                          value="yes"
+                          checked={petData.goodWithDogs === 'yes'}
+                          onChange={(e) => setPetData({ ...petData, goodWithDogs: 'yes' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithDogs"
+                          value="no"
+                          checked={petData.goodWithDogs === 'no'}
+                          onChange={(e) => setPetData({ ...petData, goodWithDogs: 'no' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">No</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithDogs"
+                          value="unsure"
+                          checked={petData.goodWithDogs === 'unsure'}
+                          onChange={(e) => setPetData({ ...petData, goodWithDogs: 'unsure' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Unsure</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Cats</p>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithCats"
+                          value="yes"
+                          checked={petData.goodWithCats === 'yes'}
+                          onChange={(e) => setPetData({ ...petData, goodWithCats: 'yes' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithCats"
+                          value="no"
+                          checked={petData.goodWithCats === 'no'}
+                          onChange={(e) => setPetData({ ...petData, goodWithCats: 'no' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">No</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithCats"
+                          value="unsure"
+                          checked={petData.goodWithCats === 'unsure'}
+                          onChange={(e) => setPetData({ ...petData, goodWithCats: 'unsure' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Unsure</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Children</p>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithChildren"
+                          value="yes"
+                          checked={petData.goodWithChildren === 'yes'}
+                          onChange={(e) => setPetData({ ...petData, goodWithChildren: 'yes' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithChildren"
+                          value="no"
+                          checked={petData.goodWithChildren === 'no'}
+                          onChange={(e) => setPetData({ ...petData, goodWithChildren: 'no' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">No</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="goodWithChildren"
+                          value="unsure"
+                          checked={petData.goodWithChildren === 'unsure'}
+                          onChange={(e) => setPetData({ ...petData, goodWithChildren: 'unsure' })}
+                          className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Unsure</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     // Reset tag to unactivated state, clear all pet data
     await adminDb.collection('tags').doc(tagCode.toUpperCase()).set({
       isActive: false,
-      userId: undefined,
+      userId: null,
       isLost: false,
       pet: {
         name: '',

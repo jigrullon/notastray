@@ -73,13 +73,16 @@ function DashboardContent() {
           const snapshot = await getDocs(tagsQuery)
           snapshot.forEach(tagDoc => {
             const data = tagDoc.data()
-            allTags.push({
-              code: tagDoc.id,
-              petName: data.pet?.name || 'Unnamed',
-              isActive: data.isActive || false,
-              isLost: data.isLost || false,
-              activatedAt: data.activatedAt || undefined,
-            })
+            // Only include active tags
+            if (data.isActive) {
+              allTags.push({
+                code: tagDoc.id,
+                petName: data.pet?.name || 'Unnamed',
+                isActive: data.isActive || false,
+                isLost: data.isLost || false,
+                activatedAt: data.activatedAt || undefined,
+              })
+            }
           })
         }
         setTags(allTags)
