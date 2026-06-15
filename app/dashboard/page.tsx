@@ -278,33 +278,6 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Tags</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">{tags.filter(t => t.isActive).length}</p>
-              </div>
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-                <Package className="w-6 h-6 text-primary-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Scans</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">0</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                <Heart className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Link
