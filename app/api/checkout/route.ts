@@ -66,40 +66,26 @@ export async function POST(request: Request) {
             sessionParams.customer_email = userEmail;
         }
 
-        // Set shipping options
-        if (shippingOption) {
-            sessionParams.shipping_options = [
-                {
-                    shipping_rate_data: {
-                        type: 'fixed_amount',
-                        fixed_amount: { amount: Math.round(shippingOption.cost * 100), currency: 'usd' },
-                        display_name: shippingOption.displayName,
-                        delivery_estimate: {
-                            minimum: { unit: 'business_day', value: shippingOption.minDays },
-                            maximum: { unit: 'business_day', value: shippingOption.maxDays },
-                        },
+        // Free shipping: always a single $0 "Free Shipping" option.
+        sessionParams.shipping_options = [
+            {
+                shipping_rate_data: {
+                    type: 'fixed_amount',
+                    fixed_amount: {
+                        amount: 0,
+                        currency: 'usd',
+                    },
+                    display_name: 'Free Shipping',
+                    delivery_estimate: {
+                        minimum: { unit: 'business_day', value: 5 },
+                        maximum: { unit: 'business_day', value: 7 },
                     },
                 },
-            ];
-        } else {
-            // Fallback if no shipping option provided (shouldn't happen with new frontend)
-            sessionParams.shipping_options = [
-                {
-                    shipping_rate_data: {
-                        type: 'fixed_amount',
-                        fixed_amount: { amount: 499, currency: 'usd' },
-                        display_name: 'Standard Shipping',
-                        delivery_estimate: {
-                            minimum: { unit: 'business_day', value: 5 },
-                            maximum: { unit: 'business_day', value: 7 },
-                        },
-                    },
-                },
-            ];
-        }
+            },
+        ];
 
         sessionParams.shipping_address_collection = {
-            allowed_countries: ['US', 'CA'],
+            allowed_countries: ['US'],
         };
 
         const session = await stripe.checkout.sessions.create(sessionParams);

@@ -76,8 +76,8 @@ export default function ShippingReturnsPage() {
                 Shipping Costs
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
-                Shipping costs are calculated at checkout based on your location. You'll see the exact
-                shipping fee before you complete your purchase.
+                Free shipping on all orders within the United States. There are no separate shipping
+                fees &mdash; the price you see is the price you pay.
               </p>
             </div>
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebaseAdmin'
+import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 
 export async function POST(request: Request) {
     try {
@@ -14,6 +14,7 @@ export async function POST(request: Request) {
             consentMethod = 'user_selection',
             maxNotificationsPerHour = 3,
             locationSharing = true,
+            displayName = undefined,
         } = body
 
         if (!userId) {
@@ -21,6 +22,24 @@ export async function POST(request: Request) {
                 { success: false, error: 'User ID is required' },
                 { status: 400 }
             )
+        }
+
+        // Validate displayName if provided
+        let trimmedDisplayName: string | undefined = undefined
+        if (displayName !== undefined && displayName !== null) {
+            trimmedDisplayName = displayName.trim()
+            if (!trimmedDisplayName) {
+                return NextResponse.json(
+                    { success: false, error: 'Name cannot be empty' },
+                    { status: 400 }
+                )
+            }
+            if (trimmedDisplayName.length > 100) {
+                return NextResponse.json(
+                    { success: false, error: 'Name must be 100 characters or less' },
+                    { status: 400 }
+                )
+            }
         }
 
         const now = new Date().toISOString()
@@ -48,6 +67,14 @@ export async function POST(request: Request) {
         // Include phone and email if provided
         if (phone) updateData.phone = phone
         if (email) updateData.email = email
+        if (trimmedDisplayName) updateData.displayName = trimmedDisplayName
+
+        // Update Firebase Auth displayName if provided
+        if (trimmedDisplayName) {
+            await adminAuth.updateUser(userId, {
+                displayName: trimmedDisplayName,
+            })
+        }
 
         // Update user document in Firestore
         await adminDb.collection('users').doc(userId).set(updateData, { merge: true })
@@ -60,6 +87,7 @@ export async function POST(request: Request) {
                 emailOptIn,
                 phone,
                 email,
+                displayName: trimmedDisplayName,
                 consentTimestamp: now,
             },
         })

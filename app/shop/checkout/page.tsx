@@ -6,13 +6,15 @@ import Link from 'next/link'
 import { useCart } from '@/lib/CartContext'
 import { useAuth } from '@/lib/AuthContext'
 
-interface ShippingRate {
-  service: string
-  cost: number
-  minDays: number
-  maxDays: number
-  displayName: string
-}
+// COMMENTED OUT: Paid shipping rate type (used if reverting from free shipping)
+// interface ShippingRate {
+//   service: string
+//   cost: number
+//   minDays: number
+//   maxDays: number
+//   displayName: string
+//   carrier: string
+// }
 
 function CheckoutContent() {
   const { items, removeItem, updateQuantity, subtotal } = useCart()
@@ -20,62 +22,45 @@ function CheckoutContent() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [shippingZipCode, setShippingZipCode] = useState('')
-  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([])
-  const [selectedShippingRate, setSelectedShippingRate] = useState<ShippingRate | null>(null)
-  const [loadingRates, setLoadingRates] = useState(false)
-  const [shippingError, setShippingError] = useState<string | null>(null)
 
-  // Fetch shipping rates when ZIP code changes
-  const handleZipCodeChange = async (zipCode: string) => {
-    setShippingZipCode(zipCode)
-    setSelectedShippingRate(null)
-    setShippingError(null)
+  // COMMENTED OUT: Paid shipping state and fetching (used if reverting from free shipping)
+  // const [zipCode, setZipCode] = useState('')
+  // const [shippingRates, setShippingRates] = useState<ShippingRate[]>([])
+  // const [selectedShippingRate, setSelectedShippingRate] = useState<ShippingRate | null>(null)
+  // const [loadingRates, setLoadingRates] = useState(false)
+  // const [rateError, setRateError] = useState<string | null>(null)
 
-    if (!zipCode || zipCode.length < 5) {
-      setShippingRates([])
-      return
-    }
-
-    setLoadingRates(true)
-    try {
-      const response = await fetch('/api/shipping/rates', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          destinationZip: zipCode,
-          items: items.map((item) => ({ quantity: item.quantity })),
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to calculate shipping rates')
-      }
-
-      setShippingRates(data.rates || [])
-      // Auto-select the first rate
-      if (data.rates && data.rates.length > 0) {
-        setSelectedShippingRate(data.rates[0])
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to calculate shipping rates'
-      console.error(err)
-      setShippingError(message)
-      setShippingRates([])
-    } finally {
-      setLoadingRates(false)
-    }
-  }
+  // COMMENTED OUT: Fetch shipping rates from ZIP code
+  // const fetchShippingRates = async (zip: string) => {
+  //   if (!zip || zip.length < 5) return
+  //   setLoadingRates(true)
+  //   setRateError(null)
+  //   try {
+  //     const response = await fetch('/api/shipping/rates', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ zipCode: zip }),
+  //     })
+  //     const data = await response.json()
+  //     if (response.ok) {
+  //       setShippingRates(data)
+  //       setSelectedShippingRate(data.length > 0 ? data[0] : null)
+  //     } else {
+  //       setRateError(data.error || 'Failed to fetch rates')
+  //     }
+  //   } catch (err) {
+  //     setRateError('Error fetching shipping rates')
+  //   } finally {
+  //     setLoadingRates(false)
+  //   }
+  // }
 
   const handleCheckout = async () => {
-    if (!selectedShippingRate) {
-      setError('Please select a shipping option')
-      return
-    }
+    // COMMENTED OUT: Require shipping rate selection (used if reverting from free shipping)
+    // if (!selectedShippingRate) {
+    //   setError('Please select a shipping option')
+    //   return
+    // }
 
     setLoading(true)
     setError(null)
@@ -96,8 +81,9 @@ function CheckoutContent() {
           })),
           userEmail: user?.email || undefined,
           userId: user?.uid || undefined,
-          shippingOption: selectedShippingRate,
-          shippingZipCode,
+          // COMMENTED OUT: Include shipping data if using paid rates
+          // shippingOption: selectedShippingRate,
+          // shippingZipCode: zipCode,
         }),
       })
 
@@ -202,6 +188,69 @@ function CheckoutContent() {
                   </div>
                 ))}
               </div>
+
+              {/* COMMENTED OUT: Shipping rate selection (used if reverting from free shipping)
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">Shipping</h3>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    ZIP Code
+                  </label>
+                  <input
+                    type="text"
+                    value={zipCode}
+                    onChange={(e) => {
+                      const zip = e.target.value.replace(/\D/g, '').slice(0, 5)
+                      setZipCode(zip)
+                      if (zip.length === 5) {
+                        fetchShippingRates(zip)
+                      }
+                    }}
+                    placeholder="Enter 5-digit ZIP code"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                {loadingRates && (
+                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading rates...
+                  </div>
+                )}
+
+                {rateError && (
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm rounded-md flex items-start">
+                    <AlertCircle className="w-4 h-4 mr-1.5 mt-0.5 flex-shrink-0" />
+                    {rateError}
+                  </div>
+                )}
+
+                {shippingRates.length > 0 && (
+                  <div className="space-y-3">
+                    {shippingRates.map((rate, idx) => (
+                      <label key={idx} className="flex items-center p-3 border border-gray-200 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <input
+                          type="radio"
+                          name="shipping"
+                          checked={selectedShippingRate?.service === rate.service}
+                          onChange={() => setSelectedShippingRate(rate)}
+                          className="w-4 h-4 text-primary-600"
+                        />
+                        <span className="ml-3 flex-1">
+                          <span className="block font-medium text-gray-900 dark:text-gray-100">
+                            {rate.displayName}
+                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            ${rate.cost.toFixed(2)}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              */}
             </div>
 
           </div>
@@ -209,61 +258,6 @@ function CheckoutContent() {
           {/* Pricing & Shipping Sidebar */}
           <div className="md:col-span-2">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 border border-gray-100 dark:border-gray-700 sticky top-6">
-              {/* Shipping Address */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  ZIP Code
-                </label>
-                <input
-                  type="text"
-                  value={shippingZipCode}
-                  onChange={(e) => handleZipCodeChange(e.target.value)}
-                  placeholder="Enter 5-digit ZIP"
-                  maxLength={5}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-                {shippingError && (
-                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{shippingError}</p>
-                )}
-              </div>
-
-              {/* Shipping Options */}
-              {shippingZipCode && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Shipping Method</h4>
-                    <Link href="/shipping-returns" className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline">
-                      Learn more
-                    </Link>
-                  </div>
-                  {loadingRates ? (
-                    <div className="flex items-center justify-center py-6">
-                      <Loader2 className="w-4 h-4 animate-spin text-primary-600 mr-2" />
-                      <span className="text-sm text-gray-500 dark:text-gray-400">Calculating rates...</span>
-                    </div>
-                  ) : shippingRates.length > 0 ? (
-                    <div className="space-y-2">
-                      {shippingRates.map((rate) => (
-                        <label key={rate.service} className="flex items-start p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                          <input
-                            type="radio"
-                            name="shipping"
-                            value={rate.service}
-                            checked={selectedShippingRate?.service === rate.service}
-                            onChange={() => setSelectedShippingRate(rate)}
-                            className="mt-1 w-4 h-4 text-primary-600"
-                          />
-                          <div className="ml-3 flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-gray-100">{rate.displayName}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">${rate.cost.toFixed(2)}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              )}
-
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Price Breakdown</h3>
 
               <div className="space-y-3 mb-6">
@@ -273,13 +267,17 @@ function CheckoutContent() {
                 </div>
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
                   <span>Shipping</span>
-                  <span>${selectedShippingRate ? selectedShippingRate.cost.toFixed(2) : '—'}</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">FREE</span>
                 </div>
                 <div className="border-t dark:border-gray-700 pt-3 flex justify-between font-bold text-lg text-gray-900 dark:text-gray-100">
                   <span>Due Today</span>
-                  <span>${selectedShippingRate ? (subtotal + selectedShippingRate.cost).toFixed(2) : subtotal.toFixed(2)}</span>
+                  <span>${subtotal.toFixed(2)}</span>
                 </div>
               </div>
+
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                Free shipping on all orders within the United States. We&apos;ll collect your shipping address at payment.
+              </p>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm rounded-md flex items-start">
@@ -290,7 +288,7 @@ function CheckoutContent() {
 
               <button
                 onClick={handleCheckout}
-                disabled={loading || !selectedShippingRate}
+                disabled={loading || items.length === 0}
                 className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {loading ? (

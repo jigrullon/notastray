@@ -6,7 +6,7 @@ import { Bell, Mail, MessageSquare, MapPin, Clock, Shield, ArrowLeft, User, Phon
 import { useAuth } from '@/lib/AuthContext'
 import { useRouter } from 'next/navigation'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { db, auth } from '@/lib/firebase'
 
 export default function NotificationSettingsPage() {
   const { user, loading } = useAuth()
@@ -22,6 +22,16 @@ export default function NotificationSettingsPage() {
     email: '',
     phone: ''
   })
+
+  const [firstName, setFirstName] = useState('')
+  const [nameError, setNameError] = useState<string | null>(null)
+
+  const validateName = (name: string): string | null => {
+    const trimmed = name.trim()
+    if (!trimmed) return 'First name is required'
+    if (trimmed.length > 100) return 'First name must be 100 characters or less'
+    return null
+  }
 
   const [settings, setSettings] = useState({
     smsEnabled: false,
@@ -50,6 +60,7 @@ export default function NotificationSettingsPage() {
               email: data.email || user.email || '',
               phone: data.phone || ''
             })
+            setFirstName(data.displayName || user?.displayName || '')
             setOriginalPhone(data.phone || '')
 
             // Load preferences from Firestore
@@ -218,6 +229,13 @@ export default function NotificationSettingsPage() {
   const handleSave = async () => {
     if (!user) return
 
+    // Validate name
+    const error = validateName(firstName)
+    if (error) {
+      setNameError(error)
+      return
+    }
+
     // Require consent if SMS is enabled and phone number has been added or changed
     if (settings.smsEnabled && contactInfo.phone.trim() && phoneChanged()) {
       setPendingAction('save')
@@ -240,6 +258,7 @@ export default function NotificationSettingsPage() {
           emailOptIn: settings.emailEnabled,
           phone: contactInfo.phone,
           email: contactInfo.email,
+          displayName: firstName.trim(),
           consentMethod: 'user_selection',
           maxNotificationsPerHour: settings.maxNotificationsPerHour,
           locationSharing: settings.locationSharing,
@@ -249,6 +268,12 @@ export default function NotificationSettingsPage() {
       const data = await response.json()
 
       if (data.success) {
+        // Reload Firebase Auth user to reflect displayName change
+        if (auth.currentUser) {
+          await auth.currentUser.reload()
+        }
+        // Update local state with trimmed name to ensure consistency
+        setFirstName(firstName.trim())
         setSuccessMessage('Settings saved successfully!')
         setTimeout(() => setSuccessMessage(''), 3000)
       } else {
@@ -301,7 +326,31 @@ export default function NotificationSettingsPage() {
                 <User className="w-5 h-5 mr-2 text-primary-600" />
                 Contact Information
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    First Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => {
+                        setFirstName(e.target.value)
+                        setNameError(null)
+                      }}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                      placeholder="John"
+                    />
+                  </div>
+                  {nameError && (
+                    <p className="text-red-500 text-sm mt-1">{nameError}</p>
+                  )}
+                </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Email Address
