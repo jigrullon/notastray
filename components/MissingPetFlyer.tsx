@@ -61,26 +61,44 @@ export default function MissingPetFlyer({
   const primaryContact = ownerName && ownerPhone ? `${ownerName} - ${ownerPhone}` : ownerName || ownerPhone || contactInfo || (vetName ? `${vetName}${vetAddress ? ` - ${vetAddress}` : ''}` : '')
 
   const handleDownloadPDF = async () => {
-    console.log('Download button clicked, user:', user)
     if (!flyerRef.current || !user) {
       alert('Please log in to download the PDF')
       return
     }
     setDownloading(true)
     try {
-      console.log('Starting PDF generation...')
-      console.log('Flyer ref:', flyerRef.current)
+      // Convert Firebase image URL to data URL for html2canvas compatibility
+      const img = flyerRef.current.querySelector('img')
+      let originalSrc = ''
+      if (img && img.src && img.src.includes('firebasestorage')) {
+        originalSrc = img.src
+        try {
+          const response = await fetch(img.src)
+          if (!response.ok) throw new Error('Failed to fetch image')
+          const blob = await response.blob()
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+          img.src = dataUrl
+        } catch (err) {
+          console.warn('Could not convert image to data URL, proceeding without image:', err)
+        }
+      }
 
-      console.log('Calling html2canvas...')
       const canvas = await html2canvas(flyerRef.current, {
         scale: 2,
         backgroundColor: '#ffffff',
-        logging: true, // Enable logging to see what html2canvas is doing
+        logging: false,
         useCORS: true,
         allowTaint: true,
       })
 
-      console.log('Canvas generated, creating PDF...')
+      // Restore original image src
+      if (img && originalSrc) {
+        img.src = originalSrc
+      }
 
       const pdf = new jsPDF({
         orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
@@ -94,22 +112,15 @@ export default function MissingPetFlyer({
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
 
-      // Get PDF as blob
       const pdfBlob = pdf.output('blob') as Blob
 
-      // Upload via backend API with admin privileges
-      console.log('Uploading PDF via backend API...')
       const fileName = `missing-pet-${petName.replace(/\s+/g, '-')}-${Date.now()}.pdf`
-      console.log('Getting ID token...')
       const idToken = await user.getIdToken()
-      console.log('ID token obtained, creating FormData...')
 
-      // Use FormData to send binary data
       const formData = new FormData()
       formData.append('tagCode', tagCode)
       formData.append('fileName', fileName)
       formData.append('pdf', pdfBlob, fileName)
-      console.log('FormData created, calling upload API...')
 
       const uploadResponse = await fetch('/api/upload-missing-flyer', {
         method: 'POST',
@@ -118,7 +129,6 @@ export default function MissingPetFlyer({
         },
         body: formData,
       })
-      console.log('Upload response received:', uploadResponse.status)
 
       if (!uploadResponse.ok) {
         const error = await uploadResponse.json()
@@ -127,8 +137,6 @@ export default function MissingPetFlyer({
 
       const uploadData = await uploadResponse.json()
       const downloadUrl = uploadData.downloadUrl
-
-      console.log('PDF uploaded, triggering download...')
       setPdfUrl(downloadUrl)
 
       // Trigger browser download using the signed URL
@@ -212,11 +220,13 @@ export default function MissingPetFlyer({
           </div>
 
           {/* Last Seen */}
-          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-6">
-            <p className="font-bold text-red-900 text-sm mb-2">LAST SEEN</p>
-            <p className="text-red-800 font-semibold">{lastSeenDate}</p>
-            <p className="text-red-800 font-semibold">{lastSeenLocation}</p>
-          </div>
+          {(lastSeenDate || lastSeenLocation) && (
+            <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-6">
+              <p className="font-bold text-red-900 text-sm mb-2">LAST SEEN</p>
+              {lastSeenDate && <p className="text-red-800 font-semibold">{lastSeenDate}</p>}
+              {lastSeenLocation && <p className="text-red-800 font-semibold">{lastSeenLocation}</p>}
+            </div>
+          )}
 
           {/* Physical & Behavioral */}
           {(physicalDescription || medicalBehavioral) && (
@@ -260,10 +270,7 @@ export default function MissingPetFlyer({
       {isOwner && (
         <div className="flex gap-3 justify-center">
           <button
-            onClick={() => {
-              console.log('BUTTON CLICKED!', { downloading, user, tagCode })
-              handleDownloadPDF()
-            }}
+            onClick={handleDownloadPDF}
             disabled={downloading}
             className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
           >
