@@ -67,23 +67,23 @@ export default function MissingPetFlyer({
     }
     setDownloading(true)
     try {
-      // Convert Firebase image URL to data URL for html2canvas compatibility
+      // Convert Firebase image URL to data URL via API proxy
       const img = flyerRef.current.querySelector('img')
       let originalSrc = ''
       if (img && img.src && img.src.includes('firebasestorage')) {
         originalSrc = img.src
         try {
-          const response = await fetch(img.src)
-          if (!response.ok) throw new Error('Failed to fetch image')
-          const blob = await response.blob()
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(reader.result as string)
-            reader.readAsDataURL(blob)
+          // Use API to proxy the image and convert to base64
+          const response = await fetch('/api/proxy-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageUrl: img.src }),
           })
-          img.src = dataUrl
+          if (!response.ok) throw new Error('Failed to proxy image')
+          const data = await response.json()
+          img.src = data.dataUrl
         } catch (err) {
-          console.warn('Could not convert image to data URL, proceeding without image:', err)
+          console.warn('Could not load image, proceeding without:', err)
         }
       }
 
