@@ -8,6 +8,7 @@ import { useAuth } from '../../lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getSpecies, getBreeds } from '@/lib/breedUtils'
 
 export default function ActivatePage() {
   return (
@@ -343,29 +344,57 @@ function ActivateContent() {
                   <select
                     id="species"
                     value={petData.species}
-                    onChange={(e) => setPetData({ ...petData, species: e.target.value })}
+                    onChange={(e) => {
+                      setPetData({ ...petData, species: e.target.value, breed: '' })
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                   >
                     <option value="">Select...</option>
-                    <option value="Dog">Dog</option>
-                    <option value="Cat">Cat</option>
-                    <option value="Bird">Bird</option>
-                    <option value="Rabbit">Rabbit</option>
-                    <option value="Other">Other</option>
+                    {getSpecies().map((species) => (
+                      <option key={species} value={species}>
+                        {species}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label htmlFor="breed" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Breed
                   </label>
-                  <input
-                    type="text"
-                    id="breed"
-                    value={petData.breed}
-                    onChange={(e) => setPetData({ ...petData, breed: e.target.value })}
-                    placeholder="e.g., Golden Retriever, Tabby, Cockatiel"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                  />
+                  {petData.species === 'Other' ? (
+                    <input
+                      type="text"
+                      id="breed"
+                      value={petData.breed}
+                      onChange={(e) => setPetData({ ...petData, breed: e.target.value })}
+                      placeholder="e.g., Ferret, Hamster"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                    />
+                  ) : petData.species && ['Dog', 'Cat'].includes(petData.species) ? (
+                    <select
+                      id="breed"
+                      value={petData.breed}
+                      onChange={(e) => setPetData({ ...petData, breed: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                    >
+                      <option value="">Select Breed...</option>
+                      {getBreeds(petData.species).map((breed) => (
+                        <option key={breed} value={breed}>
+                          {breed}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      id="breed"
+                      value={petData.breed}
+                      onChange={(e) => setPetData({ ...petData, breed: e.target.value })}
+                      placeholder="Select a species first"
+                      disabled
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    />
+                  )}
                 </div>
               </div>
 

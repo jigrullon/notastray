@@ -88,9 +88,9 @@ export async function POST(request: NextRequest) {
         vetName,
         vetAddress,
         allergies,
-        goodWithDogs: goodWithDogs || false,
-        goodWithCats: goodWithCats || false,
-        goodWithChildren: goodWithChildren || false,
+        goodWithDogs: goodWithDogs || 'unsure',
+        goodWithCats: goodWithCats || 'unsure',
+        goodWithChildren: goodWithChildren || 'unsure',
       },
     });
 
