@@ -65,7 +65,7 @@ export default function ShopPage() {
               </h1>
 
               <p className="text-3xl font-bold text-primary-600 dark:text-primary-400 mb-6">
-                $14.95
+                $18.50
               </p>
 
               {/* Color Selector */}
@@ -131,7 +131,7 @@ export default function ShopPage() {
                     color: selectedColor,
                     size: selectedSize,
                     quantity: 1,
-                    price: 14.95,
+                    price: 18.50,
                     image: '',
                   })
                   setIsCartOpen(true)

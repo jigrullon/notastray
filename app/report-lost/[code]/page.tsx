@@ -12,6 +12,7 @@ import {
   MapPin, Calendar, Phone, AlertTriangle,
 } from 'lucide-react'
 import MissingPetFlyer from '@/components/MissingPetFlyer'
+import { getSpecies, getBreeds } from '@/lib/breedUtils'
 
 interface TagDoc {
   userId: string
@@ -335,13 +336,13 @@ export default function ReportLostPage() {
                 </div>
                 <div>
                   <label className={labelClass}>Species *</label>
-                  <select value={profile.species} onChange={e => setProfile(p => ({ ...p, species: e.target.value }))} className={inputClass}>
+                  <select value={profile.species} onChange={e => setProfile(p => ({ ...p, species: e.target.value, primaryBreed: '', breedMix: '' }))} className={inputClass}>
                     <option value="">Select...</option>
-                    <option>Dog</option>
-                    <option>Cat</option>
-                    <option>Bird</option>
-                    <option>Rabbit</option>
-                    <option>Other</option>
+                    {getSpecies().map((species) => (
+                      <option key={species} value={species}>
+                        {species}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -382,11 +383,24 @@ export default function ReportLostPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Primary Breed</label>
-                  <input type="text" value={profile.primaryBreed} onChange={e => setProfile(p => ({ ...p, primaryBreed: e.target.value }))} placeholder="e.g. Labrador Retriever" className={inputClass} />
+                  {profile.species === 'Other' ? (
+                    <input type="text" value={profile.primaryBreed} onChange={e => setProfile(p => ({ ...p, primaryBreed: e.target.value }))} placeholder="e.g. Ferret, Hamster" className={inputClass} />
+                  ) : profile.species && ['Dog', 'Cat'].includes(profile.species) ? (
+                    <select value={profile.primaryBreed} onChange={e => setProfile(p => ({ ...p, primaryBreed: e.target.value }))} className={inputClass}>
+                      <option value="">Select Breed...</option>
+                      {getBreeds(profile.species).map((breed) => (
+                        <option key={breed} value={breed}>
+                          {breed}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input type="text" value={profile.primaryBreed} onChange={e => setProfile(p => ({ ...p, primaryBreed: e.target.value }))} placeholder="Select a species first" disabled className={`${inputClass} bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`} />
+                  )}
                 </div>
                 <div>
-                  <label className={labelClass}>Breed Mix</label>
-                  <input type="text" value={profile.breedMix} onChange={e => setProfile(p => ({ ...p, breedMix: e.target.value }))} placeholder="e.g. Golden Retriever mix" className={inputClass} />
+                  <label className={labelClass}>Breed Mix / Additional Notes</label>
+                  <input type="text" value={profile.breedMix} onChange={e => setProfile(p => ({ ...p, breedMix: e.target.value }))} placeholder="e.g. Golden Retriever mix, other details" className={inputClass} />
                 </div>
               </div>
 
@@ -690,7 +704,18 @@ export default function ReportLostPage() {
               contactInfo={report.contactInfo}
               rewardOffered={report.rewardOffered}
               tagCode={upperCode}
+              isOwner={true}
             />
+
+            {/* View Poster Page Link */}
+            <div className="text-center mt-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                You can view and download this poster anytime at:
+              </p>
+              <a href={`/missing-pet/${upperCode}`} className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors">
+                View Poster Page
+              </a>
+            </div>
 
             {/* Next Steps */}
             <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">

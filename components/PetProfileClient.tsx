@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getSpecies, getBreeds } from '@/lib/breedUtils'
 
 interface LocationData {
   latitude: number
@@ -24,9 +25,9 @@ interface PetData {
   vet: string
   vetAddress: string
   allergies: string
-  goodWithDogs: boolean
-  goodWithCats: boolean
-  goodWithChildren: boolean
+  goodWithDogs: 'yes' | 'no' | 'unsure'
+  goodWithCats: 'yes' | 'no' | 'unsure'
+  goodWithChildren: 'yes' | 'no' | 'unsure'
 }
 
 interface PetProfileClientProps {
@@ -39,7 +40,7 @@ interface PetProfileClientProps {
 }
 
 export default function PetProfileClient({ petData, tagCode, userId, isLost, species, breed }: PetProfileClientProps) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const isOwner = !!(user && userId && user.uid === userId)
 
   const [notificationSent, setNotificationSent] = useState(false)
@@ -56,6 +57,10 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
 
   // Send notification when component mounts
   useEffect(() => {
+    // Wait until auth has finished loading before sending notifications
+    // This prevents notifications from being sent before we can check if user is owner
+    if (loading) return
+
     // Don't notify when owner views their own pet
     if (isOwner) return
 
@@ -116,7 +121,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
     }
 
     sendNotification()
-  }, [tagCode, isOwner])
+  }, [tagCode, isOwner, loading])
 
   const sendNotificationWithLocation = async (locationData: LocationData, source: 'qr' | 'unknown' = 'unknown') => {
     try {
@@ -415,18 +420,51 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                   placeholder="Pet name"
                 />
                 <div className="flex gap-2 justify-center">
-                  <input
+                  <select
                     value={editSpecies}
-                    onChange={(e) => setEditSpecies(e.target.value)}
+                    onChange={(e) => {
+                      setEditSpecies(e.target.value)
+                      setEditBreed('')
+                    }}
                     className={`${inputClass} text-center text-sm`}
-                    placeholder="Species (e.g. Dog)"
-                  />
-                  <input
-                    value={editBreed}
-                    onChange={(e) => setEditBreed(e.target.value)}
-                    className={`${inputClass} text-center text-sm`}
-                    placeholder="Breed (e.g. Golden Retriever)"
-                  />
+                  >
+                    <option value="">Select Species</option>
+                    {getSpecies().map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+
+                  {editSpecies === 'Other' ? (
+                    <input
+                      value={editBreed}
+                      onChange={(e) => setEditBreed(e.target.value)}
+                      className={`${inputClass} text-center text-sm`}
+                      placeholder="Specify (e.g. Ferret)"
+                    />
+                  ) : editSpecies && ['Dog', 'Cat'].includes(editSpecies) ? (
+                    <select
+                      value={editBreed}
+                      onChange={(e) => setEditBreed(e.target.value)}
+                      className={`${inputClass} text-center text-sm`}
+                    >
+                      <option value="">Select Breed</option>
+                      {getBreeds(editSpecies).map((breed) => (
+                        <option key={breed} value={breed}>
+                          {breed}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      value={editBreed}
+                      onChange={(e) => setEditBreed(e.target.value)}
+                      className={`${inputClass} text-center text-sm`}
+                      placeholder="Breed"
+                      disabled
+                    />
+                  )}
                 </div>
               </>
             ) : (
@@ -570,58 +608,107 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               Temperament
             </h2>
             {editing ? (
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editData.goodWithDogs}
-                    onChange={(e) => setEditData({ ...editData, goodWithDogs: e.target.checked })}
-                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <Dog className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-700 dark:text-gray-300">Good with dogs</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editData.goodWithCats}
-                    onChange={(e) => setEditData({ ...editData, goodWithCats: e.target.checked })}
-                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <Cat className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-700 dark:text-gray-300">Good with cats</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editData.goodWithChildren}
-                    onChange={(e) => setEditData({ ...editData, goodWithChildren: e.target.checked })}
-                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <Baby className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-700 dark:text-gray-300">Good with children</span>
-                </label>
+              <div className="space-y-4">
+                {/* Good with Dogs */}
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <Dog className="w-4 h-4 mr-2 text-gray-500" />
+                    Good with dogs?
+                  </p>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithDogs" value="yes" checked={editData.goodWithDogs === 'yes'} onChange={(e) => setEditData({ ...editData, goodWithDogs: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithDogs" value="no" checked={editData.goodWithDogs === 'no'} onChange={(e) => setEditData({ ...editData, goodWithDogs: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">No</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithDogs" value="unsure" checked={editData.goodWithDogs === 'unsure'} onChange={(e) => setEditData({ ...editData, goodWithDogs: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">Unsure</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Good with Cats */}
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <Cat className="w-4 h-4 mr-2 text-gray-500" />
+                    Good with cats?
+                  </p>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithCats" value="yes" checked={editData.goodWithCats === 'yes'} onChange={(e) => setEditData({ ...editData, goodWithCats: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithCats" value="no" checked={editData.goodWithCats === 'no'} onChange={(e) => setEditData({ ...editData, goodWithCats: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">No</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithCats" value="unsure" checked={editData.goodWithCats === 'unsure'} onChange={(e) => setEditData({ ...editData, goodWithCats: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">Unsure</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Good with Children */}
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <Baby className="w-4 h-4 mr-2 text-gray-500" />
+                    Good with children?
+                  </p>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithChildren" value="yes" checked={editData.goodWithChildren === 'yes'} onChange={(e) => setEditData({ ...editData, goodWithChildren: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithChildren" value="no" checked={editData.goodWithChildren === 'no'} onChange={(e) => setEditData({ ...editData, goodWithChildren: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">No</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="goodWithChildren" value="unsure" checked={editData.goodWithChildren === 'unsure'} onChange={(e) => setEditData({ ...editData, goodWithChildren: e.target.value as 'yes' | 'no' | 'unsure' })} className="w-4 h-4 text-primary-600" />
+                      <span className="text-gray-700 dark:text-gray-300">Unsure</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {petData.goodWithDogs && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                    <Dog className="w-4 h-4 mr-1" />
-                    Good with dogs
-                  </span>
-                )}
-                {petData.goodWithCats && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                    <Cat className="w-4 h-4 mr-1" />
-                    Good with cats
-                  </span>
-                )}
-                {petData.goodWithChildren && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                    <Baby className="w-4 h-4 mr-1" />
-                    Good with children
-                  </span>
-                )}
+              <div className="space-y-3">
+                {/* Good with Dogs */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Dog className="w-5 h-5 text-gray-500" />
+                    <span className="text-gray-700 dark:text-gray-300">Good with dogs</span>
+                  </div>
+                  {petData.goodWithDogs === 'yes' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium">Yes</span>}
+                  {petData.goodWithDogs === 'no' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-medium">No</span>}
+                  {petData.goodWithDogs === 'unsure' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-medium">Unsure</span>}
+                </div>
+
+                {/* Good with Cats */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Cat className="w-5 h-5 text-gray-500" />
+                    <span className="text-gray-700 dark:text-gray-300">Good with cats</span>
+                  </div>
+                  {petData.goodWithCats === 'yes' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium">Yes</span>}
+                  {petData.goodWithCats === 'no' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-medium">No</span>}
+                  {petData.goodWithCats === 'unsure' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-medium">Unsure</span>}
+                </div>
+
+                {/* Good with Children */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Baby className="w-5 h-5 text-gray-500" />
+                    <span className="text-gray-700 dark:text-gray-300">Good with children</span>
+                  </div>
+                  {petData.goodWithChildren === 'yes' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium">Yes</span>}
+                  {petData.goodWithChildren === 'no' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-medium">No</span>}
+                  {petData.goodWithChildren === 'unsure' && <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-medium">Unsure</span>}
+                </div>
               </div>
             )}
           </div>

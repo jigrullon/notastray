@@ -9,12 +9,6 @@ if (!getApps().length) {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
 
-  console.log('[Firebase Init] projectId:', projectId)
-  console.log('[Firebase Init] clientEmail:', clientEmail)
-  console.log('[Firebase Init] privateKey exists:', !!privateKey)
-  console.log('[Firebase Init] privateKey length:', privateKey?.length)
-  console.log('[Firebase Init] privateKey starts with:', privateKey?.substring(0, 50))
-
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error(`Missing Firebase config: projectId=${!!projectId}, clientEmail=${!!clientEmail}, privateKey=${!!privateKey}`)
   }
@@ -30,9 +24,8 @@ if (!getApps().length) {
       credential: cert(serviceAccount as any),
       storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     })
-    console.log('[Firebase Init] Successfully initialized Firebase')
   } catch (err) {
-    console.error('[Firebase Init] Failed to initialize:', err)
+    console.error('Firebase initialization failed:', err)
     throw err
   }
 }
