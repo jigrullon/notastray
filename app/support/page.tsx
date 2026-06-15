@@ -66,10 +66,10 @@ export default function SupportPage() {
                 Can&apos;t find what you need? Send us an email and we&apos;ll get back to you as soon as possible.
               </p>
               <a
-                href="mailto:notastray.hq@gmail.com"
+                href="mailto:support@notastray.com"
                 className="btn-primary inline-block"
               >
-                notastray.hq@gmail.com
+                support@notastray.com
               </a>
             </div>
 
