@@ -28,6 +28,7 @@ interface MissingPetFlyerProps {
   contactInfo: string
   rewardOffered: boolean
   tagCode: string
+  isOwner?: boolean
 }
 
 export default function MissingPetFlyer({
@@ -50,6 +51,7 @@ export default function MissingPetFlyer({
   contactInfo,
   rewardOffered,
   tagCode,
+  isOwner = false,
 }: MissingPetFlyerProps) {
   const { user } = useAuth()
   const flyerRef = useRef<HTMLDivElement>(null)
@@ -227,7 +229,7 @@ export default function MissingPetFlyer({
               )}
               {medicalBehavioral && (
                 <div>
-                  <p className="font-bold text-yellow-900 text-sm mb-1">IMPORTANT NOTES</p>
+                  <p className="font-bold text-yellow-900 text-sm mb-1">ALLERGIES / HEALTH INFO</p>
                   <p className="text-yellow-800 text-sm">{medicalBehavioral}</p>
                 </div>
               )}
@@ -236,7 +238,7 @@ export default function MissingPetFlyer({
 
           {/* Contact Banner */}
           <div className="bg-blue-600 text-white text-center py-4 px-4 rounded-lg mb-6">
-            <p className="text-sm font-bold mb-2 m-0">IF YOU SEE THIS PET</p>
+            <p className="text-xl font-bold mb-3 m-0">IF YOU SEE THIS PET, CONTACT</p>
             <p className="text-3xl font-black m-0">{primaryContact}</p>
             {rewardOffered && (
               <p className="text-sm font-bold mt-3 m-0">💰 REWARD OFFERED</p>
@@ -254,20 +256,22 @@ export default function MissingPetFlyer({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-3 justify-center">
-        <button
-          onClick={() => {
-            console.log('BUTTON CLICKED!', { downloading, user, tagCode })
-            handleDownloadPDF()
-          }}
-          disabled={downloading}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
-        >
-          <Download className="w-5 h-5" />
-          {downloading ? 'Generating PDF...' : 'Download PDF'}
-        </button>
-      </div>
+      {/* Action Buttons - Owner Only */}
+      {isOwner && (
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => {
+              console.log('BUTTON CLICKED!', { downloading, user, tagCode })
+              handleDownloadPDF()
+            }}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+          >
+            <Download className="w-5 h-5" />
+            {downloading ? 'Generating PDF...' : 'Download PDF'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
