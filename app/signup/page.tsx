@@ -23,7 +23,7 @@ export default function SignupPage() {
 function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signUp, signInWithGoogle, user } = useAuth()
+  const { signUp, /* signInWithGoogle, */ user } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -113,17 +113,18 @@ function SignupContent() {
     }
   }
 
-  const handleGoogleSignup = async () => {
-    setLoading(true)
-    setError(null)
+  // TODO: Google Sign-In temporarily disabled
+  // const handleGoogleSignup = async () => {
+  //   setLoading(true)
+  //   setError(null)
 
-    try {
-      await signInWithGoogle()
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign up with Google')
-      setLoading(false)
-    }
-  }
+  //   try {
+  //     await signInWithGoogle()
+  //   } catch (err: any) {
+  //     setError(err.message || 'Failed to sign up with Google')
+  //     setLoading(false)
+  //   }
+  // }
 
   const handleSMSConsent = (agreed: boolean) => {
     if (agreed) {
@@ -566,6 +567,7 @@ function SignupContent() {
             </div>
           </form>
 
+          {/* TODO: Google Sign-In temporarily disabled
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -604,6 +606,7 @@ function SignupContent() {
               </button>
             </div>
           </div>
+          */}
         </div>
 
         <p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">

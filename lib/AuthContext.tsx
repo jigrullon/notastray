@@ -21,7 +21,8 @@ interface AuthContextType {
     loading: boolean;
     signUp: (email: string, password: string, displayName: string) => Promise<UserCredential>;
     signIn: (email: string, password: string) => Promise<UserCredential>;
-    signInWithGoogle: () => Promise<UserCredential>;
+    // TODO: signInWithGoogle temporarily disabled
+    // signInWithGoogle: () => Promise<UserCredential>;
     logOut: () => Promise<void>;
     resetPassword: (email: string) => Promise<void>;
 }
@@ -80,33 +81,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return signInWithEmailAndPassword(auth, email, password);
     };
 
-    const signInWithGoogle = async () => {
-        const provider = new GoogleAuthProvider();
-        const userCredential = await signInWithPopup(auth, provider);
+    // TODO: Google Sign-In temporarily disabled
+    // const signInWithGoogle = async () => {
+    //     const provider = new GoogleAuthProvider();
+    //     const userCredential = await signInWithPopup(auth, provider);
 
-        // Create Firestore user document if it doesn't exist
-        const userDoc = doc(db, 'users', userCredential.user.uid);
-        const existing = await getDoc(userDoc);
-        if (!existing.exists()) {
-            await setDoc(userDoc, {
-                displayName: userCredential.user.displayName || '',
-                email: userCredential.user.email || '',
-                subscription: {
-                    status: 'none',
-                    plan: null,
-                    stripeSubscriptionId: null,
-                    stripeCustomerId: null,
-                    currentPeriodEnd: null,
-                    createdAt: null,
-                },
-                tagCodes: [],
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            });
-        }
+    //     // Create Firestore user document if it doesn't exist
+    //     const userDoc = doc(db, 'users', userCredential.user.uid);
+    //     const existing = await getDoc(userDoc);
+    //     if (!existing.exists()) {
+    //         await setDoc(userDoc, {
+    //             displayName: userCredential.user.displayName || '',
+    //             email: userCredential.user.email || '',
+    //             subscription: {
+    //                 status: 'none',
+    //                 plan: null,
+    //                 stripeSubscriptionId: null,
+    //                 stripeCustomerId: null,
+    //                 currentPeriodEnd: null,
+    //                 createdAt: null,
+    //             },
+    //             tagCodes: [],
+    //             createdAt: new Date().toISOString(),
+    //             updatedAt: new Date().toISOString(),
+    //         });
+    //     }
 
-        return userCredential;
-    };
+    //     return userCredential;
+    // };
 
     const logOut = () => {
         return signOut(auth);
@@ -122,7 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             loading,
             signUp,
             signIn,
-            signInWithGoogle,
+            // TODO: signInWithGoogle temporarily disabled
+            // signInWithGoogle,
             logOut,
             resetPassword
         }}>

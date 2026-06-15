@@ -62,8 +62,8 @@ const faqs = [
             </ol>
             <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
               If you run into any trouble, email{' '}
-              <a href="mailto:notastray.hq@gmail.com" className="text-primary-600 dark:text-primary-400 hover:underline">
-                notastray.hq@gmail.com
+              <a href="mailto:support@notastray.com" className="text-primary-600 dark:text-primary-400 hover:underline">
+                support@notastray.com
               </a>{' '}
               and we&apos;ll help you take care of it.
             </p>
@@ -112,8 +112,8 @@ const faqs = [
         answer: (
           <p>
             We will take care of that for you! Email us at{' '}
-            <a href="mailto:notastray.hq@gmail.com" className="text-primary-600 dark:text-primary-400 hover:underline">
-              notastray.hq@gmail.com
+            <a href="mailto:support@notastray.com" className="text-primary-600 dark:text-primary-400 hover:underline">
+              support@notastray.com
             </a>{' '}
             and we&apos;ll get you sorted out.
           </p>
@@ -290,10 +290,10 @@ export default function FAQPage() {
               Email us and we&apos;ll help you out!
             </p>
             <a
-              href="mailto:notastray.hq@gmail.com"
+              href="mailto:support@notastray.com"
               className="btn-primary inline-block"
             >
-              notastray.hq@gmail.com
+              support@notastray.com
             </a>
           </div>
         </div>

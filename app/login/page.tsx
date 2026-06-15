@@ -8,7 +8,7 @@ import { Mail, Lock, AlertCircle, Loader2, Heart } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn, signInWithGoogle } = useAuth()
+  const { signIn, /* signInWithGoogle */ } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,19 +30,20 @@ export default function LoginPage() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    setLoading(true)
-    setError(null)
+  // TODO: Google Sign-In temporarily disabled
+  // const handleGoogleLogin = async () => {
+  //   setLoading(true)
+  //   setError(null)
 
-    try {
-      await signInWithGoogle()
-      router.push('/dashboard')
-    } catch (err: any) {
-      console.error(err)
-      setError('Failed to sign in with Google')
-      setLoading(false)
-    }
-  }
+  //   try {
+  //     await signInWithGoogle()
+  //     router.push('/dashboard')
+  //   } catch (err: any) {
+  //     console.error(err)
+  //     setError('Failed to sign in with Google')
+  //     setLoading(false)
+  //   }
+  // }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -159,6 +160,7 @@ export default function LoginPage() {
             </div>
           </form>
 
+          {/* TODO: Google Sign-In temporarily disabled
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -197,6 +199,7 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+          */}
 
           <p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
             By signing in, you agree to our{' '}
