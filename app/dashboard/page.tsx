@@ -38,7 +38,10 @@ export default function DashboardPage() {
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, loading, logOut } = useAuth()
+  const { user, loading, logOut, resendVerificationEmail } = useAuth()
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [resendError, setResendError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
   const [subscribeLoading, setSubscribeLoading] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [subscription, setSubscription] = useState<SubscriptionData>({ status: 'none' })
@@ -233,22 +236,100 @@ function DashboardContent() {
   if (!user) return null
 
   if (!user.emailVerified) {
+    const handleResend = async () => {
+      setResendState('sending')
+      setResendError(null)
+      try {
+        await resendVerificationEmail()
+        setResendState('sent')
+      } catch (err: any) {
+        setResendState('error')
+        setResendError(
+          err?.code === 'auth/too-many-requests'
+            ? 'Too many requests. Please wait a few minutes before trying again.'
+            : 'Could not send the verification email. Please try again.'
+        )
+      }
+    }
+
+    const handleRefresh = async () => {
+      setRefreshing(true)
+      try {
+        await user.reload()
+        if (user.emailVerified) {
+          // Full reload so the auth state re-reads and the gate passes.
+          window.location.reload()
+        } else {
+          setResendError('Your email still looks unverified. Please click the link in the email, then try again.')
+          setRefreshing(false)
+        }
+      } catch {
+        setRefreshing(false)
+      }
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-brand-cream dark:bg-gray-900 p-4">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Email Not Verified</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Please check your email and click the verification link to access your dashboard.
+            Please check your email and click the verification link to access your dashboard. Don&apos;t forget to check
+            your spam or junk folder.
           </p>
-          <button
-            onClick={async () => {
-              await logOut()
-              router.push('/login')
-            }}
-            className="w-full bg-primary-600 hover:bg-primary-400 text-white px-4 py-2 rounded-md transition-colors"
-          >
-            Back to Login
-          </button>
+
+          {resendState === 'sent' ? (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-4">
+              <p className="text-sm text-green-800 dark:text-green-300">
+                Verification email sent to <span className="font-medium">{user.email}</span>. It may take a minute to arrive.
+              </p>
+            </div>
+          ) : resendError ? (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
+              <p className="text-sm text-red-800 dark:text-red-300">{resendError}</p>
+            </div>
+          ) : null}
+
+          <div className="space-y-3">
+            <button
+              onClick={handleResend}
+              disabled={resendState === 'sending' || resendState === 'sent'}
+              className="w-full flex items-center justify-center bg-primary-600 hover:bg-primary-400 disabled:opacity-60 text-white px-4 py-2 rounded-md transition-colors"
+            >
+              {resendState === 'sending' ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...
+                </>
+              ) : resendState === 'sent' ? (
+                'Email Sent'
+              ) : (
+                'Resend Verification Email'
+              )}
+            </button>
+
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="w-full flex items-center justify-center border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 px-4 py-2 rounded-md transition-colors"
+            >
+              {refreshing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Checking...
+                </>
+              ) : (
+                "I've Verified — Refresh"
+              )}
+            </button>
+
+            <button
+              onClick={async () => {
+                await logOut()
+                router.push('/login')
+              }}
+              className="w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+            >
+              Back to Login
+            </button>
+          </div>
         </div>
       </div>
     )
