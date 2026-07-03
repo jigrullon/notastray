@@ -16,9 +16,26 @@ interface LocationData {
   address?: string
 }
 
+// Format a YYYY-MM-DD birthday for display, with an approximate age.
+function formatBirthday(birthday: string): string {
+  if (!birthday) return ''
+  const date = new Date(`${birthday}T00:00:00`)
+  if (isNaN(date.getTime())) return birthday
+  const formatted = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const now = new Date()
+  let age = now.getFullYear() - date.getFullYear()
+  const monthDiff = now.getMonth() - date.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+    age--
+  }
+  if (age < 0) return formatted
+  return `${formatted} (${age} ${age === 1 ? 'year' : 'years'} old)`
+}
+
 interface PetData {
   name: string
   photo: string
+  birthday: string
   owner: string
   address: string
   phone: string
@@ -221,6 +238,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
         pet: {
           name: editData.name,
           photo: photoUrl,
+          birthday: editData.birthday,
           ownerName: editData.owner,
           ownerAddress: editData.address,
           ownerPhone: editData.phone,
@@ -466,6 +484,15 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                     />
                   )}
                 </div>
+                <div className="mt-3 max-w-xs mx-auto">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birthday</label>
+                  <input
+                    type="date"
+                    value={editData.birthday}
+                    onChange={(e) => setEditData({ ...editData, birthday: e.target.value })}
+                    className={`${inputClass} text-center text-sm`}
+                  />
+                </div>
               </>
             ) : (
               <>
@@ -473,6 +500,11 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                 <p className="text-gray-600 dark:text-gray-400">
                   {species && breed ? `${species} \u2022 ${breed}` : species || breed || ''}
                 </p>
+                {petData.birthday && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                    Birthday: {formatBirthday(petData.birthday)}
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -565,20 +597,20 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           {/* Veterinarian */}
           {(editing || petData.vet) && (
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Veterinarian</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Veterinarian Clinic</h2>
               {editing ? (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vet Name</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Veterinarian Clinic</label>
                     <input
                       value={editData.vet}
                       onChange={(e) => setEditData({ ...editData, vet: e.target.value })}
                       className={inputClass}
-                      placeholder="Veterinarian name"
+                      placeholder="e.g. Springfield Animal Hospital"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vet Address</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Clinic Address</label>
                     <input
                       value={editData.vetAddress}
                       onChange={(e) => setEditData({ ...editData, vetAddress: e.target.value })}

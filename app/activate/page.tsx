@@ -34,6 +34,7 @@ function ActivateContent() {
     photo: null as File | null,
     species: '',
     breed: '',
+    birthday: '',
     ownerName: '',
     address: '',
     phone: '',
@@ -121,6 +122,7 @@ function ActivateContent() {
           photo: photoUrl,
           species: data.species,
           breed: data.breed,
+          birthday: data.birthday,
           ownerName: data.ownerName,
           ownerAddress: data.address,
           ownerPhone: data.phone,
@@ -398,18 +400,32 @@ function ActivateContent() {
                 </div>
               </div>
 
-              {/* Pet Name */}
-              <div>
-                <label htmlFor="petName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Pet Name
-                </label>
-                <input
-                  type="text"
-                  id="petName"
-                  value={petData.name}
-                  onChange={(e) => setPetData({ ...petData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                />
+              {/* Pet Name & Birthday */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="petName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pet Name
+                  </label>
+                  <input
+                    type="text"
+                    id="petName"
+                    value={petData.name}
+                    onChange={(e) => setPetData({ ...petData, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Birthday
+                  </label>
+                  <input
+                    type="date"
+                    id="birthday"
+                    value={petData.birthday}
+                    onChange={(e) => setPetData({ ...petData, birthday: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  />
+                </div>
               </div>
 
               {/* Owner Info */}
@@ -459,14 +475,14 @@ function ActivateContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="vetName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Veterinarian Name
+                    Veterinarian Clinic
                   </label>
                   <input
                     type="text"
                     id="vetName"
                     value={petData.vetName}
                     onChange={(e) => setPetData({ ...petData, vetName: e.target.value })}
-                    placeholder="Dr. Smith"
+                    placeholder="e.g. Springfield Animal Hospital"
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                   />
                 </div>
