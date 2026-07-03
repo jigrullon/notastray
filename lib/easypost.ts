@@ -127,15 +127,19 @@ export async function getRates(
 export async function createShipment(options: {
   toAddress: ShippingAddress;
   carrierAccountId?: string;
+  reference?: string;
 }): Promise<ShipmentResponse> {
   try {
-    const { toAddress, carrierAccountId } = options;
+    const { toAddress, carrierAccountId, reference } = options;
 
     if (!FROM_ADDRESS.zip || !FROM_ADDRESS.state || !FROM_ADDRESS.city) {
       throw new Error('FROM_ADDRESS not fully configured in environment variables');
     }
 
-    // Create shipment
+    // Create shipment. `reference` (our orderId) is stored on the EasyPost
+    // shipment so the label is identifiable in the dashboard and the tracker
+    // webhook can be matched back to the order even if the tracking number
+    // isn't the lookup key.
     const shipment = await getClient().Shipment.create({
       to_address: {
         name: toAddress.name,
@@ -148,6 +152,7 @@ export async function createShipment(options: {
       },
       from_address: FROM_ADDRESS,
       parcel: PARCEL,
+      reference: reference || undefined,
       carrier_accounts: carrierAccountId ? [carrierAccountId] : [],
     });
 

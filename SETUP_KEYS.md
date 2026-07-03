@@ -34,7 +34,21 @@ To run the application with Stripe and Firebase integration, you need to configu
     *   Price: $5.00 Recurring / Monthly.
     *   Copy the **Price ID** (e.g., `price_1Pxyz...`) if you plan to hardcode it or fetch it dynamically.
 
-## 4. Environment Files
+## 4. Google reCAPTCHA Setup (tag lookup bot protection)
 
-*   **`.env.local`**: Contains public keys safe for the browser.
-*   **`.dev.vars`**: Contains secret keys for Cloudflare Pages Functions (backend). NEVER commit this file or expose these keys on the client.
+The `/lookup` page uses **reCAPTCHA v2 Checkbox** to slow down bots enumerating tag codes. Without keys, it runs in "dev mode" and skips the CAPTCHA entirely.
+
+1.  **Create a site**: Go to [google.com/recaptcha/admin/create](https://www.google.com/recaptcha/admin/create).
+    *   **Type**: reCAPTCHA v2 → **"I'm not a robot" Checkbox** (must be v2 Checkbox — v3/Enterprise use a different API).
+    *   **Domains**: add your production domain (`notastray.com`, and `www.notastray.com` if used) and `localhost` for local testing.
+2.  **Get the keys**:
+    *   Copy the **Site key** into `.env.local` as `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (public, inlined at build time).
+    *   Copy the **Secret key** into `.dev.vars` as `RECAPTCHA_SECRET_KEY` (secret, read at runtime by `/api/verify-captcha`). Never prefix it with `NEXT_PUBLIC_`.
+3.  **Deploy (Cloudflare Pages)**:
+    *   `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` is inlined by Next.js **at build time**. Because `npm run deploy` builds locally before `wrangler pages deploy`, it must be present in the local build env (`.env.local`). Also add it in Cloudflare Pages → Settings → Environment variables for safety.
+    *   `RECAPTCHA_SECRET_KEY` is a **runtime** value: add it as an encrypted (Secret) environment variable in Cloudflare Pages, and to `.dev.vars` for local `wrangler` preview.
+
+## 5. Environment Files
+
+*   **`.env.local`**: Contains public keys safe for the browser (e.g. `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`).
+*   **`.dev.vars`**: Contains secret keys for Cloudflare Pages Functions (backend), e.g. `RECAPTCHA_SECRET_KEY`. NEVER commit this file or expose these keys on the client.

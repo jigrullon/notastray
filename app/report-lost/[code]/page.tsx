@@ -80,6 +80,12 @@ export default function ReportLostPage() {
     contactInfo: '', rewardOffered: false, reportTitle: '',
   })
 
+  // Scroll back to the top when moving between steps so a short step after a
+  // long one doesn't leave the view stuck at the bottom of the previous step.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [step])
+
   useEffect(() => {
     if (authLoading) return
     if (!user) {

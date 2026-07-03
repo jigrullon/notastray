@@ -208,6 +208,7 @@ export async function POST(request: Request) {
                             zip: order.shippingAddress.postalCode,
                             country: order.shippingAddress.country || 'US',
                         },
+                        reference: order.orderId,
                     });
 
                     // Update order with shipment info
@@ -231,6 +232,7 @@ export async function POST(request: Request) {
                         const confirmationEmailData = getOrderConfirmationEmail({
                             orderId: order.orderId,
                             confirmationCode: order.confirmationCode,
+                            orderConfirmationUrl: `https://notastray.com/shop/success?session_id=${encodeURIComponent(order.stripeSessionId)}`,
                             customerName: order.shippingAddress.name,
                             items: order.items,
                             subtotal: order.subtotal,
