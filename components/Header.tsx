@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { Menu, X, Sun, Moon, ShoppingCart } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { useTheme } from '@/lib/ThemeProvider'
@@ -13,8 +13,15 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { user, logOut } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const { theme, toggleTheme } = useTheme()
   const { itemCount, setIsCartOpen } = useCart()
+
+  // Close the mobile menu whenever we navigate to a new page, so the menu
+  // overlay doesn't stay open on top of the destination page.
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [pathname])
 
   const handleSignOut = async () => {
     try {

@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
   getOrderConfirmationEmail,
-  getShippingEmail,
-  getTrackingUpdateEmail,
   getMerchantOrderEmail,
 } from '@/lib/emailTemplates';
 
@@ -63,64 +61,6 @@ export async function GET(request: Request) {
       });
       break;
 
-    case 'shipping':
-      emailData = getShippingEmail({
-        orderId: mockOrder.orderId,
-        confirmationCode: mockOrder.confirmationCode,
-        customerName: mockOrder.customerName,
-        trackingNumber: '9400111899223456789012',
-        carrier: 'USPS',
-        trackingUrl: 'https://tracking.usps.com/?tracknumbers=9400111899223456789012',
-        estimatedDeliveryMin: mockOrder.estimatedDeliveryMin,
-        estimatedDeliveryMax: mockOrder.estimatedDeliveryMax,
-        shippingAddress: mockOrder.shippingAddress,
-      });
-      break;
-
-    case 'in_transit':
-      emailData = getTrackingUpdateEmail({
-        orderId: mockOrder.orderId,
-        trackingNumber: '9400111899223456789012',
-        status: 'in_transit',
-        statusDisplay: 'In Transit',
-        lastLocation: {
-          city: 'Jersey City',
-          state: 'NJ',
-        },
-        trackingUrl: 'https://tracking.usps.com/?tracknumbers=9400111899223456789012',
-        estimatedDeliveryDate: mockOrder.estimatedDeliveryMax,
-      });
-      break;
-
-    case 'out_for_delivery':
-      emailData = getTrackingUpdateEmail({
-        orderId: mockOrder.orderId,
-        trackingNumber: '9400111899223456789012',
-        status: 'out_for_delivery',
-        statusDisplay: 'Out for Delivery',
-        lastLocation: {
-          city: 'New York',
-          state: 'NY',
-        },
-        trackingUrl: 'https://tracking.usps.com/?tracknumbers=9400111899223456789012',
-        estimatedDeliveryDate: mockOrder.estimatedDeliveryMax,
-      });
-      break;
-
-    case 'delivered':
-      emailData = getTrackingUpdateEmail({
-        orderId: mockOrder.orderId,
-        trackingNumber: '9400111899223456789012',
-        status: 'delivered',
-        statusDisplay: 'Delivered',
-        lastLocation: {
-          city: 'New York',
-          state: 'NY',
-        },
-        trackingUrl: 'https://tracking.usps.com/?tracknumbers=9400111899223456789012',
-      });
-      break;
-
     case 'merchant':
       emailData = getMerchantOrderEmail({
         orderId: mockOrder.orderId,
@@ -141,7 +81,7 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           error: 'Invalid email type',
-          available: ['confirmation', 'shipping', 'delivered', 'merchant'],
+          available: ['confirmation', 'merchant'],
         },
         { status: 400 }
       );

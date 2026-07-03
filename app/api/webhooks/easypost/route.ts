@@ -1,22 +1,10 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { verifyWebhookSignature } from '@/lib/easypost';
-import { getShippingEmail, getTrackingUpdateEmail } from '@/lib/emailTemplates';
-import { sendEmail } from '@/lib/sendEmail';
 
-const statusDisplayMap: Record<string, string> = {
-  unknown: 'Shipment information received',
-  pre_transit: 'Shipment picked up',
-  in_transit: 'In transit',
-  out_for_delivery: 'Out for delivery',
-  delivered: 'Delivered',
-  available_for_pickup: 'Available for pickup',
-  return_in_transit: 'Return in transit',
-  returned: 'Returned',
-  failure: 'Delivery attempted - contact carrier',
-  cancelled: 'Shipment cancelled',
-  error: 'Shipment error',
-};
+// Note: customer-facing shipping-status notifications (shipped / in transit /
+// out for delivery / delivered) are handled by WeSupply, not here. This webhook
+// only syncs shipment status onto the order document in Firestore.
 
 export async function POST(request: Request) {
   try {
@@ -68,10 +56,7 @@ export async function POST(request: Request) {
       const orderDoc = orderSnap.docs[0];
       const order = orderDoc.data();
 
-      // Map EasyPost status to friendly display
-      const statusDisplay = statusDisplayMap[tracker.status] || tracker.status;
-
-      // Update order status in Firestore
+      // Update order status in Firestore (WeSupply handles the emails)
       await orderDoc.ref.update({
         shipment_status: tracker.status,
         last_location: tracker.last_location || null,
@@ -80,56 +65,6 @@ export async function POST(request: Request) {
       });
 
       console.log(`Order ${order.orderId} status updated to ${tracker.status}`);
-
-      // Send customer email on key events
-      if (order.customerEmail) {
-        const trackingUrl = `https://tracking.usps.com/?tracknumbers=${trackingNumber}`;
-        let emailData = null;
-
-        // Send "Your order is on the way!" email when it enters the mail system
-        if (tracker.status === 'in_transit') {
-          emailData = getShippingEmail({
-            orderId: order.orderId,
-            confirmationCode: order.confirmationCode,
-            customerName: order.shippingAddress?.name,
-            trackingNumber,
-            carrier: 'USPS',
-            trackingUrl,
-            estimatedDeliveryMin: order.estimatedDeliveryMin,
-            estimatedDeliveryMax: order.estimatedDeliveryMax,
-            shippingAddress: order.shippingAddress,
-          });
-        }
-        // Send "Your order arrived!" email on delivery
-        else if (tracker.status === 'delivered') {
-          emailData = getTrackingUpdateEmail({
-            orderId: order.orderId,
-            trackingNumber,
-            status: tracker.status,
-            statusDisplay,
-            lastLocation: tracker.last_location,
-            trackingUrl,
-            estimatedDeliveryDate: order.estimatedDeliveryMax,
-          });
-        }
-
-        if (emailData) {
-          try {
-            await sendEmail({
-              to: order.customerEmail,
-              subject: emailData.subject,
-              html: emailData.html,
-              text: emailData.text,
-            });
-            console.log(
-              `Email sent to ${order.customerEmail} for status ${tracker.status}`
-            );
-          } catch (emailError) {
-            console.error('Failed to send email:', emailError);
-            // Don't fail the webhook if email fails
-          }
-        }
-      }
     }
 
     return NextResponse.json({ received: true });
