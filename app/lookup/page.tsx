@@ -23,6 +23,8 @@ export default function LookupPage() {
   const [error, setError] = useState('')
   const [captchaVerified, setCaptchaVerified] = useState(false)
   const [captchaLoaded, setCaptchaLoaded] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(false)
   const captchaRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<number | null>(null)
 
@@ -42,7 +44,10 @@ export default function LookupPage() {
       if (captchaRef.current && widgetIdRef.current === null) {
         widgetIdRef.current = window.grecaptcha.render(captchaRef.current, {
           sitekey: RECAPTCHA_SITE_KEY,
-          callback: () => setCaptchaVerified(true),
+          callback: (token: string) => {
+            setCaptchaVerified(true)
+            setCaptchaToken(token)
+          },
         })
       }
     }
@@ -58,7 +63,15 @@ export default function LookupPage() {
     }
   }, [RECAPTCHA_SITE_KEY])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetCaptcha = () => {
+    setCaptchaVerified(false)
+    setCaptchaToken(null)
+    if (widgetIdRef.current !== null) {
+      window.grecaptcha.reset(widgetIdRef.current)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
@@ -77,6 +90,31 @@ export default function LookupPage() {
     if (!captchaVerified) {
       setError('Please complete the CAPTCHA verification.')
       return
+    }
+
+    // Verify the CAPTCHA token server-side before allowing navigation.
+    // Skipped automatically in dev mode (no site key → no widget → no token).
+    if (RECAPTCHA_SITE_KEY) {
+      setVerifying(true)
+      try {
+        const resp = await fetch('/api/verify-captcha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: captchaToken }),
+        })
+        const data = await resp.json()
+        if (!data.success) {
+          setError('CAPTCHA verification failed. Please try again.')
+          resetCaptcha()
+          return
+        }
+      } catch {
+        setError('Could not verify CAPTCHA. Please try again.')
+        resetCaptcha()
+        return
+      } finally {
+        setVerifying(false)
+      }
     }
 
     router.push(`/pet/${trimmed}`)
@@ -170,9 +208,10 @@ export default function LookupPage() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors"
+              disabled={verifying}
+              className="w-full bg-primary-600 hover:bg-primary-400 disabled:opacity-70 text-white font-medium py-3 rounded-lg transition-colors"
             >
-              View Pet Profile
+              {verifying ? 'Verifying...' : 'View Pet Profile'}
             </button>
           </form>
 

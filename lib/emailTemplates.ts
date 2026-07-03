@@ -149,20 +149,20 @@ export function getOrderConfirmationEmail(data: OrderConfirmationEmailData) {
               </tbody>
             </table>
 
-            <div style="margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
-                <span>Subtotal</span>
-                <span>$${data.subtotal.toFixed(2)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px;">
-                <span>Shipping</span>
-                <span>$${data.shippingCost.toFixed(2)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; padding-top: 12px; border-top: 2px solid #e5e7eb;">
-                <span>Total</span>
-                <span>$${data.total.toFixed(2)}</span>
-              </div>
-            </div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+              <tr>
+                <td style="padding: 4px 0; font-size: 15px;">Subtotal:</td>
+                <td style="padding: 4px 0; font-size: 15px; text-align: right;">$${data.subtotal.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0 12px 0; font-size: 15px;">Shipping:</td>
+                <td style="padding: 4px 0 12px 0; font-size: 15px; text-align: right;">$${data.shippingCost.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0 0 0; font-size: 16px; font-weight: bold; border-top: 2px solid #e5e7eb;">Total:</td>
+                <td style="padding: 12px 0 0 0; font-size: 16px; font-weight: bold; text-align: right; border-top: 2px solid #e5e7eb;">$${data.total.toFixed(2)}</td>
+              </tr>
+            </table>
 
             <h3 style="color: #047857; font-size: 16px; margin-top: 24px; margin-bottom: 8px;">Expected Delivery</h3>
             <p style="margin: 0; font-size: 15px; color: #666;">

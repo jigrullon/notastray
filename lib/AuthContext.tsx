@@ -25,6 +25,7 @@ interface AuthContextType {
     // signInWithGoogle: () => Promise<UserCredential>;
     logOut: () => Promise<void>;
     resetPassword: (email: string) => Promise<void>;
+    resendVerificationEmail: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -118,6 +119,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return sendPasswordResetEmail(auth, email);
     };
 
+    const resendVerificationEmail = async () => {
+        if (!auth.currentUser) {
+            throw new Error('You must be signed in to resend a verification email.');
+        }
+        await sendEmailVerification(auth.currentUser);
+    };
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -127,7 +135,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // TODO: signInWithGoogle temporarily disabled
             // signInWithGoogle,
             logOut,
-            resetPassword
+            resetPassword,
+            resendVerificationEmail
         }}>
             {children}
         </AuthContext.Provider>

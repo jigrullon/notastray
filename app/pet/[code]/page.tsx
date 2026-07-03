@@ -21,6 +21,7 @@ async function getPetData(code: string) {
       petData: {
         name: pet.name?.stringValue || '',
         photo: pet.photo?.stringValue || '/api/placeholder/300/300',
+        birthday: pet.birthday?.stringValue || '',
         owner: pet.ownerName?.stringValue || '',
         address: pet.ownerAddress?.stringValue || '',
         phone: pet.ownerPhone?.stringValue || '',
