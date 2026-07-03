@@ -58,21 +58,6 @@ function SignupContent() {
       if (phoneNum) {
         setPhone(phoneNum)
       }
-
-      const savedData = sessionStorage.getItem('activationData')
-      if (savedData) {
-        try {
-          const { petData } = JSON.parse(savedData)
-          if (petData?.ownerName && !ownerName) {
-            setName(petData.ownerName)
-          }
-          if (petData?.phone && !phoneNum) {
-            setPhone(petData.phone)
-          }
-        } catch (err) {
-          console.error('Failed to load activation data:', err)
-        }
-      }
     }
   }, [searchParams])
 
@@ -160,9 +145,6 @@ function SignupContent() {
         })
       }
 
-      if (fromActivate && activationCode) {
-        sessionStorage.setItem('activationRedirect', activationCode)
-      }
       setSuccess(true)
     } catch (err: any) {
       console.error('Error saving notification preferences:', err)
@@ -423,7 +405,10 @@ function SignupContent() {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-primary-600 hover:text-primary-500">
+          <Link
+            href={fromActivate && activationCode ? `/login?from=activate&code=${activationCode}` : '/login'}
+            className="font-medium text-primary-600 hover:text-primary-500"
+          >
             Sign in
           </Link>
         </p>

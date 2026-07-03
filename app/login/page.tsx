@@ -1,18 +1,35 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/AuthContext'
 import { Mail, Lock, AlertCircle, Loader2, Heart } from 'lucide-react'
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
+  )
+}
+
+function LoginContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { signIn, /* signInWithGoogle */ } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const from = searchParams.get('from')
+  const code = searchParams.get('code')
+  const fromActivate = from === 'activate' && !!code
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,7 +38,11 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password)
-      router.push('/dashboard')
+      if (fromActivate && code) {
+        router.push(`/activate?code=${code.toUpperCase()}`)
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err: any) {
       console.error(err)
       setError('Failed to sign in. Please check your credentials.')
@@ -59,7 +80,10 @@ export default function LoginPage() {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
           Or{' '}
-          <Link href="/signup" className="font-medium text-primary-600 hover:text-primary-500">
+          <Link
+            href={fromActivate && code ? `/signup?from=activate&code=${code}` : '/signup'}
+            className="font-medium text-primary-600 hover:text-primary-500"
+          >
             create a new account
           </Link>
         </p>

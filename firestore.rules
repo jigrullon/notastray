@@ -15,11 +15,16 @@ service cloud.firestore {
 
     // Tags — public read (QR code scanners need this without auth)
     // create: server-side only via Firebase Admin SDK (tag import scripts)
-    // update: authenticated users can activate an unclaimed tag or update their own
+    // update: authenticated users can claim an unclaimed tag or update their own
+    //   Claim semantics: userId set + isActive false = claimed/draft (profile being filled)
+    //                    isActive true = fully activated (public pet profile live)
+    //   A tag without a userId field, or with userId == null, is unclaimed and may be
+    //   claimed by any authenticated user. Once claimed, only that user may update it.
     match /tags/{code} {
       allow read: if true;
       allow create: if false;
       allow update: if request.auth != null && (
+        !('userId' in resource.data) ||
         resource.data.userId == null ||
         resource.data.userId == request.auth.uid
       );
