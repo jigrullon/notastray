@@ -264,7 +264,7 @@ export default function ReportLostPage() {
             </div>
 
             <p className="text-gray-600 dark:text-gray-400 mt-4 mb-6">
-              We know reporting <span className="font-semibold text-gray-800 dark:text-gray-200">{petName}</span> as missing is stressful — we&apos;re going to help you every step of the way.
+              We know reporting <span className="font-semibold text-gray-800 dark:text-gray-200">{petName} </span>as missing is stressful — we&apos;re going to help you every step of the way.
               It only takes 3 steps, and we&apos;ll use the profile information you&apos;ve already set up.
             </p>
 

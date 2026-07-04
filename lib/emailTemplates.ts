@@ -763,6 +763,101 @@ View in Dashboard: ${data.dashboardUrl}
   };
 }
 
+export interface EmailVerificationEmailData {
+  customerName?: string;
+  verifyUrl: string;
+}
+
+export function getEmailVerificationEmail(data: EmailVerificationEmailData) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+      </head>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+
+          <!-- Header with Logo -->
+          <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <p style="margin: 8px 0 0 0; font-size: 18px;">Verify Your Email Address</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 32px;">
+            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+
+            <p style="font-size: 16px;">Welcome to NotAStray! Please verify your email address to complete your account setup and start protecting your pet.</p>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${data.verifyUrl}" style="background-color: #047857; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Verify My Email</a>
+            </div>
+
+            <p style="font-size: 14px; color: #666; margin: 24px 0 8px 0;">
+              If the button above doesn't work, copy and paste this link into your browser:
+            </p>
+            <p style="font-size: 13px; color: #047857; word-break: break-all; margin: 0 0 24px 0;">
+              ${data.verifyUrl}
+            </p>
+
+            <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: #92400e;">
+                <strong>This link expires in 24 hours.</strong> If it expires, you can request a new one from your dashboard.
+              </p>
+            </div>
+
+            <p style="color: #999; font-size: 13px; margin: 24px 0 0 0;">
+              If you did not create a NotAStray account, you can safely ignore this email.
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 8px 0;">
+              Questions? Email us at <a href="mailto:support@notastray.com" style="color: #047857; text-decoration: none;">support@notastray.com</a>
+            </p>
+            <p style="margin: 0 0 12px 0;">
+              <a href="https://notastray.com" style="color: #047857; text-decoration: none; font-weight: bold;">NotAStray.com</a>
+            </p>
+            <p style="margin: 0; font-size: 11px; color: #999;">
+              Keeping pets safe, one tag at a time.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+Verify Your Email Address
+
+Hi ${data.customerName || 'there'},
+
+Welcome to NotAStray! Please verify your email address to complete your account setup and start protecting your pet.
+
+Verify your email here:
+${data.verifyUrl}
+
+This link expires in 24 hours. If it expires, you can request a new one from your dashboard.
+
+If you did not create a NotAStray account, you can safely ignore this email.
+
+Questions? Email us at support@notastray.com
+
+---
+NotAStray.com
+Keeping pets safe, one tag at a time.
+  `;
+
+  return {
+    subject: 'Verify your NotAStray email address',
+    html,
+    text,
+  };
+}
+
 export function getLostPetNotificationEmail(data: LostPetNotificationEmailData) {
   const html = `
     <!DOCTYPE html>

@@ -5,7 +5,6 @@ import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     signOut,
-    sendEmailVerification,
     sendPasswordResetEmail,
     updateProfile,
     User,
@@ -15,6 +14,31 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+
+// Sends the branded verification email via our own endpoint (AWS SES), replacing
+// Firebase's default sendEmailVerification. Throws with code 'auth/too-many-requests'
+// on a 429 so the dashboard banner's existing special-casing keeps working.
+async function sendCustomVerificationEmail(user: User, continueUrl?: string): Promise<void> {
+    const idToken = await user.getIdToken();
+    const res = await fetch('/api/auth/send-verification-email', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(continueUrl ? { continueUrl } : {}),
+    });
+
+    if (res.status === 429) {
+        const err = new Error('Too many verification email requests.') as Error & { code: string };
+        err.code = 'auth/too-many-requests';
+        throw err;
+    }
+
+    if (!res.ok) {
+        throw new Error('Failed to send verification email.');
+    }
+}
 
 interface AuthContextType {
     user: User | null;
@@ -72,8 +96,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             updatedAt: new Date().toISOString(),
         }, { merge: true });
 
-        // Send verification email
-        await sendEmailVerification(userCredential.user);
+        // Send our branded verification email. Never let an email failure fail signup.
+        try {
+            await sendCustomVerificationEmail(userCredential.user);
+        } catch (emailError) {
+            console.error('Failed to send verification email during signup:', emailError);
+        }
 
         return userCredential;
     };
@@ -123,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!auth.currentUser) {
             throw new Error('You must be signed in to resend a verification email.');
         }
-        await sendEmailVerification(auth.currentUser);
+        await sendCustomVerificationEmail(auth.currentUser);
     };
 
     return (
