@@ -1,7 +1,10 @@
 'use client'
 
 import { useRef } from 'react'
-import html2canvas from 'html2canvas'
+// html2canvas-pro: actively maintained fork of html2canvas (abandoned since 2022).
+// The original hangs indefinitely on modern Chrome — the cause of the recurring
+// "stuck on Generating PDF" bug. Do not switch back to plain html2canvas.
+import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
 import { Download, Share2 } from 'lucide-react'
 import { useState } from 'react'
