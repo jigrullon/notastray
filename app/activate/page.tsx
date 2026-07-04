@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Camera, Upload, Check, ArrowLeft, Shield, Star, Loader2, AlertCircle } from 'lucide-react'
+import { Camera, Upload, Check, ArrowLeft, Shield, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '../../lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
@@ -26,9 +26,15 @@ function ActivateContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
-  const [autoSubmitReady, setAutoSubmitReady] = useState(false)
   const [tagCode, setTagCode] = useState('')
+  // URL from Firestore pet.photo — preserved in draft auto-saves; used as photoUrl fallback on submit
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null)
+  const [draftSaved, setDraftSaved] = useState(false)
+  // Set when the submitted code belongs to the current user's already-activated tag
+  const [ownActivatedTagCode, setOwnActivatedTagCode] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [petData, setPetData] = useState({
     name: '',
     photo: null as File | null,
@@ -46,31 +52,132 @@ function ActivateContent() {
     goodWithChildren: '' as '' | 'yes' | 'no' | 'unsure',
   })
 
+  const [activateError, setActivateError] = useState<string | null>(null)
+  const [activateLoading, setActivateLoading] = useState(false)
+  const [subscribeLoading, setSubscribeLoading] = useState(false)
+
   // Scroll back to the top when moving between steps so a short step after a
   // long one doesn't leave the view stuck at the bottom of the previous step.
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [step])
 
+  // Handle ?code= URL param.
+  // - Not logged in: just prefill the step-1 code input; let the normal step-1 flow
+  //   route the user to /signup or prompt them to sign in.
+  // - Logged in: validate the tag, claim it (if unclaimed), prefill any saved draft,
+  //   and advance directly to step 2.
   useEffect(() => {
     const code = searchParams.get('code')
-    if (code && user && !autoSubmitReady) {
-      const savedData = sessionStorage.getItem('activationData')
-      if (savedData) {
-        try {
-          const { tagCode: savedTagCode, petData: savedPetData } = JSON.parse(savedData)
-          if (savedTagCode === code) {
-            setTagCode(code)
-            setPetData(savedPetData)
-            setStep(2)
-            setAutoSubmitReady(true)
-          }
-        } catch (err) {
-          console.error('Failed to load activation data:', err)
+    if (!code || step !== 1) return
+
+    const upperCode = code.toUpperCase()
+    setTagCode(upperCode)
+
+    if (!user) return // Not logged in — just prefill the step-1 input
+
+    ;(async () => {
+      try {
+        const tagDoc = await getDoc(doc(db, 'tags', upperCode))
+        if (!tagDoc.exists()) {
+          setActivateError('Tag code not found. Please check and try again.')
+          return
         }
+        const data = tagDoc.data()!
+
+        if (data.isActive && !data.isTestTag) {
+          if (data.userId === user.uid) {
+            setOwnActivatedTagCode(upperCode)
+          } else {
+            setActivateError('This tag has already been activated.')
+          }
+          return
+        }
+
+        if (data.userId && data.userId !== user.uid && !data.isTestTag) {
+          setActivateError('This tag is already linked to another account.')
+          return
+        }
+
+        // Claim if unclaimed
+        if (!data.userId) {
+          await updateDoc(doc(db, 'tags', upperCode), {
+            userId: user.uid,
+            claimedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+        }
+
+        // Prefill from Firestore draft if present
+        if (data.pet) {
+          const pet = data.pet
+          setExistingPhotoUrl(pet.photo || null)
+          setPetData({
+            name: pet.name || '',
+            photo: null,
+            species: pet.species || '',
+            breed: pet.breed || '',
+            birthday: pet.birthday || '',
+            ownerName: pet.ownerName || '',
+            address: pet.ownerAddress || '',
+            phone: pet.ownerPhone || '',
+            vetName: pet.vetName || '',
+            vetAddress: pet.vetAddress || '',
+            allergies: pet.allergies || '',
+            goodWithDogs: (pet.goodWithDogs || '') as '' | 'yes' | 'no' | 'unsure',
+            goodWithCats: (pet.goodWithCats || '') as '' | 'yes' | 'no' | 'unsure',
+            goodWithChildren: (pet.goodWithChildren || '') as '' | 'yes' | 'no' | 'unsure',
+          })
+        }
+
+        setStep(2)
+      } catch (err) {
+        console.error('Error handling ?code= param:', err)
+        setActivateError('Unable to verify tag. Please try again.')
       }
+    })()
+  }, [searchParams, user, step])
+
+  // Debounced auto-save: while editing the profile (step 2), persist the draft to
+  // Firestore ~2.5 s after the last change. Does not upload the local photo file —
+  // preserves the existing pet.photo URL from Firestore instead.
+  useEffect(() => {
+    if (step !== 2 || !user || !tagCode) return
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        await updateDoc(doc(db, 'tags', tagCode), {
+          pet: {
+            name: petData.name,
+            species: petData.species,
+            breed: petData.breed,
+            birthday: petData.birthday,
+            ownerName: petData.ownerName,
+            ownerAddress: petData.address,
+            ownerPhone: petData.phone,
+            vetName: petData.vetName,
+            vetAddress: petData.vetAddress,
+            allergies: petData.allergies,
+            goodWithDogs: petData.goodWithDogs,
+            goodWithCats: petData.goodWithCats,
+            goodWithChildren: petData.goodWithChildren,
+            photo: existingPhotoUrl || '',
+          },
+          updatedAt: new Date().toISOString(),
+        })
+        setDraftSaved(true)
+        setTimeout(() => setDraftSaved(false), 3000)
+      } catch (err) {
+        console.error('Auto-save failed:', err)
+      }
+    }, 2500)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [searchParams, user, autoSubmitReady])
+  }, [petData, step, user, tagCode, existingPhotoUrl])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
@@ -96,27 +203,104 @@ function ActivateContent() {
     setPetData({ ...petData, phone: formatted })
   }
 
-  const [activateError, setActivateError] = useState<string | null>(null)
-  const [activateLoading, setActivateLoading] = useState(false)
+  const handleCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setActivateError(null)
+    setOwnActivatedTagCode(null)
+    if (tagCode.length < 6) return
 
-  const submitActivation = async (code: string, data: typeof petData) => {
     try {
-      if (!user) {
-        sessionStorage.setItem('activationData', JSON.stringify({ tagCode: code, petData: data }))
-        window.location.href = `/signup?from=activate&code=${code}`
+      const upperCode = tagCode.toUpperCase()
+      const tagDoc = await getDoc(doc(db, 'tags', upperCode))
+      if (!tagDoc.exists()) {
+        setActivateError('Tag code not found. Please check and try again.')
         return
       }
 
-      setActivateLoading(true)
-      setActivateError(null)
+      const data = tagDoc.data()!
 
-      const tagRef = doc(db, 'tags', code)
+      if (data.isActive && !data.isTestTag) {
+        if (data.userId === user?.uid) {
+          setOwnActivatedTagCode(upperCode)
+        } else {
+          setActivateError('This tag has already been activated.')
+        }
+        return
+      }
+
+      setTagCode(upperCode)
+
+      if (!user) {
+        // Account-first: route to signup carrying only the code. Profile data is not
+        // passed in the URL — it will be persisted to Firestore after account creation.
+        window.location.href = `/signup?from=activate&code=${upperCode}`
+        return
+      }
+
+      // Logged in — claim if unclaimed, error if claimed by someone else
+      if (data.userId && data.userId !== user.uid && !data.isTestTag) {
+        setActivateError('This tag is already linked to another account.')
+        return
+      }
+      if (!data.userId) {
+        await updateDoc(doc(db, 'tags', upperCode), {
+          userId: user.uid,
+          claimedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+      }
+
+      // Prefill from Firestore draft if present
+      if (data.pet) {
+        const pet = data.pet
+        setExistingPhotoUrl(pet.photo || null)
+        setPetData({
+          name: pet.name || '',
+          photo: null,
+          species: pet.species || '',
+          breed: pet.breed || '',
+          birthday: pet.birthday || '',
+          ownerName: pet.ownerName || '',
+          address: pet.ownerAddress || '',
+          phone: pet.ownerPhone || '',
+          vetName: pet.vetName || '',
+          vetAddress: pet.vetAddress || '',
+          allergies: pet.allergies || '',
+          goodWithDogs: (pet.goodWithDogs || '') as '' | 'yes' | 'no' | 'unsure',
+          goodWithCats: (pet.goodWithCats || '') as '' | 'yes' | 'no' | 'unsure',
+          goodWithChildren: (pet.goodWithChildren || '') as '' | 'yes' | 'no' | 'unsure',
+        })
+      }
+
+      setStep(2)
+    } catch (err) {
+      console.error('Error validating tag:', err)
+      setActivateError('Unable to verify tag. Please try again.')
+    }
+  }
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return // user is always authenticated at step 2; guard only
+
+    // Flush any pending auto-save before the final write
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+
+    setActivateLoading(true)
+    setActivateError(null)
+
+    try {
+      const tagRef = doc(db, 'tags', tagCode)
       const userRef = doc(db, 'users', user.uid)
 
-      let photoUrl = ''
-      if (data.photo) {
-        const storageRef = ref(storage, `pet-photos/${code}/${Date.now()}-${data.photo.name}`)
-        await uploadBytes(storageRef, data.photo)
+      // Use the existing Firestore photo URL as fallback; upload if a new file was chosen
+      let photoUrl = existingPhotoUrl || ''
+      if (petData.photo) {
+        const storageRef = ref(storage, `pet-photos/${tagCode}/${Date.now()}-${petData.photo.name}`)
+        await uploadBytes(storageRef, petData.photo)
         photoUrl = await getDownloadURL(storageRef)
       }
 
@@ -124,20 +308,20 @@ function ActivateContent() {
         isActive: true,
         userId: user.uid,
         pet: {
-          name: data.name,
+          name: petData.name,
           photo: photoUrl,
-          species: data.species,
-          breed: data.breed,
-          birthday: data.birthday,
-          ownerName: data.ownerName,
-          ownerAddress: data.address,
-          ownerPhone: data.phone,
-          vetName: data.vetName,
-          vetAddress: data.vetAddress,
-          allergies: data.allergies,
-          goodWithDogs: data.goodWithDogs,
-          goodWithCats: data.goodWithCats,
-          goodWithChildren: data.goodWithChildren,
+          species: petData.species,
+          breed: petData.breed,
+          birthday: petData.birthday,
+          ownerName: petData.ownerName,
+          ownerAddress: petData.address,
+          ownerPhone: petData.phone,
+          vetName: petData.vetName,
+          vetAddress: petData.vetAddress,
+          allergies: petData.allergies,
+          goodWithDogs: petData.goodWithDogs,
+          goodWithCats: petData.goodWithCats,
+          goodWithChildren: petData.goodWithChildren,
         },
         isLost: false,
         foundReports: [],
@@ -146,67 +330,17 @@ function ActivateContent() {
       })
 
       await updateDoc(userRef, {
-        tagCodes: arrayUnion(code),
+        tagCodes: arrayUnion(tagCode),
         updatedAt: new Date().toISOString(),
       })
 
       setStep(3)
-      sessionStorage.removeItem('activationData')
     } catch (err) {
       console.error('Error activating tag:', err)
       setActivateError('Failed to activate tag. Please try again.')
     } finally {
       setActivateLoading(false)
     }
-  }
-
-  useEffect(() => {
-    if (autoSubmitReady && user && step === 2 && tagCode) {
-      submitActivation(tagCode, petData)
-      setAutoSubmitReady(false)
-    }
-  }, [autoSubmitReady, user, step, tagCode, petData])
-
-  const handleCodeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setActivateError(null)
-    if (tagCode.length < 6) return
-
-    // Validate tag exists in Firestore and is not already active
-    try {
-      const tagDoc = await getDoc(doc(db, 'tags', tagCode.toUpperCase()))
-      if (!tagDoc.exists()) {
-        setActivateError('Tag code not found. Please check and try again.')
-        return
-      }
-      if (tagDoc.data().isActive && !tagDoc.data().isTestTag) {
-        setActivateError('This tag has already been activated.')
-        return
-      }
-      setTagCode(tagCode.toUpperCase())
-      setStep(2)
-    } catch (err) {
-      console.error('Error validating tag:', err)
-      setActivateError('Unable to verify tag. Please try again.')
-    }
-  }
-
-  const [subscribeLoading, setSubscribeLoading] = useState(false)
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user) {
-      const params = new URLSearchParams({
-        from: 'activate',
-        code: tagCode,
-        ownerName: petData.ownerName || '',
-        phone: petData.phone || '',
-      })
-      sessionStorage.setItem('activationData', JSON.stringify({ tagCode, petData }))
-      window.location.href = `/signup?${params.toString()}`
-      return
-    }
-    await submitActivation(tagCode, petData)
   }
 
   const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
@@ -284,12 +418,26 @@ function ActivateContent() {
                   required
                 />
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  This code is printed on your tag and looks like "ABC123"
+                  This code is printed on your tag and looks like &quot;ABC123&quot;
                 </p>
                 {activateError && (
                   <div className="mt-3 flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                     {activateError}
+                  </div>
+                )}
+                {ownActivatedTagCode && (
+                  <div className="mt-3 flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>
+                      This tag is already activated.{' '}
+                      <Link
+                        href={`/pet/${ownActivatedTagCode}`}
+                        className="underline font-medium"
+                      >
+                        View pet profile
+                      </Link>
+                    </span>
                   </div>
                 )}
               </div>
@@ -301,6 +449,18 @@ function ActivateContent() {
               >
                 Continue
               </button>
+
+              {!user && (
+                <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">
+                  Already have an account?{' '}
+                  <Link
+                    href={tagCode.length >= 6 ? `/login?from=activate&code=${tagCode}` : '/login'}
+                    className="text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+              )}
             </form>
           </div>
         )}
@@ -309,7 +469,7 @@ function ActivateContent() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Create Pet Profile</h1>
             <p className="text-gray-600 dark:text-gray-400 mb-8">
-              Fill out your pet's information to help them get home safely
+              Fill out your pet&apos;s information to help them get home safely
             </p>
 
             <form onSubmit={handleProfileSubmit} className="space-y-6">
@@ -329,6 +489,12 @@ function ActivateContent() {
                   {petData.photo ? (
                     <img
                       src={URL.createObjectURL(petData.photo)}
+                      alt="Pet preview"
+                      className="w-32 h-32 object-cover rounded-lg mx-auto mb-4"
+                    />
+                  ) : existingPhotoUrl ? (
+                    <img
+                      src={existingPhotoUrl}
                       alt="Pet preview"
                       className="w-32 h-32 object-cover rounded-lg mx-auto mb-4"
                     />
@@ -438,7 +604,7 @@ function ActivateContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Owner's First Name
+                    Owner&apos;s First Name
                   </label>
                   <input
                     type="text"
@@ -510,7 +676,7 @@ function ActivateContent() {
               {/* Medical Info */}
               <div>
                 <label htmlFor="allergies" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Allergies & Medical Information
+                  Allergies &amp; Medical Information
                 </label>
                 <textarea
                   id="allergies"
@@ -537,7 +703,7 @@ function ActivateContent() {
                           name="goodWithDogs"
                           value="yes"
                           checked={petData.goodWithDogs === 'yes'}
-                          onChange={(e) => setPetData({ ...petData, goodWithDogs: 'yes' })}
+                          onChange={() => setPetData({ ...petData, goodWithDogs: 'yes' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
@@ -548,7 +714,7 @@ function ActivateContent() {
                           name="goodWithDogs"
                           value="no"
                           checked={petData.goodWithDogs === 'no'}
-                          onChange={(e) => setPetData({ ...petData, goodWithDogs: 'no' })}
+                          onChange={() => setPetData({ ...petData, goodWithDogs: 'no' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">No</span>
@@ -559,7 +725,7 @@ function ActivateContent() {
                           name="goodWithDogs"
                           value="unsure"
                           checked={petData.goodWithDogs === 'unsure'}
-                          onChange={(e) => setPetData({ ...petData, goodWithDogs: 'unsure' })}
+                          onChange={() => setPetData({ ...petData, goodWithDogs: 'unsure' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">Unsure</span>
@@ -576,7 +742,7 @@ function ActivateContent() {
                           name="goodWithCats"
                           value="yes"
                           checked={petData.goodWithCats === 'yes'}
-                          onChange={(e) => setPetData({ ...petData, goodWithCats: 'yes' })}
+                          onChange={() => setPetData({ ...petData, goodWithCats: 'yes' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
@@ -587,7 +753,7 @@ function ActivateContent() {
                           name="goodWithCats"
                           value="no"
                           checked={petData.goodWithCats === 'no'}
-                          onChange={(e) => setPetData({ ...petData, goodWithCats: 'no' })}
+                          onChange={() => setPetData({ ...petData, goodWithCats: 'no' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">No</span>
@@ -598,7 +764,7 @@ function ActivateContent() {
                           name="goodWithCats"
                           value="unsure"
                           checked={petData.goodWithCats === 'unsure'}
-                          onChange={(e) => setPetData({ ...petData, goodWithCats: 'unsure' })}
+                          onChange={() => setPetData({ ...petData, goodWithCats: 'unsure' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">Unsure</span>
@@ -615,7 +781,7 @@ function ActivateContent() {
                           name="goodWithChildren"
                           value="yes"
                           checked={petData.goodWithChildren === 'yes'}
-                          onChange={(e) => setPetData({ ...petData, goodWithChildren: 'yes' })}
+                          onChange={() => setPetData({ ...petData, goodWithChildren: 'yes' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
@@ -626,7 +792,7 @@ function ActivateContent() {
                           name="goodWithChildren"
                           value="no"
                           checked={petData.goodWithChildren === 'no'}
-                          onChange={(e) => setPetData({ ...petData, goodWithChildren: 'no' })}
+                          onChange={() => setPetData({ ...petData, goodWithChildren: 'no' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">No</span>
@@ -637,7 +803,7 @@ function ActivateContent() {
                           name="goodWithChildren"
                           value="unsure"
                           checked={petData.goodWithChildren === 'unsure'}
-                          onChange={(e) => setPetData({ ...petData, goodWithChildren: 'unsure' })}
+                          onChange={() => setPetData({ ...petData, goodWithChildren: 'unsure' })}
                           className="rounded-full border-gray-300 dark:border-gray-600 text-primary-600"
                         />
                         <span className="ml-2 text-gray-700 dark:text-gray-300">Unsure</span>
@@ -652,6 +818,10 @@ function ActivateContent() {
                   <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                   {activateError}
                 </div>
+              )}
+
+              {draftSaved && (
+                <p className="text-sm text-center text-green-600 dark:text-green-400">Draft saved</p>
               )}
 
               <button type="submit" className="w-full btn-primary py-3 text-lg flex items-center justify-center" disabled={activateLoading}>
@@ -674,7 +844,7 @@ function ActivateContent() {
               </div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Profile Created!</h1>
               <p className="text-gray-600 dark:text-gray-400 mb-8">
-                Your pet's profile is now active. The QR code on tag {tagCode} will now
+                Your pet&apos;s profile is now active. The QR code on tag {tagCode} will now
                 direct to their profile page.
               </p>
 
