@@ -56,7 +56,18 @@ export default function MissingPetFlyer({
   const { user } = useAuth()
   const flyerRef = useRef<HTMLDivElement>(null)
   const [downloading, setDownloading] = useState(false)
+  const [stage, setStage] = useState<string | null>(null)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+
+  // Watchdog wrapper: no stage of PDF generation may hang silently.
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+      ),
+    ])
+  }
 
   const primaryContact = ownerName && ownerPhone ? `${ownerName} - ${ownerPhone}` : ownerName || ownerPhone || contactInfo || (vetName ? `${vetName}${vetAddress ? ` - ${vetAddress}` : ''}` : '')
 
@@ -66,6 +77,11 @@ export default function MissingPetFlyer({
       return
     }
     setDownloading(true)
+    const t0 = Date.now()
+    const logStage = (name: string) => {
+      setStage(name)
+      console.log(`[flyer-pdf] ${name} (+${Date.now() - t0}ms)`)
+    }
     try {
       // Convert Firebase image URL to a data URL via the server-side proxy.
       // The server fetch is not subject to browser CORS, so this path works
@@ -75,12 +91,17 @@ export default function MissingPetFlyer({
       const img = flyerRef.current.querySelector('img')
       let originalSrc = ''
       if (img && img.src && img.src.includes('firebasestorage')) {
+        logStage('Preparing photo…')
         originalSrc = img.src
-        const response = await fetch('/api/proxy-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: img.src }),
-        })
+        const response = await withTimeout(
+          fetch('/api/proxy-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageUrl: img.src }),
+          }),
+          30000,
+          'Photo preparation'
+        )
         if (!response.ok) {
           throw new Error('Could not load the pet photo for the PDF. Please try again.')
         }
@@ -88,15 +109,21 @@ export default function MissingPetFlyer({
         img.src = data.dataUrl
       }
 
-      const canvas = await html2canvas(flyerRef.current, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        // Hard cap on image loading so PDF generation can never hang indefinitely.
-        imageTimeout: 15000,
-      })
+      logStage('Rendering flyer…')
+      const canvas = await withTimeout(
+        html2canvas(flyerRef.current, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          // Hard cap on image loading so PDF generation can never hang indefinitely.
+          imageTimeout: 15000,
+        }),
+        30000,
+        'Flyer rendering'
+      )
+      logStage('Creating PDF…')
 
       // Restore original image src
       if (img && originalSrc) {
@@ -125,22 +152,29 @@ export default function MissingPetFlyer({
       formData.append('fileName', fileName)
       formData.append('pdf', pdfBlob, fileName)
 
-      const uploadResponse = await fetch('/api/upload-missing-flyer', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: formData,
-      })
+      logStage('Uploading PDF…')
+      console.log(`[flyer-pdf] PDF size: ${(pdfBlob.size / 1024 / 1024).toFixed(2)} MB`)
+      const uploadResponse = await withTimeout(
+        fetch('/api/upload-missing-flyer', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: formData,
+        }),
+        60000,
+        'PDF upload'
+      )
 
       if (!uploadResponse.ok) {
-        const error = await uploadResponse.json()
-        throw new Error(error.error || 'Failed to upload PDF')
+        const error = await uploadResponse.json().catch(() => ({}))
+        throw new Error(error.error || `Failed to upload PDF (HTTP ${uploadResponse.status})`)
       }
 
       const uploadData = await uploadResponse.json()
       const downloadUrl = uploadData.downloadUrl
       setPdfUrl(downloadUrl)
+      logStage('Starting download…')
 
       // Trigger browser download using the signed URL
       const link = document.createElement('a')
@@ -154,6 +188,7 @@ export default function MissingPetFlyer({
       alert(`Failed to generate PDF: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setDownloading(false)
+      setStage(null)
     }
   }
 
@@ -283,7 +318,7 @@ export default function MissingPetFlyer({
             className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
           >
             <Download className="w-5 h-5" />
-            {downloading ? 'Generating PDF...' : 'Download PDF'}
+            {downloading ? (stage || 'Generating PDF…') : 'Download PDF'}
           </button>
         </div>
       )}
