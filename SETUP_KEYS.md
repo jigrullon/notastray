@@ -59,7 +59,19 @@ NotAStray sends its own branded verification emails (from `support@notastray.com
     *   `NEXT_PUBLIC_APP_URL` — base URL used to build the verification link (e.g. `https://notastray.com`). **Build-time inlined** by Next.js, so it must be set in Vercel **before** the build runs (same handling as `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`).
 2.  **Flow**: signup / resend → `POST /api/auth/send-verification-email` (generates a signed token, sends it via SES) → user clicks `/verify-email?token=…` → `POST /api/auth/verify-email` validates the token and flips `emailVerified` server-side via the Firebase Admin SDK.
 
-## 6. Environment Files
+## 6. Firebase Storage CORS (`cors.json`)
+
+`cors.json` at the repo root is the CORS configuration for the Firebase Storage bucket. Apply it with:
+
+```bash
+gsutil cors set cors.json gs://<NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET>
+```
+
+Notes:
+*   It must include the **production origins** (`notastray.com`, `www`, `*.vercel.app`), not just localhost. A localhost-only config was the root cause of the recurring "broken image on the lost-pet flyer" bug: the flyer image used a CORS-mode request that the bucket rejected in production while working in dev.
+*   As of the flyer fix, no app code strictly *requires* bucket CORS (images render as plain `<img>` and PDF capture uses the server-side `/api/proxy-image`). Keep the config applied anyway as defense-in-depth for any future CORS-mode use of storage assets.
+
+## 7. Environment Files
 
 *   **`.env.local`**: Contains public keys safe for the browser (e.g. `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`).
 *   **`.dev.vars`**: Contains secret keys for Cloudflare Pages Functions (backend), e.g. `RECAPTCHA_SECRET_KEY`. NEVER commit this file or expose these keys on the client.

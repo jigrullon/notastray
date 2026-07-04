@@ -1,12 +1,13 @@
 'use client'
 
 import { useRef } from 'react'
-import html2canvas from 'html2canvas'
+// html2canvas-pro: actively maintained fork of html2canvas (abandoned since 2022).
+// The original hangs indefinitely on modern Chrome — the cause of the recurring
+// "stuck on Generating PDF" bug. Do not switch back to plain html2canvas.
+import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
 import { Download, Share2 } from 'lucide-react'
 import { useState } from 'react'
-// Firebase is no longer needed for upload (using backend API instead)
-import { useAuth } from '@/lib/AuthContext'
 
 interface MissingPetFlyerProps {
   petName: string
@@ -53,47 +54,72 @@ export default function MissingPetFlyer({
   tagCode,
   isOwner = false,
 }: MissingPetFlyerProps) {
-  const { user } = useAuth()
   const flyerRef = useRef<HTMLDivElement>(null)
   const [downloading, setDownloading] = useState(false)
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [stage, setStage] = useState<string | null>(null)
+
+  // Watchdog wrapper: no stage of PDF generation may hang silently.
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+      ),
+    ])
+  }
 
   const primaryContact = ownerName && ownerPhone ? `${ownerName} - ${ownerPhone}` : ownerName || ownerPhone || contactInfo || (vetName ? `${vetName}${vetAddress ? ` - ${vetAddress}` : ''}` : '')
 
   const handleDownloadPDF = async () => {
-    if (!flyerRef.current || !user) {
-      alert('Please log in to download the PDF')
-      return
-    }
+    if (!flyerRef.current) return
     setDownloading(true)
+    const t0 = Date.now()
+    const logStage = (name: string) => {
+      setStage(name)
+      console.log(`[flyer-pdf] ${name} (+${Date.now() - t0}ms)`)
+    }
     try {
-      // Convert Firebase image URL to data URL via API proxy
+      // Convert Firebase image URL to a data URL via the server-side proxy.
+      // The server fetch is not subject to browser CORS, so this path works
+      // regardless of the storage bucket's CORS configuration. A proxy failure
+      // is fatal-and-visible: proceeding would silently produce a PDF with a
+      // broken image placeholder.
       const img = flyerRef.current.querySelector('img')
       let originalSrc = ''
       if (img && img.src && img.src.includes('firebasestorage')) {
+        logStage('Preparing photo…')
         originalSrc = img.src
-        try {
-          // Use API to proxy the image and convert to base64
-          const response = await fetch('/api/proxy-image', {
+        const response = await withTimeout(
+          fetch('/api/proxy-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ imageUrl: img.src }),
-          })
-          if (!response.ok) throw new Error('Failed to proxy image')
-          const data = await response.json()
-          img.src = data.dataUrl
-        } catch (err) {
-          console.warn('Could not load image, proceeding without:', err)
+          }),
+          30000,
+          'Photo preparation'
+        )
+        if (!response.ok) {
+          throw new Error('Could not load the pet photo for the PDF. Please try again.')
         }
+        const data = await response.json()
+        img.src = data.dataUrl
       }
 
-      const canvas = await html2canvas(flyerRef.current, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-      })
+      logStage('Rendering flyer…')
+      const canvas = await withTimeout(
+        html2canvas(flyerRef.current, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          // Hard cap on image loading so PDF generation can never hang indefinitely.
+          imageTimeout: 15000,
+        }),
+        30000,
+        'Flyer rendering'
+      )
+      logStage('Creating PDF…')
 
       // Restore original image src
       if (img && originalSrc) {
@@ -106,51 +132,28 @@ export default function MissingPetFlyer({
         format: canvas.width > canvas.height ? [297, 210] : [210, 297],
       })
 
-      const imgData = canvas.toDataURL('image/png')
+      // JPEG instead of PNG: ~5-10x smaller for photo-heavy flyers with no
+      // visible quality loss at 0.9.
+      const imgData = canvas.toDataURL('image/jpeg', 0.9)
       const pdfWidth = pdf.internal.pageSize.getWidth()
       const pdfHeight = pdf.internal.pageSize.getHeight()
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
 
-      const pdfBlob = pdf.output('blob') as Blob
-
+      logStage('Saving PDF…')
       const fileName = `missing-pet-${petName.replace(/\s+/g, '-')}-${Date.now()}.pdf`
-      const idToken = await user.getIdToken()
 
-      const formData = new FormData()
-      formData.append('tagCode', tagCode)
-      formData.append('fileName', fileName)
-      formData.append('pdf', pdfBlob, fileName)
-
-      const uploadResponse = await fetch('/api/upload-missing-flyer', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: formData,
-      })
-
-      if (!uploadResponse.ok) {
-        const error = await uploadResponse.json()
-        throw new Error(error.error || 'Failed to upload PDF')
-      }
-
-      const uploadData = await uploadResponse.json()
-      const downloadUrl = uploadData.downloadUrl
-      setPdfUrl(downloadUrl)
-
-      // Trigger browser download using the signed URL
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      // Save directly in the browser — no server round-trip. The previous
+      // upload-to-storage + signed-URL flow served no purpose (nothing ever
+      // read the stored PDFs) and failed on Vercel's ~4.5MB body limit (HTTP
+      // 413) whenever the pet photo was large.
+      pdf.save(fileName)
     } catch (err) {
       console.error('PDF generation failed:', err)
       alert(`Failed to generate PDF: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setDownloading(false)
+      setStage(null)
     }
   }
 
@@ -177,10 +180,15 @@ export default function MissingPetFlyer({
           {/* Photo */}
           {photo && (
             <div className="mb-6 rounded-lg overflow-hidden bg-gray-200 aspect-square">
+              {/* No crossOrigin attribute: a CORS-mode request would make the browser
+                  refuse to render the image unless the storage bucket's CORS config
+                  matches the current origin — the root cause of the recurring broken
+                  image. Plain <img> renders cross-origin without any CORS headers.
+                  PDF capture doesn't need it either: the photo is swapped to a
+                  server-proxied data URL before html2canvas runs. */}
               <img
                 src={photo}
                 alt={petName}
-                crossOrigin="anonymous"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -275,7 +283,7 @@ export default function MissingPetFlyer({
             className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
           >
             <Download className="w-5 h-5" />
-            {downloading ? 'Generating PDF...' : 'Download PDF'}
+            {downloading ? (stage || 'Generating PDF…') : 'Download PDF'}
           </button>
         </div>
       )}

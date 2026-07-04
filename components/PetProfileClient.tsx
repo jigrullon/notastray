@@ -550,12 +550,21 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <span className="text-gray-700 dark:text-gray-300">{petData.owner}</span>
-                  <a
-                    href={`tel:${petData.phone}`}
-                    className="btn-primary"
-                  >
-                    Call Now
-                  </a>
+                  {petData.phone ? (
+                    <a
+                      href={`tel:${petData.phone}`}
+                      className="btn-primary"
+                    >
+                      Call Now
+                    </a>
+                  ) : (
+                    <button
+                      disabled
+                      className="btn-primary opacity-50 cursor-not-allowed"
+                    >
+                      Call Now
+                    </button>
+                  )}
                 </div>
 
                 {petData.address && (
@@ -749,9 +758,15 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-3">
               {!isOwner && (
-                <a href={`tel:${petData.phone}`} className="btn-primary flex-1 text-center py-3">
-                  Call Owner Now
-                </a>
+                petData.phone ? (
+                  <a href={`tel:${petData.phone}`} className="btn-primary flex-1 text-center py-3">
+                    Call Owner Now
+                  </a>
+                ) : (
+                  <button disabled className="btn-primary flex-1 text-center py-3 opacity-50 cursor-not-allowed">
+                    Call Owner Now
+                  </button>
+                )
               )}
               {isOwner && !editing && (
                 lostStatus ? (

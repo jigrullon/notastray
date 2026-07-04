@@ -43,7 +43,6 @@ function ActivateContent() {
     birthday: '',
     ownerName: '',
     address: '',
-    phone: '',
     vetName: '',
     vetAddress: '',
     allergies: '',
@@ -120,7 +119,6 @@ function ActivateContent() {
             birthday: pet.birthday || '',
             ownerName: pet.ownerName || '',
             address: pet.ownerAddress || '',
-            phone: pet.ownerPhone || '',
             vetName: pet.vetName || '',
             vetAddress: pet.vetAddress || '',
             allergies: pet.allergies || '',
@@ -156,7 +154,6 @@ function ActivateContent() {
             birthday: petData.birthday,
             ownerName: petData.ownerName,
             ownerAddress: petData.address,
-            ownerPhone: petData.phone,
             vetName: petData.vetName,
             vetAddress: petData.vetAddress,
             allergies: petData.allergies,
@@ -184,24 +181,6 @@ function ActivateContent() {
     setPetData({ ...petData, photo: file })
   }
 
-  // Phone number formatting function
-  const formatPhoneNumber = (value: string) => {
-    // Remove all non-digits
-    const phoneNumber = value.replace(/\D/g, '')
-
-    // Format as XXX-XXX-XXXX
-    if (phoneNumber.length >= 6) {
-      return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`
-    } else if (phoneNumber.length >= 3) {
-      return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`
-    }
-    return phoneNumber
-  }
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value)
-    setPetData({ ...petData, phone: formatted })
-  }
 
   const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -262,7 +241,6 @@ function ActivateContent() {
           birthday: pet.birthday || '',
           ownerName: pet.ownerName || '',
           address: pet.ownerAddress || '',
-          phone: pet.ownerPhone || '',
           vetName: pet.vetName || '',
           vetAddress: pet.vetAddress || '',
           allergies: pet.allergies || '',
@@ -315,7 +293,6 @@ function ActivateContent() {
           birthday: petData.birthday,
           ownerName: petData.ownerName,
           ownerAddress: petData.address,
-          ownerPhone: petData.phone,
           vetName: petData.vetName,
           vetAddress: petData.vetAddress,
           allergies: petData.allergies,
@@ -601,33 +578,17 @@ function ActivateContent() {
               </div>
 
               {/* Owner Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Owner&apos;s First Name
-                  </label>
-                  <input
-                    type="text"
-                    id="ownerName"
-                    value={petData.ownerName}
-                    onChange={(e) => setPetData({ ...petData, ownerName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    value={petData.phone}
-                    onChange={handlePhoneChange}
-                    placeholder="123-456-7890"
-                    maxLength={12}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                  />
-                </div>
+              <div>
+                <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Owner&apos;s First Name
+                </label>
+                <input
+                  type="text"
+                  id="ownerName"
+                  value={petData.ownerName}
+                  onChange={(e) => setPetData({ ...petData, ownerName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                />
               </div>
 
               <div>

@@ -49,6 +49,10 @@ function VerifyEmailContent() {
       return
     }
 
+    // Strip the token from the address bar once consumed so it doesn't
+    // linger in browser history, screenshots, or copied URLs.
+    window.history.replaceState(null, '', '/verify-email')
+
     const verify = async () => {
       try {
         const res = await fetch('/api/auth/verify-email', {

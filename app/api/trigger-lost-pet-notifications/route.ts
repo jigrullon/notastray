@@ -1,39 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getFirestore } from 'firebase-admin/firestore'
-import { getAuth } from 'firebase-admin/auth'
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
-
-interface Env {
-  FIREBASE_PROJECT_ID?: string
-  FIREBASE_CLIENT_EMAIL?: string
-  FIREBASE_PRIVATE_KEY?: string
-  SENDGRID_API_KEY?: string
-  LOST_PET_NOTIFICATION_EMAIL?: string
-  LOST_PET_NOTIFICATION_TOKEN?: string
-}
-
-// Initialize Firebase Admin SDK
-function initializeFirebase() {
-  if (getApps().length > 0) {
-    return
-  }
-
-  const projectId = process.env.FIREBASE_PROJECT_ID
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY
-
-  if (!projectId || !clientEmail || !privateKey) {
-    throw new Error('Firebase config missing from environment')
-  }
-
-  initializeApp({
-    credential: cert({
-      projectId,
-      clientEmail,
-      privateKey: privateKey.replace(/\\n/g, '\n'),
-    }),
-  })
-}
+// Shared Admin SDK init (FIREBASE_SERVICE_ACCOUNT) — do not re-initialize here.
+// This route previously used its own init with a different env-var scheme
+// (FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY), making its behavior depend on
+// which env vars existed and which route initialized the app first.
+import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,9 +17,8 @@ export async function POST(request: NextRequest) {
 
     console.log('[Lost Pet Notifications] Starting batch notification check')
 
-    initializeFirebase()
-    const db = getFirestore()
-    const auth = getAuth()
+    const db = adminDb
+    const auth = adminAuth
 
     const now = Date.now()
     const threeHoursInMs = 3 * 60 * 60 * 1000
