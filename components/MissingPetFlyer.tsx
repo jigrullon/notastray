@@ -67,24 +67,25 @@ export default function MissingPetFlyer({
     }
     setDownloading(true)
     try {
-      // Convert Firebase image URL to data URL via API proxy
+      // Convert Firebase image URL to a data URL via the server-side proxy.
+      // The server fetch is not subject to browser CORS, so this path works
+      // regardless of the storage bucket's CORS configuration. A proxy failure
+      // is fatal-and-visible: proceeding would silently produce a PDF with a
+      // broken image placeholder.
       const img = flyerRef.current.querySelector('img')
       let originalSrc = ''
       if (img && img.src && img.src.includes('firebasestorage')) {
         originalSrc = img.src
-        try {
-          // Use API to proxy the image and convert to base64
-          const response = await fetch('/api/proxy-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrl: img.src }),
-          })
-          if (!response.ok) throw new Error('Failed to proxy image')
-          const data = await response.json()
-          img.src = data.dataUrl
-        } catch (err) {
-          console.warn('Could not load image, proceeding without:', err)
+        const response = await fetch('/api/proxy-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: img.src }),
+        })
+        if (!response.ok) {
+          throw new Error('Could not load the pet photo for the PDF. Please try again.')
         }
+        const data = await response.json()
+        img.src = data.dataUrl
       }
 
       const canvas = await html2canvas(flyerRef.current, {
@@ -93,6 +94,8 @@ export default function MissingPetFlyer({
         logging: false,
         useCORS: true,
         allowTaint: true,
+        // Hard cap on image loading so PDF generation can never hang indefinitely.
+        imageTimeout: 15000,
       })
 
       // Restore original image src
@@ -177,10 +180,15 @@ export default function MissingPetFlyer({
           {/* Photo */}
           {photo && (
             <div className="mb-6 rounded-lg overflow-hidden bg-gray-200 aspect-square">
+              {/* No crossOrigin attribute: a CORS-mode request would make the browser
+                  refuse to render the image unless the storage bucket's CORS config
+                  matches the current origin — the root cause of the recurring broken
+                  image. Plain <img> renders cross-origin without any CORS headers.
+                  PDF capture doesn't need it either: the photo is swapped to a
+                  server-proxied data URL before html2canvas runs. */}
               <img
                 src={photo}
                 alt={petName}
-                crossOrigin="anonymous"
                 className="w-full h-full object-cover"
               />
             </div>

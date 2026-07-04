@@ -1,34 +1,10 @@
-import { getAuth } from 'firebase-admin/auth'
 import { getStorage } from 'firebase-admin/storage'
-import { getFirestore } from 'firebase-admin/firestore'
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { NextRequest, NextResponse } from 'next/server'
-
-if (!getApps().length) {
-  const projectId = process.env.FIREBASE_PROJECT_ID
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-
-  if (!projectId || !clientEmail || !privateKey) {
-    throw new Error(`Missing Firebase config: projectId=${!!projectId}, clientEmail=${!!clientEmail}, privateKey=${!!privateKey}`)
-  }
-
-  const serviceAccount = {
-    projectId,
-    clientEmail,
-    privateKey,
-  }
-
-  try {
-    initializeApp({
-      credential: cert(serviceAccount as any),
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    })
-  } catch (err) {
-    console.error('Firebase initialization failed:', err)
-    throw err
-  }
-}
+// Shared Admin SDK init (FIREBASE_SERVICE_ACCOUNT) — do not re-initialize here.
+// This route previously used its own init with a different env-var scheme
+// (FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY) and threw at module load when
+// those vars were absent, which silently broke flyer downloads per-environment.
+import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Verify the token and get user ID
     let uid: string
     try {
-      const decodedToken = await getAuth().verifyIdToken(token)
+      const decodedToken = await adminAuth.verifyIdToken(token)
       uid = decodedToken.uid
     } catch (err) {
       return NextResponse.json(
@@ -67,8 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify that the user owns this tag
-    const db = getFirestore()
-    const tagDoc = await db.collection('tags').doc(tagCode.toUpperCase()).get()
+    const tagDoc = await adminDb.collection('tags').doc(tagCode.toUpperCase()).get()
 
     if (!tagDoc.exists) {
       return NextResponse.json(
@@ -85,8 +60,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Generate a signed download URL using Firebase Admin SDK
-    const bucket = getStorage().bucket()
+    // Generate a signed download URL using Firebase Admin SDK.
+    // Bucket must be explicit: the shared admin app sets no default bucket, and
+    // relying on one made this route work or fail depending on which API route
+    // happened to initialize the app first.
+    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    if (!storageBucket) {
+      return NextResponse.json(
+        { error: 'Storage bucket not configured' },
+        { status: 500 }
+      )
+    }
+    const bucket = getStorage().bucket(storageBucket)
     const filePath = `missing-pet-flyers/${tagCode}/${fileName}`
     const file = bucket.file(filePath)
 
