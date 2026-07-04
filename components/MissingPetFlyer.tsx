@@ -8,8 +8,6 @@ import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
 import { Download, Share2 } from 'lucide-react'
 import { useState } from 'react'
-// Firebase is no longer needed for upload (using backend API instead)
-import { useAuth } from '@/lib/AuthContext'
 
 interface MissingPetFlyerProps {
   petName: string
@@ -56,11 +54,9 @@ export default function MissingPetFlyer({
   tagCode,
   isOwner = false,
 }: MissingPetFlyerProps) {
-  const { user } = useAuth()
   const flyerRef = useRef<HTMLDivElement>(null)
   const [downloading, setDownloading] = useState(false)
   const [stage, setStage] = useState<string | null>(null)
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
 
   // Watchdog wrapper: no stage of PDF generation may hang silently.
   const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
@@ -75,10 +71,7 @@ export default function MissingPetFlyer({
   const primaryContact = ownerName && ownerPhone ? `${ownerName} - ${ownerPhone}` : ownerName || ownerPhone || contactInfo || (vetName ? `${vetName}${vetAddress ? ` - ${vetAddress}` : ''}` : '')
 
   const handleDownloadPDF = async () => {
-    if (!flyerRef.current || !user) {
-      alert('Please log in to download the PDF')
-      return
-    }
+    if (!flyerRef.current) return
     setDownloading(true)
     const t0 = Date.now()
     const logStage = (name: string) => {
@@ -139,53 +132,22 @@ export default function MissingPetFlyer({
         format: canvas.width > canvas.height ? [297, 210] : [210, 297],
       })
 
-      const imgData = canvas.toDataURL('image/png')
+      // JPEG instead of PNG: ~5-10x smaller for photo-heavy flyers with no
+      // visible quality loss at 0.9.
+      const imgData = canvas.toDataURL('image/jpeg', 0.9)
       const pdfWidth = pdf.internal.pageSize.getWidth()
       const pdfHeight = pdf.internal.pageSize.getHeight()
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
 
-      const pdfBlob = pdf.output('blob') as Blob
-
+      logStage('Saving PDF…')
       const fileName = `missing-pet-${petName.replace(/\s+/g, '-')}-${Date.now()}.pdf`
-      const idToken = await user.getIdToken()
 
-      const formData = new FormData()
-      formData.append('tagCode', tagCode)
-      formData.append('fileName', fileName)
-      formData.append('pdf', pdfBlob, fileName)
-
-      logStage('Uploading PDF…')
-      console.log(`[flyer-pdf] PDF size: ${(pdfBlob.size / 1024 / 1024).toFixed(2)} MB`)
-      const uploadResponse = await withTimeout(
-        fetch('/api/upload-missing-flyer', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-          },
-          body: formData,
-        }),
-        60000,
-        'PDF upload'
-      )
-
-      if (!uploadResponse.ok) {
-        const error = await uploadResponse.json().catch(() => ({}))
-        throw new Error(error.error || `Failed to upload PDF (HTTP ${uploadResponse.status})`)
-      }
-
-      const uploadData = await uploadResponse.json()
-      const downloadUrl = uploadData.downloadUrl
-      setPdfUrl(downloadUrl)
-      logStage('Starting download…')
-
-      // Trigger browser download using the signed URL
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      // Save directly in the browser — no server round-trip. The previous
+      // upload-to-storage + signed-URL flow served no purpose (nothing ever
+      // read the stored PDFs) and failed on Vercel's ~4.5MB body limit (HTTP
+      // 413) whenever the pet photo was large.
+      pdf.save(fileName)
     } catch (err) {
       console.error('PDF generation failed:', err)
       alert(`Failed to generate PDF: ${err instanceof Error ? err.message : String(err)}`)
