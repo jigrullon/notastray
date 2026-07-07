@@ -207,6 +207,10 @@ export async function POST(request: Request) {
                             state: order.shippingAddress.state,
                             zip: order.shippingAddress.postalCode,
                             country: order.shippingAddress.country || 'US',
+                            // Required for WeSupply to auto-subscribe the buyer
+                            // to shipping notification emails
+                            email: order.customerEmail || undefined,
+                            phone: session.customer_details?.phone || undefined,
                         },
                         reference: order.orderId,
                     });
