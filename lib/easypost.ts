@@ -49,6 +49,11 @@ export interface ShippingAddress {
   state: string;
   zip: string;
   country: string;
+  // Buyer contact info. email is REQUIRED for WeSupply to auto-subscribe the
+  // customer to shipping-status notifications — a null email on the EasyPost
+  // address shows as "Not Subscribed" in WeSupply and no tracking emails send.
+  email?: string;
+  phone?: string;
 }
 
 export interface ShipmentResponse {
@@ -149,6 +154,9 @@ export async function createShipment(options: {
         state: toAddress.state,
         zip: toAddress.zip,
         country: toAddress.country || 'US',
+        // Forwarded so WeSupply can auto-subscribe the buyer to tracking emails
+        email: toAddress.email || undefined,
+        phone: toAddress.phone || undefined,
       },
       from_address: FROM_ADDRESS,
       parcel: PARCEL,
