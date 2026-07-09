@@ -41,7 +41,6 @@ function ActivateContent() {
     species: '',
     breed: '',
     birthday: '',
-    ownerName: '',
     address: '',
     vetName: '',
     vetAddress: '',
@@ -54,6 +53,19 @@ function ActivateContent() {
   const [activateError, setActivateError] = useState<string | null>(null)
   const [activateLoading, setActivateLoading] = useState(false)
   const [subscribeLoading, setSubscribeLoading] = useState(false)
+
+  // Owner contact info comes from the account, not the form: the activating
+  // user IS the owner. First name from the auth display name; phone from the
+  // users doc (collected at signup).
+  const ownerFirstName = user?.displayName?.trim().split(/\s+/)[0] || ''
+  const [accountPhone, setAccountPhone] = useState('')
+
+  useEffect(() => {
+    if (!user) return
+    getDoc(doc(db, 'users', user.uid))
+      .then((snap) => setAccountPhone((snap.data()?.phone as string) || ''))
+      .catch((err) => console.error('Failed to load account phone:', err))
+  }, [user])
 
   // Scroll back to the top when moving between steps so a short step after a
   // long one doesn't leave the view stuck at the bottom of the previous step.
@@ -117,7 +129,6 @@ function ActivateContent() {
             species: pet.species || '',
             breed: pet.breed || '',
             birthday: pet.birthday || '',
-            ownerName: pet.ownerName || '',
             address: pet.ownerAddress || '',
             vetName: pet.vetName || '',
             vetAddress: pet.vetAddress || '',
@@ -152,7 +163,8 @@ function ActivateContent() {
             species: petData.species,
             breed: petData.breed,
             birthday: petData.birthday,
-            ownerName: petData.ownerName,
+            ownerName: ownerFirstName,
+            ownerPhone: accountPhone,
             ownerAddress: petData.address,
             vetName: petData.vetName,
             vetAddress: petData.vetAddress,
@@ -174,7 +186,7 @@ function ActivateContent() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [petData, step, user, tagCode, existingPhotoUrl])
+  }, [petData, step, user, tagCode, existingPhotoUrl, ownerFirstName, accountPhone])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
@@ -239,7 +251,6 @@ function ActivateContent() {
           species: pet.species || '',
           breed: pet.breed || '',
           birthday: pet.birthday || '',
-          ownerName: pet.ownerName || '',
           address: pet.ownerAddress || '',
           vetName: pet.vetName || '',
           vetAddress: pet.vetAddress || '',
@@ -291,7 +302,8 @@ function ActivateContent() {
           species: petData.species,
           breed: petData.breed,
           birthday: petData.birthday,
-          ownerName: petData.ownerName,
+          ownerName: ownerFirstName,
+          ownerPhone: accountPhone,
           ownerAddress: petData.address,
           vetName: petData.vetName,
           vetAddress: petData.vetAddress,
@@ -444,7 +456,12 @@ function ActivateContent() {
 
         {step === 2 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Create Pet Profile</h1>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create Pet Profile</h1>
+              <span className="shrink-0 px-2.5 py-1 rounded-md bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-mono text-sm font-semibold">
+                Tag {tagCode}
+              </span>
+            </div>
             <p className="text-gray-600 dark:text-gray-400 mb-8">
               Fill out your pet&apos;s information to help them get home safely
             </p>
@@ -577,20 +594,8 @@ function ActivateContent() {
                 </div>
               </div>
 
-              {/* Owner Info */}
-              <div>
-                <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Owner&apos;s First Name
-                </label>
-                <input
-                  type="text"
-                  id="ownerName"
-                  value={petData.ownerName}
-                  onChange={(e) => setPetData({ ...petData, ownerName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                />
-              </div>
-
+              {/* Owner name & phone come from the account — the activating user
+                  is the owner. Editable later from the pet profile if needed. */}
               <div>
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Address
