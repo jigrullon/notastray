@@ -14,8 +14,13 @@ function getClient(): any {
   return client;
 }
 
-// Your home address (origin for all shipments)
+// Origin / return address for all shipments (env-driven).
+// FROM_COMPANY controls what prints on the label's From block (e.g.
+// "NotAStray LLC"). FROM_NAME is optional — leave it unset to keep personal
+// names off the label; EasyPost accepts company-only addresses.
 const FROM_ADDRESS = {
+  name: process.env.FROM_NAME || undefined,
+  company: process.env.FROM_COMPANY || undefined,
   street1: process.env.FROM_STREET || '',
   street2: process.env.FROM_STREET2 || '',
   city: process.env.FROM_CITY || '',
@@ -24,12 +29,38 @@ const FROM_ADDRESS = {
   country: 'US',
 };
 
-const PARCEL = {
-  length: 5,
-  width: 5,
+// Mailer dimensions (inches). Weight is computed per-order — see
+// calculateShipmentWeightOz below.
+const PARCEL_DIMENSIONS = {
+  length: 9,
+  width: 7,
   height: 1,
-  weight: 2, // ounces - adjust based on actual tag weight with packaging
 };
+
+// Shipment weight model: empty mailer + per-tag weight. Defaults are
+// calibrated so a single-tag order ≈ 1.1 oz (measured). Override via env
+// after weighing real packaging: ENVELOPE_WEIGHT_OZ, TAG_WEIGHT_OZ.
+const ENVELOPE_WEIGHT_OZ = parseFloat(process.env.ENVELOPE_WEIGHT_OZ || '0.7');
+const TAG_WEIGHT_OZ = parseFloat(process.env.TAG_WEIGHT_OZ || '0.4');
+
+/**
+ * Total shipment weight in ounces for an order containing `tagCount` tags.
+ * USPS Ground Advantage prices sub-1lb parcels in 4 oz tiers, so small
+ * per-tag differences rarely change the rate — but the computed weight keeps
+ * postage honest as order sizes grow.
+ */
+export function calculateShipmentWeightOz(tagCount: number): number {
+  const count = Math.max(1, tagCount);
+  // Round up to one decimal; never report less than 1 oz.
+  return Math.max(1, Math.round((ENVELOPE_WEIGHT_OZ + TAG_WEIGHT_OZ * count) * 10) / 10);
+}
+
+function buildParcel(weightOz?: number) {
+  return {
+    ...PARCEL_DIMENSIONS,
+    weight: weightOz ?? calculateShipmentWeightOz(1),
+  };
+}
 
 export interface ShippingRate {
   service: string;
@@ -67,7 +98,8 @@ export interface ShipmentResponse {
 
 export async function getRates(
   toZip: string,
-  destinationCountry: string = 'US'
+  destinationCountry: string = 'US',
+  weightOz?: number
 ): Promise<ShippingRate[]> {
   try {
     if (!FROM_ADDRESS.zip || !FROM_ADDRESS.state || !FROM_ADDRESS.city) {
@@ -81,7 +113,7 @@ export async function getRates(
         country: destinationCountry,
       },
       from_address: FROM_ADDRESS,
-      parcel: PARCEL,
+      parcel: buildParcel(weightOz),
     });
 
     if (!shipment.rates || shipment.rates.length === 0) {
@@ -133,9 +165,10 @@ export async function createShipment(options: {
   toAddress: ShippingAddress;
   carrierAccountId?: string;
   reference?: string;
+  weightOz?: number;
 }): Promise<ShipmentResponse> {
   try {
-    const { toAddress, carrierAccountId, reference } = options;
+    const { toAddress, carrierAccountId, reference, weightOz } = options;
 
     if (!FROM_ADDRESS.zip || !FROM_ADDRESS.state || !FROM_ADDRESS.city) {
       throw new Error('FROM_ADDRESS not fully configured in environment variables');
@@ -159,7 +192,7 @@ export async function createShipment(options: {
         phone: toAddress.phone || undefined,
       },
       from_address: FROM_ADDRESS,
-      parcel: PARCEL,
+      parcel: buildParcel(weightOz),
       reference: reference || undefined,
       carrier_accounts: carrierAccountId ? [carrierAccountId] : [],
     });

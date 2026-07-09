@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { getOrderConfirmationEmail, getMerchantOrderEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
-import { createShipment } from '@/lib/easypost';
+import { createShipment, calculateShipmentWeightOz } from '@/lib/easypost';
 
 function encodeEmailId(email: string): string {
     return encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
@@ -213,6 +213,10 @@ export async function POST(request: Request) {
                             phone: session.customer_details?.phone || undefined,
                         },
                         reference: order.orderId,
+                        // Weight scales with tag count: envelope + per-tag weight
+                        weightOz: calculateShipmentWeightOz(
+                            order.items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+                        ),
                     });
 
                     // Update order with shipment info
