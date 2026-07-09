@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle, Edit3, Save, X, Camera, Loader2, Download } from 'lucide-react'
+import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle, Edit3, Save, X, Camera, Loader2, Download, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'
@@ -355,11 +355,24 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           </div>
         )}
 
+        {/* Back to Dashboard (owner only) */}
+        {isOwner && (
+          <div className="mb-4">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              Back to Dashboard
+            </Link>
+          </div>
+        )}
+
         {/* Owner Controls */}
         {isOwner && (
-          <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">This is your pet</span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {editing ? (
                 <>
                   <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-500 transition-colors disabled:opacity-50">

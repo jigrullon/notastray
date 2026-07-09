@@ -92,7 +92,18 @@ function SignupContent() {
       await signUp(email, password, name)
       setShowNotifications(true)
     } catch (err: any) {
-      setError(err.message || 'Failed to create account')
+      // Map Firebase error codes to friendly messages — never surface raw
+      // Firebase error strings (e.g. "Firebase: Error (auth/...)") to users.
+      const code = err?.code as string | undefined
+      if (code === 'auth/email-already-in-use') {
+        setError('That email is already in use. Try signing in instead.')
+      } else if (code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.')
+      } else if (code === 'auth/weak-password') {
+        setError('Please choose a stronger password (at least 8 characters).')
+      } else {
+        setError('Failed to create account. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
