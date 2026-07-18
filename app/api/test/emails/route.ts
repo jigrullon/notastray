@@ -73,7 +73,6 @@ export async function GET(request: Request) {
         tax: mockOrder.tax,
         total: mockOrder.total,
         shippingAddress: mockOrder.shippingAddress,
-        dashboardUrl: 'https://notastray.com/dashboard/orders',
       });
       break;
 
