@@ -61,7 +61,6 @@ export interface MerchantOrderEmailData {
     state: string;
     postalCode: string;
   };
-  dashboardUrl: string;
 }
 
 export function getOrderConfirmationEmail(data: OrderConfirmationEmailData) {
@@ -706,10 +705,6 @@ export function getMerchantOrderEmail(data: MerchantOrderEmailData) {
                 3. Attach label and drop off at USPS
               </p>
             </div>
-
-            <div style="text-align: center; margin-top: 32px;">
-              <a href="${data.dashboardUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View in Dashboard</a>
-            </div>
           </div>
 
           <!-- Footer -->
@@ -752,8 +747,6 @@ NEXT STEPS
 1. Print the shipping label from EasyPost (link in dashboard)
 2. Pack the items listed above
 3. Attach label and drop off at USPS
-
-View in Dashboard: ${data.dashboardUrl}
   `;
 
   return {
@@ -981,6 +974,219 @@ Keeping pets safe, one tag at a time.
 
   return {
     subject: `🚨 Missing Pet Alert: ${data.petName} (${data.species})`,
+    html,
+    text,
+  };
+}
+
+export interface SubscriptionConfirmationEmailData {
+  customerName?: string;
+  planType: 'monthly' | 'yearly';
+  planPrice: number;
+  renewalDate: string;
+  dashboardUrl: string;
+  userEmail?: string;
+}
+
+export function getSubscriptionConfirmationEmail(data: SubscriptionConfirmationEmailData) {
+  const planLabel = data.planType === 'monthly' ? 'Monthly' : 'Annual';
+  const planPrice = data.planType === 'monthly' ? '$3' : '$30';
+  const billingPeriod = data.planType === 'monthly' ? '/month' : '/year';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+      </head>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+
+          <!-- Header with Logo -->
+          <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <p style="margin: 8px 0 0 0; font-size: 18px;">Your PROTECT Plan is Active 🎉</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 32px;">
+            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+
+            <p style="font-size: 16px;">Thank you for subscribing to the NotAStray PROTECT Plan! Your subscription is now active and your pet is protected with instant alerts.</p>
+
+            <div style="background-color: #f3f4f6; border: 1px solid #d1d5db; padding: 20px; margin: 24px 0; border-radius: 6px;">
+              <p style="margin: 0 0 12px 0; font-size: 14px; color: #666;">SUBSCRIPTION DETAILS</p>
+              <div style="margin: 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
+                  <span>Plan:</span>
+                  <strong style="color: #047857;">${planLabel}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0; font-size: 15px;">
+                  <span>Next Renewal Date:</span>
+                  <strong style="color: #047857;">${data.renewalDate}</strong>
+                </div>
+              </div>
+              <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 12px;">
+                <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: bold;">
+                  <span>Amount:</span>
+                  <span style="color: #047857;">${planPrice}${billingPeriod}</span>
+                </div>
+              </div>
+            </div>
+
+            <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">What You Get</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 15px;">
+              <strong>Instant Alerts:</strong> Get SMS & email notifications whenever someone scans your pet's tag. This is how you'll know if your pet is lost and found.
+            </p>
+
+            <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: #92400e;">
+                <strong>Want to change your plan?</strong> You can manage or cancel your subscription anytime from your dashboard.
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${data.dashboardUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Manage Your Subscription</a>
+            </div>
+
+            <p style="color: #999; font-size: 13px; margin: 24px 0 0 0;">
+              You're receiving this confirmation because you subscribed to a NotAStray PROTECT Plan. If you didn't sign up for this, please contact us at support@notastray.com
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 12px 0;">
+              <a href="https://notastray.com" style="color: #047857; text-decoration: none; font-weight: bold;">NotAStray.com</a>
+            </p>
+            ${data.userEmail ? `
+            <p style="margin: 0 0 8px 0; font-size: 11px; color: #999;">
+              <a href="https://notastray.com/api/unsubscribe/email?email=${encodeURIComponent(data.userEmail)}" style="color: #999; text-decoration: none;">Unsubscribe from emails</a>
+            </p>
+            ` : ''}
+            <p style="margin: 0; font-size: 11px; color: #999;">
+              Keeping pets safe, one tag at a time.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+Your PROTECT Plan is Active 🎉
+
+Hi ${data.customerName || 'there'},
+
+Thank you for subscribing to the NotAStray PROTECT Plan! Your subscription is now active and your pet is protected with instant alerts.
+
+SUBSCRIPTION DETAILS
+Plan: ${planLabel}
+Next Renewal Date: ${data.renewalDate}
+Amount: ${planPrice}${billingPeriod}
+
+WHAT YOU GET
+✓ Instant Alerts: Get SMS & email notifications whenever someone scans your pet's tag. This is how you'll know if your pet is lost and found.
+
+MANAGE YOUR SUBSCRIPTION
+Visit your dashboard to change your plan or cancel anytime:
+${data.dashboardUrl}
+
+Questions? Contact us at support@notastray.com
+
+---
+NotAStray Smart Pet Tags
+Keeping pets safe, one tag at a time.
+
+${data.userEmail ? `Unsubscribe: https://notastray.com/api/unsubscribe/email?email=${encodeURIComponent(data.userEmail)}` : ''}
+  `;
+
+  return {
+    subject: `Your PROTECT Plan is Active - ${planLabel} Plan`,
+    html,
+    text,
+  };
+}
+
+export interface MerchantSubscriptionEmailData {
+  customerEmail: string;
+  customerName?: string;
+  planType: 'monthly' | 'yearly';
+  planPrice: number;
+}
+
+export function getMerchantSubscriptionEmail(data: MerchantSubscriptionEmailData) {
+  const planLabel = data.planType === 'monthly' ? 'Monthly' : 'Annual';
+  const planPrice = data.planType === 'monthly' ? '$3' : '$30';
+  const billingPeriod = data.planType === 'monthly' ? '/month' : '/year';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+      </head>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+
+          <!-- Header with Logo -->
+          <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <p style="margin: 8px 0 0 0; font-size: 18px;">New Subscriber 🎉</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 32px;">
+            <p style="margin: 0 0 24px 0; font-size: 15px;">A customer just subscribed to the PROTECT Plan. There's nothing to pack or ship—this is a recurring subscription.</p>
+
+            <h3 style="color: #047857; font-size: 16px; margin: 24px 0 8px 0;">Customer</h3>
+            <p style="margin: 0; font-size: 15px;">
+              <strong>${data.customerName || 'Customer'}</strong><br>
+              ${data.customerEmail}
+            </p>
+
+            <h3 style="color: #047857; font-size: 16px; margin: 24px 0 8px 0;">Subscription</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr style="background-color: #f9fafb;">
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 15px;">Plan</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 15px;">${planLabel}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; font-size: 16px; font-weight: bold;">Price</td>
+                <td style="padding: 12px; text-align: right; font-size: 16px; font-weight: bold; color: #047857;">${planPrice}${billingPeriod}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0; font-size: 11px; color: #999;">
+              NotAStray Fulfillment System
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+New Subscriber 🎉
+
+A customer just subscribed to the PROTECT Plan. There's nothing to pack or ship—this is a recurring subscription.
+
+CUSTOMER
+${data.customerName || 'Customer'}
+${data.customerEmail}
+
+SUBSCRIPTION
+Plan: ${planLabel}
+Price: ${planPrice}${billingPeriod}
+  `;
+
+  return {
+    subject: `[SUBSCRIPTION] New ${planLabel} Subscriber - ${data.customerName || data.customerEmail}`,
     html,
     text,
   };

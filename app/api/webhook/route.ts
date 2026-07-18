@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { getOrderConfirmationEmail, getMerchantOrderEmail } from '@/lib/emailTemplates';
+import { getOrderConfirmationEmail, getMerchantOrderEmail, getSubscriptionConfirmationEmail, getMerchantSubscriptionEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
 import { createShipment, calculateShipmentWeightOz } from '@/lib/easypost';
 
@@ -121,21 +121,97 @@ export async function POST(request: Request) {
                 const userId = session.metadata?.userId;
                 const isSubscription = session.mode === 'subscription';
 
-                if (userId && isSubscription) {
+                let stripeSub: Stripe.Subscription | null = null;
+                const plan = (session.metadata?.plan as 'monthly' | 'yearly') || 'monthly';
+
+                if (isSubscription) {
                     const stripeSubscriptionId = session.subscription as string;
                     if (stripeSubscriptionId) {
-                        const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-                        const plan = session.metadata?.plan || 'monthly';
-                        await writeSubscriptionToFirestore(userId, {
-                            status: 'active',
-                            plan,
-                            stripeSubscriptionId,
-                            stripeCustomerId: session.customer as string || '',
-                            currentPeriodEnd: new Date((stripeSub as any).current_period_end * 1000).toISOString(),
-                        });
+                        stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+                        if (userId) {
+                            await writeSubscriptionToFirestore(userId, {
+                                status: 'active',
+                                plan,
+                                stripeSubscriptionId,
+                                stripeCustomerId: session.customer as string || '',
+                                currentPeriodEnd: new Date((stripeSub as any).current_period_end * 1000).toISOString(),
+                            });
+                        }
                     }
                 }
 
+                if (isSubscription) {
+                    const customerEmail = session.customer_email || session.customer_details?.email || '';
+                    const renewalDate = stripeSub
+                        ? new Date((stripeSub as any).current_period_end * 1000).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                          })
+                        : '';
+                    const dashboardUrl = `${new URL(request.url).origin}/dashboard`;
+
+                    // Send subscription confirmation email to customer
+                    if (customerEmail) {
+                        try {
+                            const subscriptionEmailData = getSubscriptionConfirmationEmail({
+                                customerName: session.customer_details?.name || undefined,
+                                planType: plan,
+                                planPrice: plan === 'yearly' ? 30 : 3,
+                                renewalDate,
+                                dashboardUrl,
+                                userEmail: customerEmail,
+                            });
+
+                            await sendEmail({
+                                to: customerEmail,
+                                subject: subscriptionEmailData.subject,
+                                html: subscriptionEmailData.html,
+                                text: subscriptionEmailData.text,
+                            });
+                            console.log(`Subscription confirmation email sent to ${customerEmail}`);
+                        } catch (emailErr) {
+                            console.error('Subscription confirmation email failed (non-fatal):', emailErr);
+                        }
+                    }
+
+                    // Send merchant new-subscriber notification
+                    const subMerchantEmail = process.env.MERCHANT_EMAIL;
+                    if (subMerchantEmail) {
+                        try {
+                            const merchantSubEmailData = getMerchantSubscriptionEmail({
+                                customerEmail,
+                                customerName: session.customer_details?.name || undefined,
+                                planType: plan,
+                                planPrice: plan === 'yearly' ? 30 : 3,
+                            });
+
+                            await sendEmail({
+                                to: subMerchantEmail,
+                                subject: merchantSubEmailData.subject,
+                                html: merchantSubEmailData.html,
+                                text: merchantSubEmailData.text,
+                            });
+                            console.log(`Merchant subscription notification sent to ${subMerchantEmail}`);
+                        } catch (emailErr) {
+                            console.error('Merchant subscription email failed (non-fatal):', emailErr);
+                        }
+                    }
+
+                    // Auto-enroll subscriber in newsletter
+                    if (customerEmail) {
+                        try {
+                            await subscribeToNewsletter(customerEmail, 'purchase');
+                            console.log('Newsletter auto-enrolled subscriber:', customerEmail);
+                        } catch (newsletterErr) {
+                            console.error('Newsletter auto-enroll failed (non-fatal):', newsletterErr);
+                        }
+                    }
+
+                    break;
+                }
+
+                // One-time tag purchase flow
                 const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
                     expand: ['line_items', 'shipping_cost.shipping_rate', 'payment_intent'],
                 });
@@ -278,7 +354,6 @@ export async function POST(request: Request) {
                             tax: order.tax || 0,
                             total: order.total,
                             shippingAddress: order.shippingAddress,
-                            dashboardUrl: `${new URL(request.url).origin}/dashboard/orders`,
                         });
 
                         await sendEmail({
