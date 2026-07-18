@@ -78,7 +78,6 @@ export async function POST(request: Request) {
         tax: order.tax || 0,
         total: order.total,
         shippingAddress: order.shippingAddress,
-        dashboardUrl: `${new URL(request.url).origin}/dashboard/orders`,
       });
 
       try {
