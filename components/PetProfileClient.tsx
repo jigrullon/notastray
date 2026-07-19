@@ -2,12 +2,37 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle, Edit3, Save, X, Camera, Loader2, Download, ArrowLeft } from 'lucide-react'
+import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, BellRing, CheckCircle, Edit3, Save, X, Camera, Loader2, Download, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getSpecies, getBreeds } from '@/lib/breedUtils'
+import { CLIENT_COOLDOWN_MS, CLIENT_COOLDOWN_LOST_MS } from '@/lib/scanNotificationConfig'
+
+type ScanSource = 'qr' | 'lookup' | 'likely_qr' | 'unknown'
+
+// Determines how the visitor arrived — used for notification wording and
+// analytics ONLY; dedup/suppression logic must never branch on this.
+// 'likely_qr' exists for the ~1,500 legacy tags printed without ?src=qr:
+// a camera-initiated visit has an empty referrer, comes from a mobile device,
+// and is a fresh navigation (not a reload / back-forward restore). An explicit
+// ?src= param always wins, so this heuristic self-obsoletes as legacy tags
+// age out of circulation.
+function inferSource(): ScanSource {
+  if (typeof window === 'undefined') return 'unknown'
+  const srcParam = new URLSearchParams(window.location.search).get('src')
+  if (srcParam === 'qr' || srcParam === 'lookup') return srcParam
+  try {
+    const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+    const freshNavigation = !navEntry || navEntry.type === 'navigate'
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+    if (!document.referrer && isMobile && freshNavigation) return 'likely_qr'
+  } catch {
+    // Navigation Timing unavailable — treat as unknown
+  }
+  return 'unknown'
+}
 
 interface LocationData {
   latitude: number
@@ -60,7 +85,13 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
   const { user, loading } = useAuth()
   const isOwner = !!(user && userId && user.uid === userId)
 
-  const [notificationSent, setNotificationSent] = useState(false)
+  // Notification flow state:
+  //  'idle'       – nothing sent or decided yet
+  //  'sent'       – server confirmed a notification went out (green banner)
+  //  'suppressed' – client-side guard skipped auto-notify (amber banner + Alert Owner Again)
+  //  'already'    – server said the owner was alerted recently (amber banner, no button)
+  const [notifyState, setNotifyState] = useState<'idle' | 'sent' | 'suppressed' | 'already'>('idle')
+  const [manualSending, setManualSending] = useState(false)
   const [location, setLocation] = useState<LocationData | null>(null)
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState({ ...petData })
@@ -72,7 +103,9 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
 
-  // Send notification when component mounts
+  // Auto-notify on mount — guarded so lingering-tab restores and repeat
+  // visits don't spam the owner. Every guard fails open: a duplicate alert
+  // beats a missed alert for a lost pet.
   useEffect(() => {
     // Wait until auth has finished loading before sending notifications
     // This prevents notifications from being sent before we can check if user is owner
@@ -81,104 +114,105 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
     // Don't notify when owner views their own pet
     if (isOwner) return
 
-    // Check sessionStorage for duplicate notification in same session
-    const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
-    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) {
-      return // Already notified in this session today
-    }
-
-    const sendNotification = async () => {
-      try {
-        // Get source from URL params
-        const srcParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('src') : null
-        const source: 'qr' | 'unknown' = srcParam === 'qr' ? 'qr' : 'unknown'
-
-        // Get location if available
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              const locationData: LocationData = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy
-              }
-
-              // Try to get address from coordinates
-              try {
-                const response = await fetch(`/api/geocode?lat=${locationData.latitude}&lng=${locationData.longitude}`)
-                if (response.ok) {
-                  const data = await response.json()
-                  locationData.address = data.address
-                }
-              } catch (error) {
-                console.log('Geocoding failed, using coordinates only')
-              }
-
-              setLocation(locationData)
-              await sendNotificationWithLocation(locationData, source)
-            },
-            async (error) => {
-              console.log('Location error:', error.message)
-              // Send notification without precise location, use IP-based location
-              await sendNotificationWithIPLocation(source)
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 300000 // 5 minutes
-            }
-          )
-        } else {
-          // Geolocation not supported, use IP-based location
-          await sendNotificationWithIPLocation(source)
-        }
-      } catch (error) {
-        console.error('Failed to send notification:', error)
+    // Layer 1: reload detection. A restored/reloaded tab (mobile browsers
+    // discard and reload background tabs) is not a new scan — only a fresh
+    // navigation (QR scan, lookup, typed URL) should auto-notify.
+    try {
+      const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+      if (navEntry && navEntry.type !== 'navigate') {
+        setNotifyState('suppressed')
+        return
       }
+    } catch {
+      // Navigation Timing unavailable — fail open
     }
 
-    sendNotification()
+    // Layer 2: durable cooldown. localStorage survives tab discard/restore
+    // (unlike sessionStorage). Timestamp is written only after a confirmed send.
+    try {
+      const last = localStorage.getItem(`scan_notified_${tagCode}`)
+      if (last) {
+        const cooldownMs = isLost ? CLIENT_COOLDOWN_LOST_MS : CLIENT_COOLDOWN_MS
+        if (Date.now() - new Date(last).getTime() < cooldownMs) {
+          setNotifyState('suppressed')
+          return
+        }
+      }
+    } catch {
+      // Private-mode storage errors — fail open
+    }
+
+    sendNotification(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tagCode, isOwner, loading])
 
-  const sendNotificationWithLocation = async (locationData: LocationData, source: 'qr' | 'unknown' = 'unknown') => {
-    try {
-      const response = await fetch('/api/notify-owner', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tagCode: tagCode,
-          location: locationData,
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          source
+  // Resolve GPS location as a promise so the whole notify flow is awaitable
+  // (needed for the manual Alert Owner Again button's pending state).
+  const getBrowserLocation = (): Promise<LocationData | null> =>
+    new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve(null)
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
         }),
-      })
-
-      if (response.ok) {
-        setNotificationSent(true)
-        // Mark as notified in session after successful send
-        if (typeof window !== 'undefined') {
-          const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
-          sessionStorage.setItem(sessionKey, '1')
+        (error) => {
+          console.log('Location error:', error.message)
+          resolve(null)
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
         }
+      )
+    })
+
+  const sendNotification = async (manual: boolean) => {
+    try {
+      const source = inferSource()
+      const gpsLocation = await getBrowserLocation()
+
+      if (gpsLocation) {
+        // Try to get address from coordinates
+        try {
+          const response = await fetch(`/api/geocode?lat=${gpsLocation.latitude}&lng=${gpsLocation.longitude}`)
+          if (response.ok) {
+            const data = await response.json()
+            gpsLocation.address = data.address
+          }
+        } catch {
+          console.log('Geocoding failed, using coordinates only')
+        }
+
+        setLocation(gpsLocation)
+        await postNotification({ location: gpsLocation, source, manual })
+      } else {
+        // GPS denied/unavailable — fall back to approximate IP-based location
+        let ipLocation: LocationData | null = null
+        try {
+          const ipResponse = await fetch('/api/ip-location')
+          if (ipResponse.ok) {
+            ipLocation = await ipResponse.json()
+          }
+        } catch {
+          // Proceed without location — notification still goes out
+        }
+        await postNotification({ location: ipLocation, source, manual, locationMethod: 'ip' })
       }
     } catch (error) {
       console.error('Failed to send notification:', error)
     }
   }
 
-  const sendNotificationWithIPLocation = async (source: 'qr' | 'unknown' = 'unknown') => {
+  const postNotification = async (payload: {
+    location: LocationData | null
+    source: ScanSource
+    manual: boolean
+    locationMethod?: 'gps' | 'ip'
+  }) => {
     try {
-      // Get approximate location from IP
-      const ipResponse = await fetch('/api/ip-location')
-      let ipLocation = null
-
-      if (ipResponse.ok) {
-        ipLocation = await ipResponse.json()
-      }
-
       const response = await fetch('/api/notify-owner', {
         method: 'POST',
         headers: {
@@ -186,24 +220,44 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
         },
         body: JSON.stringify({
           tagCode: tagCode,
-          location: ipLocation,
+          location: payload.location,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
-          locationMethod: 'ip',
-          source
+          ...(payload.locationMethod && { locationMethod: payload.locationMethod }),
+          source: payload.source,
+          manual: payload.manual,
         }),
       })
 
-      if (response.ok) {
-        setNotificationSent(true)
-        // Mark as notified in session after successful send
-        if (typeof window !== 'undefined') {
-          const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
-          sessionStorage.setItem(sessionKey, '1')
+      if (!response.ok) return
+      const data = await response.json().catch(() => null)
+
+      if (data?.status === 'sent') {
+        setNotifyState('sent')
+        // Start the client cooldown only after a confirmed send
+        try {
+          localStorage.setItem(`scan_notified_${tagCode}`, new Date().toISOString())
+        } catch {
+          // Private mode — ignore
         }
+      } else if (data?.status === 'deduped' || data?.status === 'rate_limited') {
+        // Server suppressed the send — never show the green banner for this
+        setNotifyState('already')
       }
     } catch (error) {
       console.error('Failed to send notification:', error)
+    }
+  }
+
+  // Manual re-alert: bypasses the client-side guards above, but the server's
+  // per-visitor cooldown and per-tag rate limit still apply.
+  const handleManualAlert = async () => {
+    if (manualSending) return
+    setManualSending(true)
+    try {
+      await sendNotification(true)
+    } finally {
+      setManualSending(false)
     }
   }
 
@@ -316,7 +370,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Notification Status */}
-        {notificationSent && (
+        {notifyState === 'sent' && (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
             <div className="flex items-center">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" />
@@ -329,6 +383,36 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                   }
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+        {notifyState === 'suppressed' && !isOwner && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center">
+                <BellRing className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2 flex-shrink-0" />
+                <p className="text-amber-800 dark:text-amber-300 font-medium">
+                  The owner was recently alerted about this pet.
+                </p>
+              </div>
+              <button
+                onClick={handleManualAlert}
+                disabled={manualSending}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50"
+              >
+                {manualSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BellRing className="w-3.5 h-3.5" />}
+                {manualSending ? 'Alerting...' : 'Alert Owner Again'}
+              </button>
+            </div>
+          </div>
+        )}
+        {notifyState === 'already' && !isOwner && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <BellRing className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2 flex-shrink-0" />
+              <p className="text-amber-800 dark:text-amber-300 font-medium">
+                The owner has already been alerted recently — thank you for helping!
+              </p>
             </div>
           </div>
         )}

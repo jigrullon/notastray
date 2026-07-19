@@ -117,7 +117,8 @@ export default function LookupPage() {
       }
     }
 
-    router.push(`/pet/${trimmed}`)
+    // src=lookup labels this visit for notification wording/analytics
+    router.push(`/pet/${trimmed}?src=lookup`)
   }
 
   return (
