@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -17,8 +18,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tag code is required' }, { status: 400 });
     }
 
+    const upperTagCode = tagCode.toUpperCase();
+
+    // Remove the tag from its previous owner's tagCodes array, if any,
+    // so a reset tag doesn't keep showing up on the old owner's dashboard.
+    const existingTagDoc = await adminDb.collection('tags').doc(upperTagCode).get();
+    const previousUserId = existingTagDoc.data()?.userId;
+    if (previousUserId) {
+      await adminDb.collection('users').doc(previousUserId).update({
+        tagCodes: FieldValue.arrayRemove(upperTagCode),
+      });
+    }
+
     // Reset tag to unactivated state, clear all pet data
-    await adminDb.collection('tags').doc(tagCode.toUpperCase()).set({
+    await adminDb.collection('tags').doc(upperTagCode).set({
       isActive: false,
       userId: null,
       isLost: false,
