@@ -323,6 +323,17 @@ function ActivateContent() {
         updatedAt: new Date().toISOString(),
       })
 
+      // Fire-and-forget: never block the activation success screen on email delivery
+      user.getIdToken()
+        .then((idToken) =>
+          fetch('/api/activate/confirmation-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ tagCode }),
+          })
+        )
+        .catch((err) => console.error('Failed to send activation confirmation email:', err))
+
       setStep(3)
     } catch (err) {
       console.error('Error activating tag:', err)

@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const upperTagCode = tagCode.toUpperCase()
+    const previousUserId = tagDoc.data()?.userId
 
     // Reassign tag to user
     await adminDb.collection('tags').doc(upperTagCode).update({
@@ -37,7 +38,13 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     })
 
-    // Add tag code to user's tagCodes array
+    // Keep tagCodes arrays in sync: drop it from the previous owner (if any
+    // and different from the new owner), add it to the new owner.
+    if (previousUserId && previousUserId !== userId) {
+      await adminDb.collection('users').doc(previousUserId).update({
+        tagCodes: FieldValue.arrayRemove(upperTagCode),
+      })
+    }
     await adminDb.collection('users').doc(userId).update({
       tagCodes: FieldValue.arrayUnion(upperTagCode),
     })

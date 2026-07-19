@@ -78,6 +78,7 @@ export default function NotificationSettingsPage() {
             }
           } else {
             setContactInfo(prev => ({ ...prev, email: user.email || '' }))
+            setFirstName(user?.displayName || '')
           }
         } catch (error) {
           console.error("Error fetching user data:", error)

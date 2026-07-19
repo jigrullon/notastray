@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { FieldValue } from 'firebase-admin/firestore'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,15 +39,29 @@ export async function POST(request: NextRequest) {
     const userId = usersSnapshot.docs[0].id
 
     // Get the tag
-    const tagDoc = await adminDb.collection('tags').doc(tagCode.toUpperCase()).get()
+    const upperTagCode = tagCode.toUpperCase()
+    const tagDoc = await adminDb.collection('tags').doc(upperTagCode).get()
     if (!tagDoc.exists) {
       return NextResponse.json({ error: 'Tag not found' }, { status: 404 })
     }
 
+    const previousUserId = tagDoc.data()?.userId
+
     // Reassign tag to new user
-    await adminDb.collection('tags').doc(tagCode.toUpperCase()).update({
+    await adminDb.collection('tags').doc(upperTagCode).update({
       userId,
       updatedAt: new Date().toISOString(),
+    })
+
+    // Keep tagCodes arrays in sync: drop it from the previous owner (if any
+    // and different from the new owner), add it to the new owner.
+    if (previousUserId && previousUserId !== userId) {
+      await adminDb.collection('users').doc(previousUserId).update({
+        tagCodes: FieldValue.arrayRemove(upperTagCode),
+      })
+    }
+    await adminDb.collection('users').doc(userId).update({
+      tagCodes: FieldValue.arrayUnion(upperTagCode),
     })
 
     return NextResponse.json({
