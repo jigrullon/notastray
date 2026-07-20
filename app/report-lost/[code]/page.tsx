@@ -9,7 +9,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import {
   Loader2, AlertCircle, ArrowLeft, Check, Camera, Upload,
-  MapPin, Calendar, Phone, AlertTriangle,
+  MapPin, Calendar, Phone, AlertTriangle, Users,
 } from 'lucide-react'
 import MissingPetFlyer from '@/components/MissingPetFlyer'
 import { getSpecies, getBreeds } from '@/lib/breedUtils'
@@ -732,6 +732,29 @@ export default function ReportLostPage() {
                 <li>• Put out clothing or bedding with your scent near home</li>
                 <li>• Update this report if {petName} is found</li>
               </ul>
+            </div>
+
+            {/* Rescue Crew prompt */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5 text-teal-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                    Add trusted contacts to {petName}&apos;s Rescue Crew
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Add trusted contacts so finders have more people to call while {petName} is missing.
+                  </p>
+                  <Link
+                    href="/dashboard/rescue-crew"
+                    className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    Manage Rescue Crew &rarr;
+                  </Link>
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
