@@ -61,7 +61,7 @@ export default function ResourcesPage() {
                 <Zap className="w-6 h-6 text-primary-600 mr-2" />
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">Activate Your Tag</h3>
               </div>
-              <p className="text-gray-600 dark:text-gray-400 mb-3">Set up your pet's profile in just a few minutes</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-3">Set up your pet&apos;s profile in just a few minutes</p>
               <span className="text-primary-600 group-hover:text-primary-700 dark:group-hover:text-primary-400 font-medium">
                 Get started →
               </span>

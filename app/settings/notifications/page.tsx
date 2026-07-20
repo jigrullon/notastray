@@ -316,7 +316,7 @@ export default function NotificationSettingsPage() {
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Notification Settings</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Configure how you want to be notified when someone scans your pet's tag
+              Configure how you want to be notified when someone scans your pet&apos;s tag
             </p>
           </div>
 
@@ -482,7 +482,7 @@ export default function NotificationSettingsPage() {
                     <Shield className="w-5 h-5 text-purple-600 mr-3" />
                     <div>
                       <h3 className="font-medium text-gray-900 dark:text-gray-100">Share Scanner Location</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Include the location where your pet's tag was scanned in notifications</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Include the location where your pet&apos;s tag was scanned in notifications</p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -500,7 +500,7 @@ export default function NotificationSettingsPage() {
                   <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">How location works:</h4>
                   <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
                     <li>First, we try to get precise GPS location (requires permission)</li>
-                    <li>If GPS isn't available, we use approximate location based on internet connection</li>
+                    <li>If GPS isn&apos;t available, we use approximate location based on internet connection</li>
                     <li>Location accuracy is always indicated in notifications</li>
                     <li>No location data is stored permanently</li>
                   </ul>
@@ -531,7 +531,7 @@ export default function NotificationSettingsPage() {
                   <option value={-1}>Unlimited</option>
                 </select>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Prevents spam if your pet's tag is scanned repeatedly by the same person
+                  Prevents spam if your pet&apos;s tag is scanned repeatedly by the same person
                 </p>
               </div>
             </div>
@@ -575,14 +575,14 @@ export default function NotificationSettingsPage() {
 
             <div className="p-6 overflow-y-auto">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                By providing your mobile phone number and checking this box, you consent to receive SMS text messages from NotAStray related to your pet's safety and identification services.
+                By providing your mobile phone number and checking this box, you consent to receive SMS text messages from NotAStray related to your pet&apos;s safety and identification services.
               </p>
 
               <div className="space-y-4 text-sm text-gray-600 dark:text-gray-400">
                 <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">What messages you'll receive:</h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">What messages you&apos;ll receive:</h4>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>Notifications when someone scans your pet's QR code tag</li>
+                    <li>Notifications when someone scans your pet&apos;s QR code tag</li>
                     <li>Important alerts about your lost pet</li>
                     <li>Service updates and account information</li>
                   </ul>
@@ -590,7 +590,7 @@ export default function NotificationSettingsPage() {
 
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Message frequency:</h4>
-                  <p>Message frequency varies based on QR code scans and account activity. You may receive multiple messages if your pet's tag is scanned multiple times.</p>
+                  <p>Message frequency varies based on QR code scans and account activity. You may receive multiple messages if your pet&apos;s tag is scanned multiple times.</p>
                 </div>
 
                 <div>
@@ -609,7 +609,7 @@ export default function NotificationSettingsPage() {
                 </div>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                  By clicking "I Agree" or checking this box, you confirm that you are authorized to provide this phone number and consent to receive SMS messages as described above.
+                  By clicking &quot;I Agree&quot; or checking this box, you confirm that you are authorized to provide this phone number and consent to receive SMS messages as described above.
                 </p>
               </div>
 

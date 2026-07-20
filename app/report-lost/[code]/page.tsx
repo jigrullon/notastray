@@ -634,7 +634,7 @@ export default function ReportLostPage() {
 
                   <div>
                     <label className={labelClass}>Report Title (Optional)</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">A short title for the missing pet poster (e.g., "Missing Dog! - Reward Offered")</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">A short title for the missing pet poster (e.g., &quot;Missing Dog! - Reward Offered&quot;)</p>
                     <input
                       type="text"
                       value={report.reportTitle}

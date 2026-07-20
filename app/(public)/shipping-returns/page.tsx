@@ -23,7 +23,7 @@ export default function ShippingReturnsPage() {
             Shipping & Returns
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            We're committed to getting your pet ID tags to you quickly and safely.
+            We&apos;re committed to getting your pet ID tags to you quickly and safely.
           </p>
         </div>
       </div>
@@ -52,8 +52,8 @@ export default function ShippingReturnsPage() {
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
                 Most orders are processed and shipped within <strong>1-2 business days</strong>.
-                As a small business, we prioritize getting your pet's ID tag to you as quickly as possible.
-                If you're in a rush, contact us — we may be able to expedite your order.
+                As a small business, we prioritize getting your pet&apos;s ID tag to you as quickly as possible.
+                If you&apos;re in a rush, contact us — we may be able to expedite your order.
               </p>
             </div>
 
@@ -86,8 +86,8 @@ export default function ShippingReturnsPage() {
                 Tracking Your Order
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
-                Once your order ships, you'll receive an email with your tracking number. You can use
-                this to track your package on the USPS website. We'll also send you updates as your
+                Once your order ships, you&apos;ll receive an email with your tracking number. You can use
+                this to track your package on the USPS website. We&apos;ll also send you updates as your
                 package makes its way to you.
               </p>
             </div>
@@ -126,7 +126,7 @@ export default function ShippingReturnsPage() {
               </h3>
               <p className="text-gray-700 dark:text-gray-300 mb-2">
                 We want you to be completely satisfied with your NotAStray pet ID tag.
-                Here's our return policy:
+                Here&apos;s our return policy:
               </p>
               <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
                 <li><strong>30-day return window:</strong> Returns must be initiated within 30 days of purchase</li>
@@ -142,7 +142,7 @@ export default function ShippingReturnsPage() {
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
                 If your tag arrives damaged or defective, please contact us immediately with photos.
-                We'll send you a replacement right away — no return necessary. We stand behind the
+                We&apos;ll send you a replacement right away — no return necessary. We stand behind the
                 quality of our products and want to make sure your pet stays safe.
               </p>
             </div>
@@ -156,9 +156,9 @@ export default function ShippingReturnsPage() {
               </p>
               <ol className="list-decimal list-inside space-y-1 text-gray-700 dark:text-gray-300">
                 <li>Email us at support@notastray.com with your order number</li>
-                <li>We'll provide you with a return shipping label (if applicable)</li>
+                <li>We&apos;ll provide you with a return shipping label (if applicable)</li>
                 <li>Ship the item back to us in original condition</li>
-                <li>Once received and inspected, we'll process your refund</li>
+                <li>Once received and inspected, we&apos;ll process your refund</li>
               </ol>
             </div>
 
@@ -167,8 +167,8 @@ export default function ShippingReturnsPage() {
                 Exchanges
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
-                Need a different color or size? We're happy to exchange your tag. Simply contact us
-                and we'll work out the details. If there's a price difference, we'll adjust accordingly.
+                Need a different color or size? We&apos;re happy to exchange your tag. Simply contact us
+                and we&apos;ll work out the details. If there&apos;s a price difference, we&apos;ll adjust accordingly.
               </p>
             </div>
           </div>
@@ -181,7 +181,7 @@ export default function ShippingReturnsPage() {
               Questions About Shipping or Returns?
             </h2>
             <p className="text-gray-700 dark:text-gray-300 mb-6">
-              We're here to help! Reach out to us through any of these channels:
+              We&apos;re here to help! Reach out to us through any of these channels:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="flex items-start">
