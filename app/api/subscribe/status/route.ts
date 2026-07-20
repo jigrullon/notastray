@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2023-10-16' as any,
+        apiVersion: '2025-12-15.clover',
     });
 
     try {
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
                                     plan,
                                     stripeSubscriptionId: sub.id,
                                     stripeCustomerId: customer.id,
-                                    currentPeriodEnd: new Date((sub as any).current_period_end * 1000).toISOString(),
+                                    currentPeriodEnd: new Date(sub.items.data[0].current_period_end * 1000).toISOString(),
                                     createdAt: new Date(sub.created * 1000).toISOString(),
                                 },
                             }, { merge: true });
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
                         status: 'active',
                         plan,
                         stripeSubscriptionId: sub.id,
-                        currentPeriodEnd: new Date((sub as any).current_period_end * 1000).toISOString(),
+                        currentPeriodEnd: new Date(sub.items.data[0].current_period_end * 1000).toISOString(),
                     });
                 }
             }
