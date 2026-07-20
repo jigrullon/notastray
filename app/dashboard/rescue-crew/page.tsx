@@ -210,10 +210,6 @@ export default function RescueCrewPage() {
       setFormError('Please enter a primary telephone number.')
       return
     }
-    if (!form.permissionAttested) {
-      setFormError('Please confirm you have this person’s permission to share their contact information.')
-      return
-    }
 
     const phone2HasData = form.phone2.number.trim().length > 0
     const payload: Omit<RescueCrewContact, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -344,6 +340,10 @@ export default function RescueCrewPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+              <span className="font-medium">*</span> Required
+            </p>
 
             <div className="space-y-6">
               {/* Title */}
@@ -625,7 +625,13 @@ export default function RescueCrewPage() {
               )}
             </div>
 
-            <div className="flex gap-3 mt-8">
+            {!form.permissionAttested && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-6 text-right">
+                Check the permission box above to save this contact.
+              </p>
+            )}
+
+            <div className="flex gap-3 mt-3">
               <button
                 onClick={closeForm}
                 className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium text-sm"
@@ -635,8 +641,8 @@ export default function RescueCrewPage() {
               <div className="flex-1" />
               <button
                 onClick={handleSubmit}
-                disabled={submitting}
-                className="bg-primary-600 hover:bg-primary-400 disabled:opacity-50 text-white font-medium px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2"
+                disabled={!form.permissionAttested || submitting}
+                className="bg-primary-600 hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2"
               >
                 {submitting ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
