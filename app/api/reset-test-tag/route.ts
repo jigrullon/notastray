@@ -1,10 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 
 const TAG_CODE = 'TEST01';
 
-async function resetTestTag(): Promise<NextResponse> {
+async function resetTestTag(request: NextRequest): Promise<NextResponse> {
     try {
+        const { searchParams } = new URL(request.url)
+        const secret = searchParams.get('secret')
+        if (!process.env.ADMIN_API_KEY || secret !== process.env.ADMIN_API_KEY) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const tagRef = adminDb.collection('tags').doc(TAG_CODE);
         const doc = await tagRef.get();
 
@@ -37,10 +43,6 @@ async function resetTestTag(): Promise<NextResponse> {
     }
 }
 
-export async function POST() {
-    return resetTestTag();
-}
-
-export async function GET() {
-    return resetTestTag();
+export async function POST(request: NextRequest) {
+    return resetTestTag(request);
 }

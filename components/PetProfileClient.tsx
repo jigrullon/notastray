@@ -229,11 +229,14 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
       })
 
       if (response.ok) {
-        setNotificationSent(true)
-        // Mark as notified in session after successful send
-        if (typeof window !== 'undefined') {
-          const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
-          sessionStorage.setItem(sessionKey, '1')
+        const data = await response.json()
+        if (!data.rateLimited) {
+          setNotificationSent(true)
+          // Mark as notified in session after successful send
+          if (typeof window !== 'undefined') {
+            const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
+            sessionStorage.setItem(sessionKey, '1')
+          }
         }
       }
     } catch (error) {
@@ -267,11 +270,14 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
       })
 
       if (response.ok) {
-        setNotificationSent(true)
-        // Mark as notified in session after successful send
-        if (typeof window !== 'undefined') {
-          const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
-          sessionStorage.setItem(sessionKey, '1')
+        const data = await response.json()
+        if (!data.rateLimited) {
+          setNotificationSent(true)
+          // Mark as notified in session after successful send
+          if (typeof window !== 'undefined') {
+            const sessionKey = `scan_notified_${tagCode}_${new Date().toDateString()}`
+            sessionStorage.setItem(sessionKey, '1')
+          }
         }
       }
     } catch (error) {

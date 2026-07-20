@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     // Simple auth check - requires a secret query parameter
     const { searchParams } = new URL(request.url)
     const secret = searchParams.get('secret')
-    if (secret !== process.env.ADMIN_API_KEY && process.env.NODE_ENV === 'production') {
+    if (!process.env.ADMIN_API_KEY || secret !== process.env.ADMIN_API_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

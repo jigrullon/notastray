@@ -53,7 +53,15 @@ function addBusinessDays(startDate: Date, days: number): Date {
     return current;
 }
 
-async function writeSubscriptionToFirestore(userId: string, subscription: any): Promise<void> {
+interface SubscriptionRecord {
+    status: string;
+    plan: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId?: string;
+    currentPeriodEnd?: string;
+}
+
+async function writeSubscriptionToFirestore(userId: string, subscription: SubscriptionRecord): Promise<void> {
     await adminDb.collection('users').doc(userId).set({
         subscription: {
             status: subscription.status,
@@ -67,7 +75,43 @@ async function writeSubscriptionToFirestore(userId: string, subscription: any): 
     console.log('Subscription written to Firestore for user:', userId);
 }
 
-async function writeOrderToFirestore(order: any): Promise<void> {
+interface OrderItem {
+    name: string;
+    color: string;
+    size: string;
+    quantity: number;
+    price: number;
+}
+
+interface OrderRecord {
+    orderId: string;
+    confirmationCode: string;
+    stripeSessionId: string;
+    stripePaymentIntentId?: string;
+    userId?: string;
+    customerEmail?: string;
+    items: OrderItem[];
+    subtotal: number;
+    shippingMethod: string;
+    shippingOption?: string;
+    shippingZipCode?: string;
+    shippingCost: number;
+    tax?: number;
+    total: number;
+    shippingAddress: {
+        name: string;
+        line1: string;
+        line2: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+    };
+    estimatedDeliveryMin: string;
+    estimatedDeliveryMax: string;
+}
+
+async function writeOrderToFirestore(order: OrderRecord): Promise<void> {
     await adminDb.collection('orders').doc(order.orderId).set({
         orderId: order.orderId,
         confirmationCode: order.confirmationCode,
@@ -237,8 +281,8 @@ export async function POST(request: Request) {
                     deliveryMax = addBusinessDays(now, 7);
                 }
 
-                const items = JSON.parse(session.metadata?.items || '[]');
-                const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+                const items = JSON.parse(session.metadata?.items || '[]') as OrderItem[];
+                const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                 const taxAmount = (sessionAny.total_details?.amount_tax || 0) / 100;
                 const paymentIntent = fullSession.payment_intent as Stripe.PaymentIntent | null;
 
@@ -291,7 +335,7 @@ export async function POST(request: Request) {
                         reference: order.orderId,
                         // Weight scales with tag count: envelope + per-tag weight
                         weightOz: calculateShipmentWeightOz(
-                            order.items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+                            order.items.reduce((sum, item) => sum + (item.quantity || 1), 0)
                         ),
                     });
 
