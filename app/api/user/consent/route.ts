@@ -1,8 +1,40 @@
 import { NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 
+interface ConsentUpdate {
+    preferences: {
+        sms: { optIn: boolean; consentTimestamp: string; consentIp: string | null; consentMethod: string }
+        email: { optIn: boolean; consentTimestamp: string; consentIp: string | null; consentMethod: string }
+        maxNotificationsPerHour: number
+        locationSharing: boolean
+    }
+    phone?: string
+    email?: string
+    displayName?: string
+}
+
 export async function POST(request: Request) {
     try {
+        const authHeader = request.headers.get('authorization')
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json(
+                { success: false, error: 'Missing or invalid authorization header' },
+                { status: 401 }
+            )
+        }
+
+        const token = authHeader.substring(7)
+        let uid: string
+        try {
+            const decodedToken = await adminAuth.verifyIdToken(token)
+            uid = decodedToken.uid
+        } catch {
+            return NextResponse.json(
+                { success: false, error: 'Invalid or expired token' },
+                { status: 401 }
+            )
+        }
+
         const body = await request.json()
         const {
             userId,
@@ -21,6 +53,13 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { success: false, error: 'User ID is required' },
                 { status: 400 }
+            )
+        }
+
+        if (userId !== uid) {
+            return NextResponse.json(
+                { success: false, error: 'You do not have permission to update these preferences' },
+                { status: 403 }
             )
         }
 
@@ -45,7 +84,7 @@ export async function POST(request: Request) {
         const now = new Date().toISOString()
 
         // Build update object
-        const updateData: any = {
+        const updateData: ConsentUpdate = {
             preferences: {
                 sms: {
                     optIn: smsOptIn,

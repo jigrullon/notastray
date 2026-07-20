@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2023-10-16' as any,
+        apiVersion: '2025-12-15.clover',
     });
 
     try {
@@ -72,12 +72,20 @@ export async function GET(request: Request) {
         }
 
         // Fallback: construct from Stripe session (handles webhook race condition)
-        const items = JSON.parse(fullSession.metadata?.items || '[]');
-        const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+        interface OrderItem {
+            name: string;
+            color: string;
+            size: string;
+            quantity: number;
+            price: number;
+        }
 
-        const sessionAny = fullSession as any;
-        const shippingAddress = sessionAny.shipping_details?.address;
-        const shippingName = sessionAny.shipping_details?.name;
+        const items = JSON.parse(fullSession.metadata?.items || '[]') as OrderItem[];
+        const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        const shippingDetails = fullSession.collected_information?.shipping_details;
+        const shippingAddress = shippingDetails?.address;
+        const shippingName = shippingDetails?.name;
         const shippingRate = fullSession.shipping_cost?.shipping_rate as Stripe.ShippingRate | undefined;
         const shippingDisplayName = shippingRate?.display_name || '';
         const shippingAmount = (fullSession.shipping_cost?.amount_total || 0) / 100;

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns'
+import { adminAuth } from '@/lib/firebaseAdmin'
 
 const sesClient = new SESClient({
     region: process.env.AWS_REGION || 'us-east-1',
@@ -20,6 +21,23 @@ const snsClient = new SNSClient({
 
 export async function POST(request: Request) {
     try {
+        const authHeader = request.headers.get('authorization')
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json(
+                { success: false, error: 'Missing or invalid authorization header' },
+                { status: 401 }
+            )
+        }
+
+        try {
+            await adminAuth.verifyIdToken(authHeader.substring(7))
+        } catch {
+            return NextResponse.json(
+                { success: false, error: 'Invalid or expired token' },
+                { status: 401 }
+            )
+        }
+
         const body = await request.json()
         const { type, to } = body
 

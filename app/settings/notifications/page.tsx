@@ -119,10 +119,12 @@ export default function NotificationSettingsPage() {
     setSuccessMessage('')
 
     try {
+      const token = await user.getIdToken()
       const response = await fetch('/api/notifications/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           type,
@@ -157,9 +159,13 @@ export default function NotificationSettingsPage() {
   const handleConsentConfirm = async () => {
     try {
       if (user) {
+        const token = await user.getIdToken()
         const response = await fetch('/api/user/consent', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({
             userId: user.uid,
             smsOptIn: true,
@@ -204,9 +210,13 @@ export default function NotificationSettingsPage() {
       setTestStatus(prev => ({ ...prev, sms: 'sending' }))
       setSuccessMessage('')
       try {
+        const token = await user?.getIdToken()
         const response = await fetch('/api/notifications/test', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ type: 'sms', to: phone }),
         })
         const data = await response.json()
@@ -248,10 +258,12 @@ export default function NotificationSettingsPage() {
     setSuccessMessage('')
 
     try {
+      const token = await user.getIdToken()
       const response = await fetch('/api/user/consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId: user.uid,

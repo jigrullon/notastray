@@ -1,15 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 
 /**
- * POST /api/import-tags
+ * POST /api/import-tags?secret=ADMIN_API_KEY
  * Body: { tags: [{ code, url }] }
  *
  * Bulk-imports tags into Firestore via Firebase Admin SDK (server-side, bypasses security rules).
- * Admin-only endpoint — protect or remove after use.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
+        const { searchParams } = new URL(request.url)
+        const secret = searchParams.get('secret')
+        if (!process.env.ADMIN_API_KEY || secret !== process.env.ADMIN_API_KEY) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { tags } = await request.json();
         if (!Array.isArray(tags) || tags.length === 0) {
             return NextResponse.json({ error: 'tags array is required' }, { status: 400 });

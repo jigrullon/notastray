@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Only Firebase Storage hosts are allowed — this route is a fetch proxy, so an
+// unrestricted URL would let a caller make our server request any host (SSRF).
+const ALLOWED_HOSTS = ['firebasestorage.googleapis.com', 'storage.googleapis.com']
+
 export async function POST(request: NextRequest) {
   try {
     const { imageUrl } = await request.json()
@@ -9,6 +13,17 @@ export async function POST(request: NextRequest) {
         { error: 'Missing or invalid imageUrl' },
         { status: 400 }
       )
+    }
+
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(imageUrl)
+    } catch {
+      return NextResponse.json({ error: 'Invalid imageUrl' }, { status: 400 })
+    }
+
+    if (parsedUrl.protocol !== 'https:' || !ALLOWED_HOSTS.includes(parsedUrl.hostname)) {
+      return NextResponse.json({ error: 'imageUrl host not allowed' }, { status: 400 })
     }
 
     // Fetch the image from Firebase Storage

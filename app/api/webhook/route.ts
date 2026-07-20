@@ -53,7 +53,15 @@ function addBusinessDays(startDate: Date, days: number): Date {
     return current;
 }
 
-async function writeSubscriptionToFirestore(userId: string, subscription: any): Promise<void> {
+interface SubscriptionRecord {
+    status: string;
+    plan: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId?: string;
+    currentPeriodEnd?: string;
+}
+
+async function writeSubscriptionToFirestore(userId: string, subscription: SubscriptionRecord): Promise<void> {
     await adminDb.collection('users').doc(userId).set({
         subscription: {
             status: subscription.status,
@@ -67,7 +75,43 @@ async function writeSubscriptionToFirestore(userId: string, subscription: any): 
     console.log('Subscription written to Firestore for user:', userId);
 }
 
-async function writeOrderToFirestore(order: any): Promise<void> {
+interface OrderItem {
+    name: string;
+    color: string;
+    size: string;
+    quantity: number;
+    price: number;
+}
+
+interface OrderRecord {
+    orderId: string;
+    confirmationCode: string;
+    stripeSessionId: string;
+    stripePaymentIntentId?: string;
+    userId?: string;
+    customerEmail?: string;
+    items: OrderItem[];
+    subtotal: number;
+    shippingMethod: string;
+    shippingOption?: string;
+    shippingZipCode?: string;
+    shippingCost: number;
+    tax?: number;
+    total: number;
+    shippingAddress: {
+        name: string;
+        line1: string;
+        line2: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+    };
+    estimatedDeliveryMin: string;
+    estimatedDeliveryMax: string;
+}
+
+async function writeOrderToFirestore(order: OrderRecord): Promise<void> {
     await adminDb.collection('orders').doc(order.orderId).set({
         orderId: order.orderId,
         confirmationCode: order.confirmationCode,
@@ -100,7 +144,7 @@ export async function POST(request: Request) {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2023-10-16' as any,
+        apiVersion: '2025-12-15.clover',
     });
 
     const signature = request.headers.get('stripe-signature');
@@ -134,7 +178,7 @@ export async function POST(request: Request) {
                                 plan,
                                 stripeSubscriptionId,
                                 stripeCustomerId: session.customer as string || '',
-                                currentPeriodEnd: new Date((stripeSub as any).current_period_end * 1000).toISOString(),
+                                currentPeriodEnd: new Date(stripeSub.items.data[0].current_period_end * 1000).toISOString(),
                             });
                         }
                     }
@@ -143,7 +187,7 @@ export async function POST(request: Request) {
                 if (isSubscription) {
                     const customerEmail = session.customer_email || session.customer_details?.email || '';
                     const renewalDate = stripeSub
-                        ? new Date((stripeSub as any).current_period_end * 1000).toLocaleDateString('en-US', {
+                        ? new Date(stripeSub.items.data[0].current_period_end * 1000).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
@@ -216,9 +260,9 @@ export async function POST(request: Request) {
                     expand: ['line_items', 'shipping_cost.shipping_rate', 'payment_intent'],
                 });
 
-                const sessionAny = fullSession as any;
-                const shippingAddress = sessionAny.shipping_details?.address;
-                const shippingName = sessionAny.shipping_details?.name;
+                const shippingDetails = fullSession.collected_information?.shipping_details;
+                const shippingAddress = shippingDetails?.address;
+                const shippingName = shippingDetails?.name;
                 const shippingRate = fullSession.shipping_cost?.shipping_rate as Stripe.ShippingRate | undefined;
                 const shippingDisplayName = shippingRate?.display_name || '';
                 const shippingAmount = (fullSession.shipping_cost?.amount_total || 0) / 100;
@@ -237,9 +281,9 @@ export async function POST(request: Request) {
                     deliveryMax = addBusinessDays(now, 7);
                 }
 
-                const items = JSON.parse(session.metadata?.items || '[]');
-                const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-                const taxAmount = (sessionAny.total_details?.amount_tax || 0) / 100;
+                const items = JSON.parse(session.metadata?.items || '[]') as OrderItem[];
+                const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const taxAmount = (fullSession.total_details?.amount_tax || 0) / 100;
                 const paymentIntent = fullSession.payment_intent as Stripe.PaymentIntent | null;
 
                 const order = {
@@ -291,7 +335,7 @@ export async function POST(request: Request) {
                         reference: order.orderId,
                         // Weight scales with tag count: envelope + per-tag weight
                         weightOz: calculateShipmentWeightOz(
-                            order.items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+                            order.items.reduce((sum, item) => sum + (item.quantity || 1), 0)
                         ),
                     });
 
@@ -390,7 +434,7 @@ export async function POST(request: Request) {
                         plan: canceledSub.metadata?.plan || '',
                         stripeSubscriptionId: canceledSub.id,
                         stripeCustomerId: canceledSub.customer as string || '',
-                        currentPeriodEnd: new Date((canceledSub as any).current_period_end * 1000).toISOString(),
+                        currentPeriodEnd: new Date(canceledSub.items.data[0].current_period_end * 1000).toISOString(),
                     });
                     console.log('Subscription canceled for user:', canceledUserId);
                 }
@@ -406,7 +450,7 @@ export async function POST(request: Request) {
                         plan: updatedSub.metadata?.plan || '',
                         stripeSubscriptionId: updatedSub.id,
                         stripeCustomerId: updatedSub.customer as string || '',
-                        currentPeriodEnd: new Date((updatedSub as any).current_period_end * 1000).toISOString(),
+                        currentPeriodEnd: new Date(updatedSub.items.data[0].current_period_end * 1000).toISOString(),
                     });
                 }
                 break;

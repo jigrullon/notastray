@@ -188,15 +188,22 @@ function DashboardContent() {
 
     setCancelLoading(true)
     try {
+      const token = await user?.getIdToken()
       const response = await fetch('/api/subscribe/cancel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           subscriptionId: subscription.stripeSubscriptionId,
-          userId: user?.uid,
         }),
       })
       const data = await response.json()
+      if (!response.ok) {
+        alert(data.error || 'Failed to cancel subscription. Please try again.')
+        return
+      }
       if (data.status === 'canceled') {
         // Re-fetch true status — other active subs may still exist
         const statusRes = await fetch('/api/subscribe/status', {
