@@ -38,7 +38,7 @@ export default function HomePage() {
               Everything you need to keep pets safe
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400">
-              Simple, effective, and designed with your pet's safety in mind
+              Simple, effective, and designed with your pet&apos;s safety in mind
             </p>
           </div>
 
@@ -49,7 +49,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Instant Access</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Anyone can scan the QR code with their phone to instantly access your pet's profile
+                Anyone can scan the QR code with their phone to instantly access your pet&apos;s profile
               </p>
             </div>
 
@@ -105,7 +105,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Create Profile</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Use the code on your tag to set up your pet's profile with photos and info
+                Use the code on your tag to set up your pet&apos;s profile with photos and info
               </p>
             </div>
 

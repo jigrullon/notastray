@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, collection, getDocs, query, where, documentId } from 'firebase/firestore'
-import { Loader2, Package, Settings, Heart, Shield, Check, QrCode, AlertTriangle, Activity } from 'lucide-react'
+import { Loader2, Package, Settings, Heart, Shield, Check, QrCode, AlertTriangle, Activity, Users } from 'lucide-react'
 import Link from 'next/link'
 
 interface SubscriptionData {
@@ -443,6 +443,25 @@ function DashboardContent() {
               </div>
               <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-colors">
                 <Activity className="w-5 h-5 text-amber-600" />
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/dashboard/rescue-crew"
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 transition-colors">
+                  Rescue Crew
+                </h3>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Trusted contacts shown to finders when your pet is lost
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center group-hover:bg-teal-200 transition-colors">
+                <Users className="w-5 h-5 text-teal-600" />
               </div>
             </div>
           </Link>

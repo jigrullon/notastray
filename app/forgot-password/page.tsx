@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
                 <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Check your email</h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        We've sent password reset instructions to <strong>{email}</strong>
+                        We&apos;ve sent password reset instructions to <strong>{email}</strong>
                     </p>
                     <Link
                         href="/login"
@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
                         Reset your password
                     </h2>
                     <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-                        Enter your email and we'll send you reset instructions
+                        Enter your email and we&apos;ll send you reset instructions
                     </p>
                 </div>
 

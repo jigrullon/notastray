@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle, Edit3, Save, X, Camera, Loader2, Download, ArrowLeft } from 'lucide-react'
+import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, CheckCircle, Edit3, Save, X, Camera, Loader2, Download, ArrowLeft, User, Home, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getSpecies, getBreeds } from '@/lib/breedUtils'
+import { RELATIONSHIP_OPTIONS, type PublicRescueCrewContact, type RescueCrewPhone, type RescueCrewAddress } from '@/lib/rescueCrew'
 
 interface LocationData {
   latitude: number
@@ -30,6 +31,45 @@ function formatBirthday(birthday: string): string {
   }
   if (age < 0) return formatted
   return `${formatted} (${age} ${age === 1 ? 'year' : 'years'} old)`
+}
+
+// Map a Rescue Crew relationship value to its human-readable label.
+function relationshipLabel(value: string): string {
+  return RELATIONSHIP_OPTIONS.find((o) => o.value === value)?.label || 'Contact'
+}
+
+// Whether a Rescue Crew phone entry has a dialable number.
+function hasPhone(phone: RescueCrewPhone | null | undefined): phone is RescueCrewPhone {
+  return !!phone && !!phone.number && phone.number.trim() !== ''
+}
+
+// Build a tel: href from a Rescue Crew phone (country code + number, digits/+ only).
+function phoneHref(phone: RescueCrewPhone): string {
+  const raw = `${phone.countryCode || ''}${phone.number || ''}`
+  return `tel:${raw.replace(/[^\d+]/g, '')}`
+}
+
+// Human-friendly phone display, including type and extension when present.
+function phoneDisplay(phone: RescueCrewPhone): string {
+  const base = `${phone.countryCode ? `${phone.countryCode} ` : ''}${phone.number}`.trim()
+  const parts = [base]
+  if (phone.ext) parts.push(`ext. ${phone.ext}`)
+  const label = base + (phone.ext ? ` ext. ${phone.ext}` : '')
+  return phone.type ? `${label} (${phone.type})` : parts.join(' ')
+}
+
+// Whether a Rescue Crew address has any content worth showing.
+function hasAddress(address: RescueCrewAddress | null | undefined): address is RescueCrewAddress {
+  if (!address) return false
+  return !!(address.street || address.city || address.state || address.postal)
+}
+
+// Ordered, comma-joined single-line address for display and map lookup.
+function formatAddress(address: RescueCrewAddress): string {
+  const line1 = [address.street, address.unit].filter(Boolean).join(' ')
+  return [line1, address.city, address.state, address.postal, address.country]
+    .filter((p) => p && p.trim() !== '')
+    .join(', ')
 }
 
 interface PetData {
@@ -71,6 +111,38 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
   const [reportedFound, setReportedFound] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [crewContacts, setCrewContacts] = useState<PublicRescueCrewContact[]>([])
+
+  // Fetch the pet's public Rescue Crew contacts only while it is marked lost.
+  // The API is server-gated on isLost, but we also mirror the state here so that
+  // when the owner marks the pet found (handleToggleLost flips lostStatus), the
+  // section disappears immediately without a page reload.
+  useEffect(() => {
+    if (!lostStatus || isOwner) {
+      setCrewContacts([])
+      return
+    }
+
+    let cancelled = false
+    const loadRescueCrew = async () => {
+      try {
+        const response = await fetch(`/api/rescue-crew/${tagCode}`)
+        if (!response.ok) return
+        const data = await response.json()
+        if (!cancelled && Array.isArray(data?.contacts)) {
+          setCrewContacts(data.contacts as PublicRescueCrewContact[])
+        }
+      } catch (error) {
+        // Never let this feature break the pet profile.
+        console.error('Failed to load Rescue Crew:', error)
+      }
+    }
+
+    loadRescueCrew()
+    return () => {
+      cancelled = true
+    }
+  }, [lostStatus, isOwner, tagCode])
 
   // Send notification when component mounts
   useEffect(() => {
@@ -344,6 +416,93 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
             </div>
           </div>
         )}
+
+        {/* Rescue Crew - trusted contacts shown to finders only while the pet is lost */}
+        {lostStatus && !isOwner && crewContacts.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 mb-6">
+            <div className="flex items-center mb-1">
+              <ShieldCheck className="w-5 h-5 text-primary-600 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Rescue Crew</h2>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              People who can help bring this pet home
+            </p>
+            <div className="space-y-3">
+              {crewContacts.map((contact, index) => {
+                const isSafePlace = contact.relationship === 'safe_place'
+                const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(' ')
+                return (
+                  <div
+                    key={index}
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/40"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex-shrink-0">
+                        {isSafePlace ? (
+                          <MapPin className="w-5 h-5 text-primary-600" />
+                        ) : (
+                          <User className="w-5 h-5 text-primary-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">{contact.title}</p>
+                        {fullName && (
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{fullName}</p>
+                        )}
+                        <span className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+                          {isSafePlace ? (
+                            <>
+                              <MapPin className="w-3 h-3 mr-1" />
+                              Safe drop-off location
+                            </>
+                          ) : (
+                            relationshipLabel(contact.relationship)
+                          )}
+                        </span>
+
+                        {(hasPhone(contact.phone1) || hasPhone(contact.phone2)) && (
+                          <div className="mt-3 space-y-2">
+                            {hasPhone(contact.phone1) && (
+                              <a
+                                href={phoneHref(contact.phone1)}
+                                className="flex items-center gap-2 text-sm font-medium text-primary-700 dark:text-primary-300 hover:underline"
+                              >
+                                <Phone className="w-4 h-4 flex-shrink-0" />
+                                {phoneDisplay(contact.phone1)}
+                              </a>
+                            )}
+                            {hasPhone(contact.phone2) && (
+                              <a
+                                href={phoneHref(contact.phone2)}
+                                className="flex items-center gap-2 text-sm font-medium text-primary-700 dark:text-primary-300 hover:underline"
+                              >
+                                <Phone className="w-4 h-4 flex-shrink-0" />
+                                {phoneDisplay(contact.phone2)}
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {hasAddress(contact.address) && (
+                          <a
+                            href={`https://maps.google.com/?q=${encodeURIComponent(formatAddress(contact.address))}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-300"
+                          >
+                            <Home className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>{formatAddress(contact.address)}</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {isOwner && lostStatus && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
             <div className="flex items-center">
@@ -352,6 +511,13 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                 Your pet is marked as lost. Click Report Found below when they&apos;re back safe.
               </p>
             </div>
+            <Link
+              href="/dashboard/rescue-crew"
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Manage your Rescue Crew
+            </Link>
           </div>
         )}
 

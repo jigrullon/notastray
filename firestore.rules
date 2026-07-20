@@ -8,6 +8,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Rescue Crew — owner-only emergency contacts (public exposure is gated
+    // server-side via the Admin SDK when the pet is marked lost; never read directly)
+    match /users/{userId}/rescueCrew/{contactId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Owners — own data only
     match /owners/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;

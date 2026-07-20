@@ -15,7 +15,7 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "next lint",
+    "lint": "eslint app components lib --ext .ts,.tsx",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "reset": "./scripts/dev-reset.sh"
   },
