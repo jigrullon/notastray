@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { adminAuth } from '@/lib/firebaseAdmin';
+import { verifyBearerToken } from '@/lib/apiAuth';
 import { generateVerificationToken } from '@/lib/emailVerification';
 import { getEmailVerificationEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
@@ -20,32 +20,12 @@ const ratelimit = new Ratelimit({
 
 export async function POST(request: NextRequest) {
   // ── 1. Authenticate: require Bearer token ──────────────────────────────
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json(
-      { success: false, error: 'Missing or invalid authorization header' },
-      { status: 401 }
-    );
-  }
+  const { decoded, error } = await verifyBearerToken(request);
+  if (error) return error;
 
-  const idToken = authHeader.slice(7);
-
-  let uid: string;
-  let email: string;
-  let emailVerified: boolean;
-
-  try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    uid = decoded.uid;
-    email = decoded.email ?? '';
-    emailVerified = decoded.email_verified ?? false;
-  } catch (err) {
-    console.error('send-verification-email: token verification failed', err);
-    return NextResponse.json(
-      { success: false, error: 'Invalid or expired authorization token' },
-      { status: 401 }
-    );
-  }
+  const uid = decoded.uid;
+  const email = decoded.email ?? '';
+  const emailVerified = decoded.email_verified ?? false;
 
   if (!email) {
     return NextResponse.json(

@@ -1,3 +1,14 @@
+// Escapes HTML metacharacters before interpolating user-controlled strings
+// into an email's HTML body (never apply this to the plain-text body).
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export interface OrderConfirmationEmailData {
   orderId: string;
   confirmationCode: string;
@@ -70,8 +81,8 @@ export function getOrderConfirmationEmail(data: OrderConfirmationEmailData) {
         `
         <tr>
           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-            <strong>${item.name}</strong><br>
-            <span style="color: #666; font-size: 14px;">${item.color} / ${item.size}</span><br>
+            <strong>${escapeHtml(item.name)}</strong><br>
+            <span style="color: #666; font-size: 14px;">${escapeHtml(item.color)} / ${escapeHtml(item.size)}</span><br>
             <span style="color: #666; font-size: 14px;">Qty: ${item.quantity}</span>
           </td>
           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
@@ -100,11 +111,11 @@ export function getOrderConfirmationEmail(data: OrderConfirmationEmailData) {
 
           <!-- Content -->
           <div style="padding: 32px;">
-            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+            <p style="font-size: 16px;">Hi ${escapeHtml(data.customerName || 'there')},</p>
 
             <p style="font-size: 16px;">Thank you for your order! We've received it and it's being prepared for shipment.</p>
 
-            <h2 style="color: #047857; font-size: 18px; margin: 24px 0 12px 0;">Order #${data.orderId}</h2>
+            <h2 style="color: #047857; font-size: 18px; margin: 24px 0 12px 0;">Order #${escapeHtml(data.orderId)}</h2>
 
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
@@ -135,24 +146,24 @@ export function getOrderConfirmationEmail(data: OrderConfirmationEmailData) {
 
             <h3 style="color: #047857; font-size: 16px; margin-top: 24px; margin-bottom: 8px;">Expected Delivery</h3>
             <p style="margin: 0; font-size: 15px; color: #666;">
-              ${data.estimatedDeliveryMin} — ${data.estimatedDeliveryMax}
+              ${escapeHtml(data.estimatedDeliveryMin)} — ${escapeHtml(data.estimatedDeliveryMax)}
             </p>
 
             <h3 style="color: #047857; font-size: 16px; margin-top: 24px; margin-bottom: 8px;">Shipping To</h3>
             <p style="margin: 0; font-size: 15px; color: #666;">
-              ${data.shippingAddress.name}<br>
-              ${data.shippingAddress.line1}${data.shippingAddress.line2 ? '<br>' + data.shippingAddress.line2 : ''}<br>
-              ${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.postalCode}
+              ${escapeHtml(data.shippingAddress.name)}<br>
+              ${escapeHtml(data.shippingAddress.line1)}${data.shippingAddress.line2 ? '<br>' + escapeHtml(data.shippingAddress.line2) : ''}<br>
+              ${escapeHtml(data.shippingAddress.city)}, ${escapeHtml(data.shippingAddress.state)} ${escapeHtml(data.shippingAddress.postalCode)}
             </p>
 
             ${data.orderConfirmationUrl ? `
             <div style="text-align: center; margin-top: 32px;">
-              <a href="${data.orderConfirmationUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Your Order</a>
+              <a href="${escapeHtml(data.orderConfirmationUrl)}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Your Order</a>
             </div>
             ` : ''}
 
             <p style="color: #999; font-size: 13px; margin-top: 32px; text-align: center;">
-              Confirmation Code: ${data.confirmationCode}
+              Confirmation Code: ${escapeHtml(data.confirmationCode)}
             </p>
           </div>
 
@@ -255,7 +266,7 @@ export function getActivationReminderEmail(data: ActivationReminderEmailData) {
 
           <!-- Content -->
           <div style="padding: 32px;">
-            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+            <p style="font-size: 16px;">Hi ${escapeHtml(data.customerName || 'there')},</p>
 
             <p style="font-size: 16px;">Great news! Your NotAStray pet tag${data.petTagsCount > 1 ? 's have' : ' has'} arrived and are ready to protect your furry friend. Now comes the important part—let's activate it!</p>
 
@@ -268,7 +279,7 @@ export function getActivationReminderEmail(data: ActivationReminderEmailData) {
             </ol>
 
             <div style="text-align: center; margin: 32px 0;">
-              <a href="${data.activationUrl}" style="background-color: #047857; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Activate Your Tag Now</a>
+              <a href="${escapeHtml(data.activationUrl)}" style="background-color: #047857; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Activate Your Tag Now</a>
             </div>
 
             <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
@@ -282,7 +293,7 @@ export function getActivationReminderEmail(data: ActivationReminderEmailData) {
             </p>
 
             <p style="margin-top: 32px; color: #999; font-size: 13px;">
-              Order #: ${data.orderId}
+              Order #: ${escapeHtml(data.orderId)}
             </p>
 
             <div style="text-align: center; margin-top: 32px;">
@@ -361,33 +372,33 @@ export function getActivationConfirmationEmail(data: ActivationConfirmationEmail
 
           <!-- Content -->
           <div style="padding: 32px;">
-            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+            <p style="font-size: 16px;">Hi ${escapeHtml(data.customerName || 'there')},</p>
 
-            <p style="font-size: 16px;">Great news! Your NotAStray pet tag has been successfully activated and registered for <strong>${data.petName}</strong>.</p>
+            <p style="font-size: 16px;">Great news! Your NotAStray pet tag has been successfully activated and registered for <strong>${escapeHtml(data.petName)}</strong>.</p>
 
             <div style="background-color: #f0fdf4; border-left: 4px solid #047857; padding: 20px; margin: 24px 0; border-radius: 4px;">
               <p style="margin: 0 0 12px 0; font-size: 14px; color: #666;"><strong>TAG DETAILS</strong></p>
               <div style="margin: 0;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
                   <span>Pet Name:</span>
-                  <strong style="color: #047857;">${data.petName}</strong>
+                  <strong style="color: #047857;">${escapeHtml(data.petName)}</strong>
                 </div>
                 ${data.petSpecies ? `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
                   <span>Species:</span>
-                  <strong style="color: #047857;">${data.petSpecies}</strong>
+                  <strong style="color: #047857;">${escapeHtml(data.petSpecies)}</strong>
                 </div>
                 ` : ''}
                 <div style="display: flex; justify-content: space-between; font-size: 15px;">
                   <span>Tag Code:</span>
-                  <strong style="color: #047857; font-family: monospace;">${data.tagCode}</strong>
+                  <strong style="color: #047857; font-family: monospace;">${escapeHtml(data.tagCode)}</strong>
                 </div>
               </div>
             </div>
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">Your Pet is Now Protected</h3>
             <p style="margin: 0 0 12px 0; color: #666; font-size: 15px;">
-              Anyone who finds your pet and scans the QR code on the tag will be directed to ${data.petName}'s profile page with your contact information. You'll receive instant SMS and email alerts if someone scans the tag.
+              Anyone who finds your pet and scans the QR code on the tag will be directed to ${escapeHtml(data.petName)}'s profile page with your contact information. You'll receive instant SMS and email alerts if someone scans the tag.
             </p>
 
             <p style="margin: 0; color: #666; font-size: 15px;">
@@ -395,7 +406,7 @@ export function getActivationConfirmationEmail(data: ActivationConfirmationEmail
             </p>
 
             <div style="text-align: center; margin: 32px 0;">
-              <a href="${data.dashboardUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Your Pet's Profile</a>
+              <a href="${escapeHtml(data.dashboardUrl)}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Your Pet's Profile</a>
             </div>
 
             <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
@@ -503,7 +514,7 @@ export function getRenewalReminderEmail(data: RenewalReminderEmailData) {
 
           <!-- Content -->
           <div style="padding: 32px;">
-            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+            <p style="font-size: 16px;">Hi ${escapeHtml(data.customerName || 'there')},</p>
 
             <p style="font-size: 16px;">We wanted to give you a heads up—your NotAStray subscription renews in 3 days.</p>
 
@@ -516,7 +527,7 @@ export function getRenewalReminderEmail(data: RenewalReminderEmailData) {
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0; font-size: 15px;">
                   <span>Renewal Date:</span>
-                  <strong style="color: #047857;">${data.renewalDate}</strong>
+                  <strong style="color: #047857;">${escapeHtml(data.renewalDate)}</strong>
                 </div>
               </div>
               <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 12px;">
@@ -539,7 +550,7 @@ export function getRenewalReminderEmail(data: RenewalReminderEmailData) {
             </div>
 
             <div style="text-align: center; margin: 32px 0;">
-              <a href="${data.manageSubscriptionUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
+              <a href="${escapeHtml(data.manageSubscriptionUrl)}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
             </div>
 
             <p style="color: #666; font-size: 14px; margin: 24px 0;">
@@ -624,7 +635,7 @@ export function getMerchantOrderEmail(data: MerchantOrderEmailData) {
       ([variant, qty]) => `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${qty}x</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${variant}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(variant)}</td>
       </tr>
     `
     )
@@ -648,13 +659,13 @@ export function getMerchantOrderEmail(data: MerchantOrderEmailData) {
 
           <!-- Content -->
           <div style="padding: 32px;">
-            <h2 style="color: #047857; margin: 0 0 8px 0;">Order #${data.orderId}</h2>
-            <p style="margin: 0; color: #666; font-size: 14px;">Confirmation Code: ${data.confirmationCode}</p>
+            <h2 style="color: #047857; margin: 0 0 8px 0;">Order #${escapeHtml(data.orderId)}</h2>
+            <p style="margin: 0; color: #666; font-size: 14px;">Confirmation Code: ${escapeHtml(data.confirmationCode)}</p>
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 8px 0;">Customer</h3>
             <p style="margin: 0; font-size: 15px;">
-              <strong>${data.customerName}</strong><br>
-              ${data.customerEmail}
+              <strong>${escapeHtml(data.customerName)}</strong><br>
+              ${escapeHtml(data.customerEmail)}
             </p>
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 8px 0;">Items to Pack</h3>
@@ -672,9 +683,9 @@ export function getMerchantOrderEmail(data: MerchantOrderEmailData) {
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 8px 0;">Shipping Address</h3>
             <p style="margin: 0; font-size: 15px; color: #666;">
-              ${data.shippingAddress.name}<br>
-              ${data.shippingAddress.line1}${data.shippingAddress.line2 ? '<br>' + data.shippingAddress.line2 : ''}<br>
-              ${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.postalCode}
+              ${escapeHtml(data.shippingAddress.name)}<br>
+              ${escapeHtml(data.shippingAddress.line1)}${data.shippingAddress.line2 ? '<br>' + escapeHtml(data.shippingAddress.line2) : ''}<br>
+              ${escapeHtml(data.shippingAddress.city)}, ${escapeHtml(data.shippingAddress.state)} ${escapeHtml(data.shippingAddress.postalCode)}
             </p>
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">Order Summary</h3>
@@ -780,19 +791,19 @@ export function getEmailVerificationEmail(data: EmailVerificationEmailData) {
 
           <!-- Content -->
           <div style="padding: 32px;">
-            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+            <p style="font-size: 16px;">Hi ${escapeHtml(data.customerName || 'there')},</p>
 
             <p style="font-size: 16px;">Welcome to NotAStray! Please verify your email address to complete your account setup and start protecting your pet.</p>
 
             <div style="text-align: center; margin: 32px 0;">
-              <a href="${data.verifyUrl}" style="background-color: #047857; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Verify My Email</a>
+              <a href="${escapeHtml(data.verifyUrl)}" style="background-color: #047857; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Verify My Email</a>
             </div>
 
             <p style="font-size: 14px; color: #666; margin: 24px 0 8px 0;">
               If the button above doesn't work, copy and paste this link into your browser:
             </p>
             <p style="font-size: 13px; color: #047857; word-break: break-all; margin: 0 0 24px 0;">
-              ${data.verifyUrl}
+              ${escapeHtml(data.verifyUrl)}
             </p>
 
             <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
@@ -851,6 +862,97 @@ Keeping pets safe, one tag at a time.
   };
 }
 
+export interface PasswordChangedEmailData {
+  customerName?: string;
+  changedAt: string;
+  resetUrl: string;
+}
+
+export function getPasswordChangedEmail(data: PasswordChangedEmailData) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+      </head>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+
+          <!-- Header with Logo -->
+          <div style="background-color: #047857; color: white; padding: 24px; text-align: center;">
+            <img src="https://the-well-images.s3.us-east-1.amazonaws.com/logo-darkmode.jpeg" alt="NotAStray" style="height: 40px; margin-bottom: 12px;">
+            <p style="margin: 8px 0 0 0; font-size: 18px;">Your Password Was Changed</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 32px;">
+            <p style="font-size: 16px;">Hi ${escapeHtml(data.customerName || 'there')},</p>
+
+            <p style="font-size: 16px;">
+              This is a confirmation that the password for your NotAStray account was changed on ${escapeHtml(data.changedAt)}.
+            </p>
+
+            <div style="background-color: #fef3c7; border: 1px solid #fcd34d; padding: 16px; margin: 24px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: #92400e;">
+                <strong>Didn't make this change?</strong> Reset your password immediately and contact us at support@notastray.com.
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${escapeHtml(data.resetUrl)}" style="background-color: #047857; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Reset My Password</a>
+            </div>
+
+            <p style="color: #999; font-size: 13px; margin: 24px 0 0 0;">
+              If you made this change, no further action is needed.
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 8px 0;">
+              Questions? Email us at <a href="mailto:support@notastray.com" style="color: #047857; text-decoration: none;">support@notastray.com</a>
+            </p>
+            <p style="margin: 0 0 12px 0;">
+              <a href="https://notastray.com" style="color: #047857; text-decoration: none; font-weight: bold;">NotAStray.com</a>
+            </p>
+            <p style="margin: 0; font-size: 11px; color: #999;">
+              Keeping pets safe, one tag at a time.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+Your Password Was Changed
+
+Hi ${data.customerName || 'there'},
+
+This is a confirmation that the password for your NotAStray account was changed on ${data.changedAt}.
+
+Didn't make this change? Reset your password immediately here:
+${data.resetUrl}
+
+Then contact us at support@notastray.com.
+
+If you made this change, no further action is needed.
+
+Questions? Email us at support@notastray.com
+
+---
+NotAStray.com
+Keeping pets safe, one tag at a time.
+  `;
+
+  return {
+    subject: 'Your NotAStray password was changed',
+    html,
+    text,
+  };
+}
+
 export function getLostPetNotificationEmail(data: LostPetNotificationEmailData) {
   const html = `
     <!DOCTYPE html>
@@ -876,16 +978,16 @@ export function getLostPetNotificationEmail(data: LostPetNotificationEmailData) 
               <div style="margin: 0;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
                   <span style="font-weight: bold;">Name:</span>
-                  <span>${data.petName}</span>
+                  <span>${escapeHtml(data.petName)}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
                   <span style="font-weight: bold;">Species:</span>
-                  <span>${data.species}</span>
+                  <span>${escapeHtml(data.species)}</span>
                 </div>
                 ${data.breed ? `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;">
                   <span style="font-weight: bold;">Breed:</span>
-                  <span>${data.breed}</span>
+                  <span>${escapeHtml(data.breed)}</span>
                 </div>
                 ` : ''}
               </div>
@@ -893,23 +995,23 @@ export function getLostPetNotificationEmail(data: LostPetNotificationEmailData) 
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">Owner Information</h3>
             <div style="background-color: #f3f4f6; border-left: 4px solid #047857; padding: 16px; margin-bottom: 24px;">
-              ${data.ownerName ? `<p style="margin: 0 0 8px 0; font-size: 15px;"><strong>Name:</strong> ${data.ownerName}</p>` : ''}
-              ${data.ownerPhone ? `<p style="margin: 0 0 8px 0; font-size: 15px;"><strong>Phone:</strong> ${data.ownerPhone}</p>` : ''}
-              ${data.ownerEmail ? `<p style="margin: 0; font-size: 15px;"><strong>Email:</strong> ${data.ownerEmail}</p>` : ''}
+              ${data.ownerName ? `<p style="margin: 0 0 8px 0; font-size: 15px;"><strong>Name:</strong> ${escapeHtml(data.ownerName)}</p>` : ''}
+              ${data.ownerPhone ? `<p style="margin: 0 0 8px 0; font-size: 15px;"><strong>Phone:</strong> ${escapeHtml(data.ownerPhone)}</p>` : ''}
+              ${data.ownerEmail ? `<p style="margin: 0; font-size: 15px;"><strong>Email:</strong> ${escapeHtml(data.ownerEmail)}</p>` : ''}
             </div>
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">Lost Location</h3>
             <p style="margin: 0 0 24px 0; font-size: 15px; color: #666;">
-              ${data.lostLocation}
+              ${escapeHtml(data.lostLocation)}
             </p>
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 12px 0;">Date Lost</h3>
             <p style="margin: 0 0 24px 0; font-size: 15px; color: #666;">
-              ${data.lostDate}
+              ${escapeHtml(data.lostDate)}
             </p>
 
             <div style="text-align: center; margin: 32px 0;">
-              <a href="${data.reportUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Full Report</a>
+              <a href="${escapeHtml(data.reportUrl)}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Full Report</a>
             </div>
 
             <div style="background-color: #f0f9ff; border: 1px solid #cffafe; padding: 16px; margin: 24px 0; border-radius: 4px;">
@@ -920,7 +1022,7 @@ export function getLostPetNotificationEmail(data: LostPetNotificationEmailData) 
             </div>
 
             <p style="color: #999; font-size: 13px; margin: 24px 0 0 0;">
-              Tag Code: <strong>${data.tagCode}</strong>
+              Tag Code: <strong>${escapeHtml(data.tagCode)}</strong>
             </p>
           </div>
 
@@ -1011,7 +1113,7 @@ export function getSubscriptionConfirmationEmail(data: SubscriptionConfirmationE
 
           <!-- Content -->
           <div style="padding: 32px;">
-            <p style="font-size: 16px;">Hi ${data.customerName || 'there'},</p>
+            <p style="font-size: 16px;">Hi ${escapeHtml(data.customerName || 'there')},</p>
 
             <p style="font-size: 16px;">Thank you for subscribing to the NotAStray PROTECT Plan! Your subscription is now active and your pet is protected with instant alerts.</p>
 
@@ -1024,7 +1126,7 @@ export function getSubscriptionConfirmationEmail(data: SubscriptionConfirmationE
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0; font-size: 15px;">
                   <span>Next Renewal Date:</span>
-                  <strong style="color: #047857;">${data.renewalDate}</strong>
+                  <strong style="color: #047857;">${escapeHtml(data.renewalDate)}</strong>
                 </div>
               </div>
               <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 12px;">
@@ -1047,7 +1149,7 @@ export function getSubscriptionConfirmationEmail(data: SubscriptionConfirmationE
             </div>
 
             <div style="text-align: center; margin: 32px 0;">
-              <a href="${data.dashboardUrl}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Manage Your Subscription</a>
+              <a href="${escapeHtml(data.dashboardUrl)}" style="background-color: #047857; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Manage Your Subscription</a>
             </div>
 
             <p style="color: #999; font-size: 13px; margin: 24px 0 0 0;">
@@ -1143,8 +1245,8 @@ export function getMerchantSubscriptionEmail(data: MerchantSubscriptionEmailData
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 8px 0;">Customer</h3>
             <p style="margin: 0; font-size: 15px;">
-              <strong>${data.customerName || 'Customer'}</strong><br>
-              ${data.customerEmail}
+              <strong>${escapeHtml(data.customerName || 'Customer')}</strong><br>
+              ${escapeHtml(data.customerEmail)}
             </p>
 
             <h3 style="color: #047857; font-size: 16px; margin: 24px 0 8px 0;">Subscription</h3>

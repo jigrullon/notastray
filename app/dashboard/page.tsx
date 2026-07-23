@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, collection, getDocs, query, where, documentId } from 'firebase/firestore'
-import { Loader2, Package, Settings, Heart, Shield, Check, QrCode, AlertTriangle, Activity, Users } from 'lucide-react'
+import { Loader2, Package, Settings, Heart, Shield, Check, QrCode, AlertTriangle, Activity, Users, Lock } from 'lucide-react'
 import Link from 'next/link'
 
 interface SubscriptionData {
@@ -49,6 +49,14 @@ function DashboardContent() {
   const [subscribeError, setSubscribeError] = useState<string | null>(null)
   const [tags, setTags] = useState<TagData[]>([])
   const [tagsLoading, setTagsLoading] = useState(true)
+  const [showPasswordChanged, setShowPasswordChanged] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('passwordChanged') === '1') {
+      setShowPasswordChanged(true)
+      router.replace('/dashboard', { scroll: false })
+    }
+  }, [searchParams, router])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -340,6 +348,21 @@ function DashboardContent() {
           </div>
         )}
 
+        {showPasswordChanged && (
+          <div className="mb-6 flex items-center justify-between gap-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-green-800 dark:text-green-300">
+              <Check className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Your password has been changed successfully.</span>
+            </div>
+            <button
+              onClick={() => setShowPasswordChanged(false)}
+              className="text-green-700 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200 text-sm font-medium"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
@@ -450,6 +473,25 @@ function DashboardContent() {
               </div>
               <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-colors">
                 <Activity className="w-5 h-5 text-amber-600" />
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/settings/security"
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 transition-colors">
+                  Change Your Password
+                </h3>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Update your account password
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                <Lock className="w-5 h-5 text-red-600" />
               </div>
             </div>
           </Link>

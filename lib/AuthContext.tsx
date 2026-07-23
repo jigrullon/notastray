@@ -7,6 +7,9 @@ import {
     signOut,
     sendPasswordResetEmail,
     updateProfile,
+    updatePassword,
+    reauthenticateWithCredential,
+    EmailAuthProvider,
     User,
     UserCredential,
     GoogleAuthProvider,
@@ -40,6 +43,23 @@ async function sendCustomVerificationEmail(user: User, continueUrl?: string): Pr
     }
 }
 
+// Fires the "your password was changed" security alert without blocking the
+// caller — the password change itself has already succeeded by the time this
+// runs, so a slow or failed notification should never hold up the UI.
+function notifyPasswordChanged(user: User): void {
+    user.getIdToken()
+        .then((idToken) => fetch('/api/user/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${idToken}`,
+            },
+        }))
+        .catch((notifyError) => {
+            console.error('Failed to send password change notification:', notifyError);
+        });
+}
+
 interface AuthContextType {
     user: User | null;
     loading: boolean;
@@ -49,6 +69,7 @@ interface AuthContextType {
     // signInWithGoogle: () => Promise<UserCredential>;
     logOut: () => Promise<void>;
     resetPassword: (email: string) => Promise<void>;
+    changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
     resendVerificationEmail: () => Promise<void>;
 }
 
@@ -147,6 +168,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return sendPasswordResetEmail(auth, email);
     };
 
+    // Changes the password for the currently signed-in user. Requires the current
+    // password to reauthenticate (Firebase rejects updatePassword on a stale session
+    // otherwise). Does not sign the user out — updatePassword keeps the current
+    // session valid, so no re-login is needed afterward.
+    const changePassword = async (currentPassword: string, newPassword: string) => {
+        const currentUser = auth.currentUser;
+        if (!currentUser || !currentUser.email) {
+            throw new Error('You must be signed in to change your password.');
+        }
+
+        const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+        await reauthenticateWithCredential(currentUser, credential);
+        await updatePassword(currentUser, newPassword);
+
+        notifyPasswordChanged(currentUser);
+    };
+
     const resendVerificationEmail = async () => {
         if (!auth.currentUser) {
             throw new Error('You must be signed in to resend a verification email.');
@@ -164,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // signInWithGoogle,
             logOut,
             resetPassword,
+            changePassword,
             resendVerificationEmail
         }}>
             {children}
