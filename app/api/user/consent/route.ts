@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
+import { verifyBearerToken } from '@/lib/apiAuth'
 
 interface ConsentUpdate {
     preferences: {
@@ -15,25 +16,9 @@ interface ConsentUpdate {
 
 export async function POST(request: Request) {
     try {
-        const authHeader = request.headers.get('authorization')
-        if (!authHeader?.startsWith('Bearer ')) {
-            return NextResponse.json(
-                { success: false, error: 'Missing or invalid authorization header' },
-                { status: 401 }
-            )
-        }
-
-        const token = authHeader.substring(7)
-        let uid: string
-        try {
-            const decodedToken = await adminAuth.verifyIdToken(token)
-            uid = decodedToken.uid
-        } catch {
-            return NextResponse.json(
-                { success: false, error: 'Invalid or expired token' },
-                { status: 401 }
-            )
-        }
+        const { decoded, error } = await verifyBearerToken(request)
+        if (error) return error
+        const uid = decoded.uid
 
         const body = await request.json()
         const {
