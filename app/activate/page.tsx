@@ -45,6 +45,7 @@ function ActivateContent() {
     vetName: '',
     vetAddress: '',
     allergies: '',
+    behavioralNotes: '',
     goodWithDogs: '' as '' | 'yes' | 'no' | 'unsure',
     goodWithCats: '' as '' | 'yes' | 'no' | 'unsure',
     goodWithChildren: '' as '' | 'yes' | 'no' | 'unsure',
@@ -133,6 +134,7 @@ function ActivateContent() {
             vetName: pet.vetName || '',
             vetAddress: pet.vetAddress || '',
             allergies: pet.allergies || '',
+            behavioralNotes: pet.behavioralNotes || '',
             goodWithDogs: (pet.goodWithDogs || '') as '' | 'yes' | 'no' | 'unsure',
             goodWithCats: (pet.goodWithCats || '') as '' | 'yes' | 'no' | 'unsure',
             goodWithChildren: (pet.goodWithChildren || '') as '' | 'yes' | 'no' | 'unsure',
@@ -169,6 +171,7 @@ function ActivateContent() {
             vetName: petData.vetName,
             vetAddress: petData.vetAddress,
             allergies: petData.allergies,
+            behavioralNotes: petData.behavioralNotes,
             goodWithDogs: petData.goodWithDogs,
             goodWithCats: petData.goodWithCats,
             goodWithChildren: petData.goodWithChildren,
@@ -255,6 +258,7 @@ function ActivateContent() {
           vetName: pet.vetName || '',
           vetAddress: pet.vetAddress || '',
           allergies: pet.allergies || '',
+          behavioralNotes: pet.behavioralNotes || '',
           goodWithDogs: (pet.goodWithDogs || '') as '' | 'yes' | 'no' | 'unsure',
           goodWithCats: (pet.goodWithCats || '') as '' | 'yes' | 'no' | 'unsure',
           goodWithChildren: (pet.goodWithChildren || '') as '' | 'yes' | 'no' | 'unsure',
@@ -308,6 +312,7 @@ function ActivateContent() {
           vetName: petData.vetName,
           vetAddress: petData.vetAddress,
           allergies: petData.allergies,
+          behavioralNotes: petData.behavioralNotes,
           goodWithDogs: petData.goodWithDogs,
           goodWithCats: petData.goodWithCats,
           goodWithChildren: petData.goodWithChildren,
@@ -663,6 +668,24 @@ function ActivateContent() {
                   placeholder="List any allergies, medications, or medical conditions..."
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                 />
+              </div>
+
+              {/* Behavioral Notes */}
+              <div>
+                <label htmlFor="behavioralNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Behavioral Notes
+                </label>
+                <textarea
+                  id="behavioralNotes"
+                  value={petData.behavioralNotes}
+                  onChange={(e) => setPetData({ ...petData, behavioralNotes: e.target.value })}
+                  rows={3}
+                  placeholder={'e.g. "Scared of thunder," "Doesn\'t like men or people with hats," "Shy around strangers"...'}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Anything a finder should know about your pet&apos;s temperament — not medical.
+                </p>
               </div>
 
               {/* Temperament */}

@@ -82,6 +82,7 @@ interface PetData {
   vet: string
   vetAddress: string
   allergies: string
+  behavioralNotes: string
   goodWithDogs: 'yes' | 'no' | 'unsure'
   goodWithCats: 'yes' | 'no' | 'unsure'
   goodWithChildren: 'yes' | 'no' | 'unsure'
@@ -323,6 +324,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           vetName: editData.vet,
           vetAddress: editData.vetAddress,
           allergies: editData.allergies,
+          behavioralNotes: editData.behavioralNotes,
           goodWithDogs: editData.goodWithDogs,
           goodWithCats: editData.goodWithCats,
           goodWithChildren: editData.goodWithChildren,
@@ -783,6 +785,32 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               ) : (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                   <p className="text-red-800 dark:text-red-300">{petData.allergies}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Behavioral Notes */}
+          {(editing || petData.behavioralNotes) && (
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                <AlertTriangle className="w-5 h-5 mr-2 text-amber-500" />
+                Behavioral Notes
+              </h2>
+              {editing ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Temperament &amp; behavior</label>
+                  <textarea
+                    value={editData.behavioralNotes}
+                    onChange={(e) => setEditData({ ...editData, behavioralNotes: e.target.value })}
+                    className={`${inputClass} resize-none`}
+                    rows={3}
+                    placeholder={'e.g. "Scared of thunder," "Doesn\'t like men or people with hats"'}
+                  />
+                </div>
+              ) : (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <p className="text-amber-800 dark:text-amber-300">{petData.behavioralNotes}</p>
                 </div>
               )}
             </div>

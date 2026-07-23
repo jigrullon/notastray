@@ -45,6 +45,7 @@ export async function POST(request: Request) {
         vetName: '',
         vetAddress: '',
         allergies: '',
+        behavioralNotes: '',
         goodWithDogs: false,
         goodWithCats: false,
         goodWithChildren: false,

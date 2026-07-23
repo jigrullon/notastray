@@ -28,6 +28,7 @@ async function getPetData(code: string) {
         vet: pet.vetName?.stringValue || '',
         vetAddress: pet.vetAddress?.stringValue || '',
         allergies: pet.allergies?.stringValue || '',
+        behavioralNotes: pet.behavioralNotes?.stringValue || '',
         goodWithDogs: (pet.goodWithDogs?.stringValue as 'yes' | 'no' | 'unsure') || 'unsure',
         goodWithCats: (pet.goodWithCats?.stringValue as 'yes' | 'no' | 'unsure') || 'unsure',
         goodWithChildren: (pet.goodWithChildren?.stringValue as 'yes' | 'no' | 'unsure') || 'unsure',
