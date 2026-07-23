@@ -2,11 +2,16 @@ import {
   collection,
   doc,
   getDocs,
-  addDoc,
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+
+// Contacts are capped to keep the list to genuinely close contacts and to
+// prevent a client from flooding the database with unlimited entries.
+// Enforced server-side in app/api/rescue-crew/route.ts — this constant is
+// only used here for the client-facing error message and UI state.
+export const MAX_RESCUE_CREW_CONTACTS = 5;
 
 // --- Types ---
 
@@ -86,17 +91,31 @@ export async function listContacts(uid: string): Promise<RescueCrewContact[]> {
   }));
 }
 
+// Creates go through a server API (instead of a direct client addDoc) so the
+// contact cap can be enforced server-side — a direct Firestore write from the
+// client couldn't be trusted to respect it.
 export async function addContact(
-  uid: string,
   data: Omit<RescueCrewContact, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
-  const now = new Date().toISOString();
-  const ref = await addDoc(contactsCollection(uid), {
-    ...data,
-    createdAt: now,
-    updatedAt: now,
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) {
+    throw new Error('You must be signed in to add a Rescue Crew contact.');
+  }
+
+  const res = await fetch('/api/rescue-crew', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(data),
   });
-  return ref.id;
+
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.error || 'Failed to add contact');
+  }
+  return json.id as string;
 }
 
 export async function updateContact(

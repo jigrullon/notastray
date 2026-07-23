@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import {
   listContacts, addContact, updateContact, deleteContact,
-  RELATIONSHIP_OPTIONS,
+  RELATIONSHIP_OPTIONS, MAX_RESCUE_CREW_CONTACTS,
   type RescueCrewContact,
   type RescueCrewPhone,
   type RescueCrewAddress,
@@ -142,8 +142,10 @@ export default function RescueCrewPage() {
   }, [user, loadData])
 
   const petNameForCode = (code: string) => tags.find(t => t.code === code)?.petName || code
+  const atCap = contacts.length >= MAX_RESCUE_CREW_CONTACTS
 
   const openAddForm = () => {
+    if (atCap) return
     setEditingId(null)
     setForm(emptyForm())
     setFormError(null)
@@ -251,7 +253,7 @@ export default function RescueCrewPage() {
       if (editingId) {
         await updateContact(user.uid, editingId, payload)
       } else {
-        await addContact(user.uid, payload)
+        await addContact(payload)
       }
       await loadData()
       closeForm()
@@ -315,13 +317,19 @@ export default function RescueCrewPage() {
             </p>
           </div>
           {!showForm && contacts.length > 0 && (
-            <button
-              onClick={openAddForm}
-              className="shrink-0 inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-400 text-white font-medium px-4 py-2.5 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Contact
-            </button>
+            atCap ? (
+              <p className="shrink-0 text-sm text-gray-500 dark:text-gray-400 max-w-xs sm:text-right">
+                You&apos;ve reached the maximum of {MAX_RESCUE_CREW_CONTACTS} contacts. Remove one to add another.
+              </p>
+            ) : (
+              <button
+                onClick={openAddForm}
+                className="shrink-0 inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-400 text-white font-medium px-4 py-2.5 rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Contact
+              </button>
+            )
           )}
         </div>
 
