@@ -33,6 +33,20 @@ function formatBirthday(birthday: string): string {
   return `${formatted} (${age} ${age === 1 ? 'year' : 'years'} old)`
 }
 
+// Joins gender / spayed-neutered / coloring into a single "Male • Neutered •
+// Golden with white patches" line, omitting whichever fields are unset.
+function formatPetDetails(
+  gender: 'male' | 'female' | '',
+  spayedNeutered: 'yes' | 'no' | '',
+  coloring: string
+): string {
+  const parts: string[] = []
+  if (gender) parts.push(gender === 'male' ? 'Male' : 'Female')
+  if (spayedNeutered) parts.push(spayedNeutered === 'yes' ? 'Spayed/Neutered' : 'Not spayed/neutered')
+  if (coloring) parts.push(coloring)
+  return parts.join(' • ')
+}
+
 // Map a Rescue Crew relationship value to its human-readable label.
 function relationshipLabel(value: string): string {
   return RELATIONSHIP_OPTIONS.find((o) => o.value === value)?.label || 'Contact'
@@ -76,12 +90,16 @@ interface PetData {
   name: string
   photo: string
   birthday: string
+  gender: 'male' | 'female' | ''
+  spayedNeutered: 'yes' | 'no' | ''
+  coloring: string
   owner: string
   address: string
   phone: string
   vet: string
   vetAddress: string
   allergies: string
+  behavioralNotes: string
   goodWithDogs: 'yes' | 'no' | 'unsure'
   goodWithCats: 'yes' | 'no' | 'unsure'
   goodWithChildren: 'yes' | 'no' | 'unsure'
@@ -317,12 +335,16 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           name: editData.name,
           photo: photoUrl,
           birthday: editData.birthday,
+          gender: editData.gender,
+          spayedNeutered: editData.spayedNeutered,
+          coloring: editData.coloring,
           ownerName: editData.owner,
           ownerAddress: editData.address,
           ownerPhone: editData.phone,
           vetName: editData.vet,
           vetAddress: editData.vetAddress,
           allergies: editData.allergies,
+          behavioralNotes: editData.behavioralNotes,
           goodWithDogs: editData.goodWithDogs,
           goodWithCats: editData.goodWithCats,
           goodWithChildren: editData.goodWithChildren,
@@ -678,6 +700,41 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                     className={`${inputClass} text-center text-sm`}
                   />
                 </div>
+                <div className="mt-3 max-w-xs mx-auto grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gender</label>
+                    <select
+                      value={editData.gender}
+                      onChange={(e) => setEditData({ ...editData, gender: e.target.value as 'male' | 'female' | '' })}
+                      className={`${inputClass} text-center text-sm`}
+                    >
+                      <option value="">Select...</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Spayed/Neutered</label>
+                    <select
+                      value={editData.spayedNeutered}
+                      onChange={(e) => setEditData({ ...editData, spayedNeutered: e.target.value as 'yes' | 'no' | '' })}
+                      className={`${inputClass} text-center text-sm`}
+                    >
+                      <option value="">Select...</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-2 max-w-xs mx-auto">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Coloring</label>
+                  <input
+                    value={editData.coloring}
+                    onChange={(e) => setEditData({ ...editData, coloring: e.target.value })}
+                    className={`${inputClass} text-center text-sm`}
+                    placeholder="e.g. Golden with white patches"
+                  />
+                </div>
               </>
             ) : (
               <>
@@ -688,6 +745,11 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                 {petData.birthday && (
                   <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                     Birthday: {formatBirthday(petData.birthday)}
+                  </p>
+                )}
+                {formatPetDetails(petData.gender, petData.spayedNeutered, petData.coloring) && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                    {formatPetDetails(petData.gender, petData.spayedNeutered, petData.coloring)}
                   </p>
                 )}
               </>
@@ -783,6 +845,32 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               ) : (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                   <p className="text-red-800 dark:text-red-300">{petData.allergies}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Behavioral Notes */}
+          {(editing || petData.behavioralNotes) && (
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                <AlertTriangle className="w-5 h-5 mr-2 text-amber-500" />
+                Behavioral Notes
+              </h2>
+              {editing ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Temperament &amp; behavior</label>
+                  <textarea
+                    value={editData.behavioralNotes}
+                    onChange={(e) => setEditData({ ...editData, behavioralNotes: e.target.value })}
+                    className={`${inputClass} resize-none`}
+                    rows={3}
+                    placeholder={'e.g. "Scared of thunder," "Doesn\'t like men or people with hats"'}
+                  />
+                </div>
+              ) : (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <p className="text-amber-800 dark:text-amber-300">{petData.behavioralNotes}</p>
                 </div>
               )}
             </div>

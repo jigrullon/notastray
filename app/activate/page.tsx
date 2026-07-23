@@ -41,10 +41,14 @@ function ActivateContent() {
     species: '',
     breed: '',
     birthday: '',
+    gender: '' as '' | 'male' | 'female',
+    spayedNeutered: '' as '' | 'yes' | 'no',
+    coloring: '',
     address: '',
     vetName: '',
     vetAddress: '',
     allergies: '',
+    behavioralNotes: '',
     goodWithDogs: '' as '' | 'yes' | 'no' | 'unsure',
     goodWithCats: '' as '' | 'yes' | 'no' | 'unsure',
     goodWithChildren: '' as '' | 'yes' | 'no' | 'unsure',
@@ -129,10 +133,14 @@ function ActivateContent() {
             species: pet.species || '',
             breed: pet.breed || '',
             birthday: pet.birthday || '',
+            gender: (pet.gender || '') as '' | 'male' | 'female',
+            spayedNeutered: (pet.spayedNeutered || '') as '' | 'yes' | 'no',
+            coloring: pet.coloring || '',
             address: pet.ownerAddress || '',
             vetName: pet.vetName || '',
             vetAddress: pet.vetAddress || '',
             allergies: pet.allergies || '',
+            behavioralNotes: pet.behavioralNotes || '',
             goodWithDogs: (pet.goodWithDogs || '') as '' | 'yes' | 'no' | 'unsure',
             goodWithCats: (pet.goodWithCats || '') as '' | 'yes' | 'no' | 'unsure',
             goodWithChildren: (pet.goodWithChildren || '') as '' | 'yes' | 'no' | 'unsure',
@@ -163,12 +171,16 @@ function ActivateContent() {
             species: petData.species,
             breed: petData.breed,
             birthday: petData.birthday,
+            gender: petData.gender,
+            spayedNeutered: petData.spayedNeutered,
+            coloring: petData.coloring,
             ownerName: ownerFirstName,
             ownerPhone: accountPhone,
             ownerAddress: petData.address,
             vetName: petData.vetName,
             vetAddress: petData.vetAddress,
             allergies: petData.allergies,
+            behavioralNotes: petData.behavioralNotes,
             goodWithDogs: petData.goodWithDogs,
             goodWithCats: petData.goodWithCats,
             goodWithChildren: petData.goodWithChildren,
@@ -251,10 +263,14 @@ function ActivateContent() {
           species: pet.species || '',
           breed: pet.breed || '',
           birthday: pet.birthday || '',
+          gender: (pet.gender || '') as '' | 'male' | 'female',
+          spayedNeutered: (pet.spayedNeutered || '') as '' | 'yes' | 'no',
+          coloring: pet.coloring || '',
           address: pet.ownerAddress || '',
           vetName: pet.vetName || '',
           vetAddress: pet.vetAddress || '',
           allergies: pet.allergies || '',
+          behavioralNotes: pet.behavioralNotes || '',
           goodWithDogs: (pet.goodWithDogs || '') as '' | 'yes' | 'no' | 'unsure',
           goodWithCats: (pet.goodWithCats || '') as '' | 'yes' | 'no' | 'unsure',
           goodWithChildren: (pet.goodWithChildren || '') as '' | 'yes' | 'no' | 'unsure',
@@ -302,12 +318,16 @@ function ActivateContent() {
           species: petData.species,
           breed: petData.breed,
           birthday: petData.birthday,
+          gender: petData.gender,
+          spayedNeutered: petData.spayedNeutered,
+          coloring: petData.coloring,
           ownerName: ownerFirstName,
           ownerPhone: accountPhone,
           ownerAddress: petData.address,
           vetName: petData.vetName,
           vetAddress: petData.vetAddress,
           allergies: petData.allergies,
+          behavioralNotes: petData.behavioralNotes,
           goodWithDogs: petData.goodWithDogs,
           goodWithCats: petData.goodWithCats,
           goodWithChildren: petData.goodWithChildren,
@@ -605,6 +625,53 @@ function ActivateContent() {
                 </div>
               </div>
 
+              {/* Gender, Spayed/Neutered & Coloring */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Gender
+                  </label>
+                  <select
+                    id="gender"
+                    value={petData.gender}
+                    onChange={(e) => setPetData({ ...petData, gender: e.target.value as '' | 'male' | 'female' })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  >
+                    <option value="">Select...</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="spayedNeutered" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Spayed/Neutered
+                  </label>
+                  <select
+                    id="spayedNeutered"
+                    value={petData.spayedNeutered}
+                    onChange={(e) => setPetData({ ...petData, spayedNeutered: e.target.value as '' | 'yes' | 'no' })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  >
+                    <option value="">Select...</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="coloring" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Coloring
+                  </label>
+                  <input
+                    type="text"
+                    id="coloring"
+                    value={petData.coloring}
+                    onChange={(e) => setPetData({ ...petData, coloring: e.target.value })}
+                    placeholder="e.g. Golden with white patches"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  />
+                </div>
+              </div>
+
               {/* Owner name & phone come from the account — the activating user
                   is the owner. Editable later from the pet profile if needed. */}
               <div>
@@ -663,6 +730,24 @@ function ActivateContent() {
                   placeholder="List any allergies, medications, or medical conditions..."
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                 />
+              </div>
+
+              {/* Behavioral Notes */}
+              <div>
+                <label htmlFor="behavioralNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Behavioral Notes
+                </label>
+                <textarea
+                  id="behavioralNotes"
+                  value={petData.behavioralNotes}
+                  onChange={(e) => setPetData({ ...petData, behavioralNotes: e.target.value })}
+                  rows={3}
+                  placeholder={'e.g. "Scared of thunder," "Doesn\'t like men or people with hats," "Shy around strangers"...'}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Anything a finder should know about your pet&apos;s temperament — not medical.
+                </p>
               </div>
 
               {/* Temperament */}
