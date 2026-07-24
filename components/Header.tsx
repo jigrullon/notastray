@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { Menu, X, Sun, Moon, ShoppingCart } from 'lucide-react'
+import { List, X, Sun, Moon, ShoppingCartSimple } from '@phosphor-icons/react'
 import { useAuth } from '@/lib/AuthContext'
 import { useTheme } from '@/lib/ThemeProvider'
 import { useCart } from '@/lib/CartContext'
@@ -78,10 +78,10 @@ export default function Header() {
             )}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              className="relative p-2 text-gray-600 hover:text-primary-700 dark:text-gray-400 dark:hover:text-primary-400 transition-colors duration-150 active:scale-95"
               aria-label="Open cart"
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCartSimple className="w-5 h-5" weight="regular" />
               {itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {itemCount}
@@ -90,10 +90,10 @@ export default function Header() {
             </button>
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+              className="p-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors duration-150 active:scale-95"
               aria-label="Toggle dark mode"
             >
-              {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+              {theme === 'dark' ? <Moon className="w-5 h-5" weight="regular" /> : <Sun className="w-5 h-5" weight="regular" />}
             </button>
             {user ? (
               <button onClick={handleSignOut} className="btn-primary">
@@ -108,10 +108,11 @@ export default function Header() {
 
           {/* Mobile menu button */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-gray-700 dark:text-gray-300 active:scale-95 transition-transform duration-150"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMenuOpen ? <X className="w-6 h-6" weight="regular" /> : <List className="w-6 h-6" weight="regular" />}
           </button>
         </div>
 
@@ -141,7 +142,7 @@ export default function Header() {
                 className="relative flex items-center p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                 aria-label="Open cart"
               >
-                <ShoppingCart className="w-5 h-5 mr-2" />
+                <ShoppingCartSimple className="w-5 h-5 mr-2" weight="regular" />
                 Cart
                 {itemCount > 0 && (
                   <span className="ml-2 bg-primary-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">

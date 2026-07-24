@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, CaretDown, CaretUp } from '@phosphor-icons/react'
 
 const faqs = [
   {
@@ -218,16 +218,16 @@ const faqs = [
 function FaqItem({ question, answer }: { question: string; answer: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-6 py-5 text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-5 text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
       >
         <span className="font-semibold text-gray-900 dark:text-gray-100 pr-4">{question}</span>
         {open ? (
-          <ChevronUp className="w-5 h-5 text-primary-600 flex-shrink-0" />
+          <CaretUp className="w-5 h-5 text-primary-600 flex-shrink-0" weight="bold" />
         ) : (
-          <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
+          <CaretDown className="w-5 h-5 text-gray-400 flex-shrink-0" weight="bold" />
         )}
       </button>
       {open && (
@@ -256,8 +256,8 @@ export default function FAQPage() {
               Back
             </button>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            Frequently Asked Questions
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 text-balance">
+            Frequently asked questions
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400">
             Everything you need to know about NotAStray tags and the PROTECT membership.
@@ -282,7 +282,7 @@ export default function FAQPage() {
           ))}
 
           {/* Still have questions */}
-          <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-lg p-6 text-center">
+          <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-2xl p-6 text-center">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Don&apos;t see your question answered?
             </h3>
@@ -300,9 +300,15 @@ export default function FAQPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-primary-600">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-white mb-4">
+      <section className="relative overflow-hidden py-20 bg-primary-700">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{ background: 'radial-gradient(circle at 25% 25%, rgba(255,255,255,0.10), transparent 55%)' }}
+        />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 w-72 h-72 rounded-full bg-primary-500/30 blur-3xl" />
+        <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold tracking-tight text-white mb-4 text-balance">
             Ready to protect your pet?
           </h2>
           <p className="text-xl text-primary-100 mb-8">
@@ -310,9 +316,9 @@ export default function FAQPage() {
           </p>
           <Link
             href="/shop"
-            className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg text-lg transition-colors duration-200"
+            className="inline-block bg-white text-primary-700 hover:bg-primary-50 active:scale-[0.98] font-medium py-3 px-8 rounded-lg text-lg transition-all duration-150 shadow-lg shadow-primary-900/30"
           >
-            Shop Tags
+            Shop tags
           </Link>
         </div>
       </section>

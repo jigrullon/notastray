@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, CheckCircle, Loader2 } from 'lucide-react'
+import { EnvelopeSimple, CheckCircle, CircleNotch } from '@phosphor-icons/react'
 import { useAuth } from '@/lib/AuthContext'
 
 type Variant = 'full' | 'compact'
@@ -62,7 +62,7 @@ export default function NewsletterSignup({ variant = 'full' }: NewsletterSignupP
                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Stay in the loop</p>
                 {status === 'success' ? (
                     <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 text-sm">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                        <CheckCircle className="w-4 h-4 flex-shrink-0" weight="fill" />
                         <span>You&apos;re subscribed! Thanks for joining.</span>
                     </div>
                 ) : (
@@ -82,10 +82,10 @@ export default function NewsletterSignup({ variant = 'full' }: NewsletterSignupP
                             <button
                                 type="submit"
                                 disabled={status === 'loading'}
-                                className="flex-shrink-0 px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-500 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                className="flex-shrink-0 px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-500 active:scale-[0.98] text-white rounded-lg transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                             >
                                 {status === 'loading' ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <CircleNotch className="w-3.5 h-3.5 animate-spin" />
                                 ) : (
                                     'Subscribe'
                                 )}
@@ -106,10 +106,10 @@ export default function NewsletterSignup({ variant = 'full' }: NewsletterSignupP
     // Full variant
     return (
         <div className="max-w-2xl mx-auto text-center">
-            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <EnvelopeSimple className="w-6 h-6 text-primary-600 dark:text-primary-400" weight="duotone" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-3 text-balance">
                 Stay in the loop
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
@@ -119,7 +119,7 @@ export default function NewsletterSignup({ variant = 'full' }: NewsletterSignupP
             {status === 'success' ? (
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-14 h-14 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400" />
+                        <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400" weight="fill" />
                     </div>
                     <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                         You&apos;re subscribed!
@@ -145,11 +145,11 @@ export default function NewsletterSignup({ variant = 'full' }: NewsletterSignupP
                         <button
                             type="submit"
                             disabled={status === 'loading'}
-                            className="px-6 py-3 font-medium bg-primary-600 hover:bg-primary-500 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
+                            className="px-6 py-3 font-medium bg-primary-600 hover:bg-primary-500 active:scale-[0.98] text-white rounded-lg transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                         >
                             {status === 'loading' ? (
                                 <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <CircleNotch className="w-4 h-4 animate-spin" />
                                     Subscribing...
                                 </>
                             ) : (
