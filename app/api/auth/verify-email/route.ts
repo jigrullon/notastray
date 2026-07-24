@@ -3,6 +3,8 @@ import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { validateVerificationToken } from '@/lib/emailVerification';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
@@ -16,7 +18,7 @@ const ratelimit = new Ratelimit({
   analytics: false,
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('auth-verify-email', async (request: NextRequest) => {
   // ── 1. Rate limit by IP ────────────────────────────────────────────────
   const ip =
     request.headers.get('x-forwarded-for') ??
@@ -67,6 +69,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { uid, email, continue: continueUrl } = validated.payload;
+  setRequestUser(uid);
   const redirectTo = continueUrl || '/dashboard';
 
   // ── 4. Fetch Firebase user ─────────────────────────────────────────────
@@ -84,7 +87,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-    console.error('verify-email: getUser failed', err);
+    log.error('verify_email_get_user_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -124,7 +129,9 @@ export async function POST(request: NextRequest) {
         { merge: true }
       );
   } catch (err) {
-    console.error('verify-email: failed to update user', err);
+    log.error('verify_email_update_user_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json(
       { success: false, error: 'Failed to verify email' },
       { status: 500 }
@@ -132,4 +139,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true, continue: redirectTo });
-}
+})

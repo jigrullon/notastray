@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/sendEmail';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
-export async function POST(request: Request) {
+export const POST = withObservability('test-send-email', async (request: Request) => {
   // Only available in development
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available in production' }, { status: 403 });
@@ -17,9 +19,10 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(`[TEST EMAIL] Attempting to send email to ${to}`);
-    console.log(`[TEST EMAIL] SENDGRID_API_KEY configured: ${!!process.env.SENDGRID_API_KEY}`);
-    console.log(`[TEST EMAIL] FROM_EMAIL: ${process.env.FROM_EMAIL || 'noreply@notastray.com'}`);
+    log.info('test_email_attempt', {
+      sendgridConfigured: !!process.env.SENDGRID_API_KEY,
+      fromEmail: process.env.FROM_EMAIL || 'noreply@notastray.com',
+    });
 
     await sendEmail({
       to,
@@ -38,7 +41,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('[TEST EMAIL] Error:', error);
+    log.error('test_email_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         success: false,
@@ -48,4 +53,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+})

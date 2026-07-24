@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getRates } from '@/lib/easypost';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
 interface RatesRequest {
   destinationZip: string;
   items?: Array<{ quantity: number }>;
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('shipping-rates', async (request: Request) => {
   try {
     const body: RatesRequest = await request.json();
     const { destinationZip } = body;
@@ -33,7 +35,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ rates });
   } catch (error) {
-    console.error('Shipping rates error:', error);
+    log.error('shipping_rates_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         error:
@@ -44,4 +48,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+})

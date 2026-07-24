@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log } from '@/lib/observability/logger'
 
 // Only Firebase Storage hosts are allowed — this route is a fetch proxy, so an
 // unrestricted URL would let a caller make our server request any host (SSRF).
 const ALLOWED_HOSTS = ['firebasestorage.googleapis.com', 'storage.googleapis.com']
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('proxy-image', async (request: NextRequest) => {
   try {
     const { imageUrl } = await request.json()
 
@@ -42,10 +44,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ dataUrl })
   } catch (error) {
-    console.error('Error proxying image:', error)
+    log.error('proxy_image_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: 'Failed to proxy image' },
       { status: 500 }
     )
   }
-}
+})

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log } from '@/lib/observability/logger'
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('verify-captcha', async (request: NextRequest) => {
   try {
     const { token } = await request.json()
 
@@ -26,12 +28,12 @@ export async function POST(request: NextRequest) {
       // Surface Google's error codes in the server log so misconfigurations
       // (e.g. invalid-input-secret, bad key type) are diagnosable instead of
       // only showing up as a generic failure in the widget.
-      console.warn('CAPTCHA verification rejected:', data['error-codes'] || 'unknown')
+      log.warn('captcha_verification_rejected', { errorCodes: data['error-codes'] || 'unknown' })
     }
 
     return NextResponse.json({ success: data.success === true })
   } catch (err) {
-    console.error('CAPTCHA verify error:', err)
+    log.error('captcha_verify_failed', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ success: false, error: 'Verification failed' }, { status: 500 })
   }
-}
+})

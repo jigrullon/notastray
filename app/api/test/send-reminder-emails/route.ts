@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/sendEmail';
 import { getActivationReminderEmail, getRenewalReminderEmail } from '@/lib/emailTemplates';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
-export async function POST(request: Request) {
+export const POST = withObservability('test-send-reminder-emails', async (request: Request) => {
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available in production' }, { status: 403 });
   }
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
         orderId: 'TEST-001',
       });
 
-      console.log(`[TEST EMAIL] Sending activation reminder to ${to}`);
+      log.info('test_activation_reminder_send', {});
       await sendEmail({
         to,
         subject: emailData.subject,
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
         cancelUrl: 'https://notastray.com/dashboard/subscription/cancel',
       });
 
-      console.log(`[TEST EMAIL] Sending renewal reminder to ${to}`);
+      log.info('test_renewal_reminder_send', {});
       await sendEmail({
         to,
         subject: emailData.subject,
@@ -90,7 +92,9 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   } catch (error) {
-    console.error('[TEST EMAIL] Error:', error);
+    log.error('test_reminder_email_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         success: false,
@@ -99,4 +103,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+})

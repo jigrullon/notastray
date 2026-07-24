@@ -5,6 +5,9 @@ import type {
   PublicRescueCrewContact,
   RescueCrewContact,
 } from '@/lib/rescueCrew'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log, setRequestUser } from '@/lib/observability/logger'
+import { logProductEvent } from '@/lib/observability/productEvents'
 
 /**
  * Public GET handler for a pet's Rescue Crew contacts.
@@ -30,10 +33,10 @@ import type {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET(
+export const GET = withObservability('rescue-crew-public', async (
   _request: Request,
   { params }: { params: Promise<{ code: string }> }
-) {
+) => {
   try {
     const { code } = await params
     const CODE = code.toUpperCase()
@@ -53,6 +56,7 @@ export async function GET(
     if (!userId) {
       return NextResponse.json({ contacts: [] })
     }
+    setRequestUser(userId)
 
     // Single array-contains where avoids needing a composite index; the
     // showWhenLost opt-in is filtered in-code below.
@@ -78,10 +82,16 @@ export async function GET(
         address: c.address,
       }))
 
+    if (contacts.length > 0) {
+      await logProductEvent('rescue_crew_viewed', { tagCode: CODE, contactCount: contacts.length })
+    }
+
     return NextResponse.json({ contacts })
   } catch (err) {
-    console.error('[Rescue Crew] Failed to load public contacts:', err)
+    log.error('rescue_crew_public_load_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
     // The pet profile must never break because of this feature.
     return NextResponse.json({ contacts: [] })
   }
-}
+})

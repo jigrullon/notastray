@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sendEmail } from '@/lib/sendEmail';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
 interface NotificationRequest {
     tagCode: string
@@ -17,7 +19,7 @@ interface NotificationRequest {
     source?: 'qr' | 'unknown'
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('notify-owner', async (request: Request) => {
     try {
         const body: NotificationRequest = await request.json()
         const { tagCode, location, timestamp, userAgent, locationMethod = 'gps', source = 'unknown' } = body
@@ -32,6 +34,7 @@ export async function POST(request: Request) {
         if (!tagData?.userId) {
             return NextResponse.json({ error: 'Tag not activated' }, { status: 404 })
         }
+        setRequestUser(tagData.userId)
 
         // Get owner information from Firestore
         const userDoc = await adminDb.collection('users').doc(tagData.userId).get()
@@ -95,7 +98,10 @@ export async function POST(request: Request) {
                     return NextResponse.json({ success: true, message: 'Rate limited', rateLimited: true })
                 }
             } catch (queryError) {
-                console.error('Error querying recent scans:', queryError)
+                log.warn('rate_limit_query_failed', {
+                    tagCode,
+                    error: queryError instanceof Error ? queryError.message : String(queryError),
+                })
                 // Continue with notification if rate limit query fails
             }
         }
@@ -189,18 +195,20 @@ export async function POST(request: Request) {
         }
 
         // Send SMS notification
-        console.log(`SMS check - enabled: ${owner.smsEnabled}, phone: ${owner.phone}`)
+        log.info('sms_notification_check', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone })
         if (owner.smsEnabled && owner.phone) {
             try {
-                console.log(`Attempting to send SMS to ${owner.phone}`)
                 await sendSMS(owner.phone, smsMessage)
                 notificationsSent.sms = true
-                console.log(`SMS sent successfully to ${owner.phone}`)
+                log.info('sms_notification_sent', { tagCode })
             } catch (smsError) {
-                console.error('Failed to send SMS:', smsError)
+                log.error('sms_notification_failed', {
+                    tagCode,
+                    error: smsError instanceof Error ? smsError.message : String(smsError),
+                })
             }
         } else {
-            console.log(`SMS not sent - smsEnabled: ${owner.smsEnabled}, phone exists: ${!!owner.phone}`)
+            log.info('sms_notification_skipped', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone })
         }
 
         // Send email notification
@@ -213,9 +221,12 @@ export async function POST(request: Request) {
                     text: emailBody,
                 })
                 notificationsSent.email = true
-                console.log(`Email sent to ${owner.email}`)
+                log.info('email_notification_sent', { tagCode })
             } catch (emailError) {
-                console.error('Failed to send email:', emailError)
+                log.error('email_notification_failed', {
+                    tagCode,
+                    error: emailError instanceof Error ? emailError.message : String(emailError),
+                })
             }
         }
 
@@ -247,13 +258,15 @@ export async function POST(request: Request) {
             notificationsSent,
         })
     } catch (error) {
-        console.error('Notification error:', error)
+        log.error('notify_owner_failed', {
+            error: error instanceof Error ? error.message : String(error),
+        })
         return NextResponse.json(
             { error: error instanceof Error ? error.message : 'Failed to send notification' },
             { status: 500 }
         )
     }
-}
+})
 
 async function sendSMS(phoneNumber: string, message: string) {
     try {
@@ -281,10 +294,10 @@ async function sendSMS(phoneNumber: string, message: string) {
             })
         )
 
-        console.log(`SMS sent successfully to ${formattedNumber}. Message ID: ${response.MessageId}`)
+        log.info('sns_sms_sent', { messageId: response.MessageId })
         return response.MessageId
     } catch (error) {
-        console.error(`Failed to send SMS to ${phoneNumber}:`, error)
+        log.error('sns_sms_failed', { error: error instanceof Error ? error.message : String(error) })
         throw error
     }
 }

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log } from '@/lib/observability/logger'
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('admin-reassign-tag', async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const secret = searchParams.get('secret')
@@ -72,10 +74,12 @@ export async function POST(request: NextRequest) {
       userEmail,
     })
   } catch (error) {
-    console.error('Error reassigning tag:', error)
+    log.error('admin_reassign_tag_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to reassign tag' },
       { status: 500 }
     )
   }
-}
+})

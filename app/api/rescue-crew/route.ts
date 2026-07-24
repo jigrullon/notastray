@@ -7,6 +7,9 @@ import {
   type RescueCrewPhone,
   type RescueCrewAddress,
 } from '@/lib/rescueCrew';
+import { withObservability } from '@/lib/observability/withObservability';
+import { setRequestUser } from '@/lib/observability/logger';
+import { logProductEvent } from '@/lib/observability/productEvents';
 
 const RELATIONSHIP_VALUES = new Set(RELATIONSHIP_OPTIONS.map((o) => o.value));
 const PHONE_TYPES = new Set(['mobile', 'home', 'work', '']);
@@ -45,10 +48,11 @@ function parseAddress(value: unknown): RescueCrewAddress | null {
 // actually enforced — firestore.rules disallows client-side creates on this
 // subcollection for the same reason. Update/delete remain client-side since
 // they can't grow the collection.
-export async function POST(request: NextRequest) {
+export const POST = withObservability('rescue-crew', async (request: NextRequest) => {
   const { decoded, error } = await verifyBearerToken(request);
   if (error) return error;
   const uid = decoded.uid;
+  setRequestUser(uid);
 
   let body: Record<string, unknown>;
   try {
@@ -103,5 +107,7 @@ export async function POST(request: NextRequest) {
     updatedAt: now,
   });
 
+  await logProductEvent('rescue_crew_contact_created', { userId: uid });
+
   return NextResponse.json({ success: true, id: docRef.id });
-}
+})

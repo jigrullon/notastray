@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sendEmail } from '@/lib/sendEmail';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -70,7 +72,7 @@ function generateConfirmationEmail(email: string): { subject: string; htmlBody: 
     };
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('newsletter-subscribe', async (request: Request) => {
     try {
         const body = await request.json();
         const { email, source = 'unknown' } = body;
@@ -90,13 +92,15 @@ export async function POST(request: Request) {
         try {
             await sendEmail({ to: email, subject, html: htmlBody });
         } catch (emailError) {
-            console.error('Failed to send confirmation email:', emailError);
+            log.error('newsletter_confirmation_email_failed', {
+                error: emailError instanceof Error ? emailError.message : String(emailError),
+            });
             // Don't fail the subscription if email fails to send
         }
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error('Newsletter subscribe error:', error);
+        log.error('newsletter_subscribe_failed', { error: error.message });
         return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
     }
-}
+})

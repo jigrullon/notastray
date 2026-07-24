@@ -1,0 +1,200 @@
+{
+  "title": "NotAStray — Business & Growth",
+  "uid": "notastray-business",
+  "tags": ["notastray", "business", "marketing"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "app_url",
+        "type": "textbox",
+        "label": "App base URL",
+        "current": { "value": "https://notastray.com", "text": "https://notastray.com" },
+        "query": "https://notastray.com"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1, "title": "Activated tags", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/summary",
+        "url_options": { "method": "GET" },
+        "root_selector": "",
+        "columns": [{ "selector": "activatedTags", "text": "Activated Tags", "type": "number" }]
+      }]
+    },
+    {
+      "id": 2, "title": "Total customers", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/summary",
+        "url_options": { "method": "GET" },
+        "root_selector": "",
+        "columns": [{ "selector": "totalCustomers", "text": "Total Customers", "type": "number" }]
+      }]
+    },
+    {
+      "id": 3, "title": "Active subscribers", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/summary",
+        "url_options": { "method": "GET" },
+        "root_selector": "",
+        "columns": [{ "selector": "activeSubscribers", "text": "Active Subscribers", "type": "number" }]
+      }]
+    },
+    {
+      "id": 4, "title": "MRR", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/summary",
+        "url_options": { "method": "GET" },
+        "root_selector": "",
+        "columns": [{ "selector": "mrr", "text": "MRR", "type": "number" }]
+      }]
+    },
+    {
+      "id": 5, "title": "Revenue (30d)", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/summary",
+        "url_options": { "method": "GET" },
+        "root_selector": "",
+        "columns": [{ "selector": "revenue30d", "text": "Revenue (30d)", "type": "number" }]
+      }]
+    },
+    {
+      "id": 6, "title": "Newsletter subscribers", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/summary",
+        "url_options": { "method": "GET" },
+        "root_selector": "",
+        "columns": [{ "selector": "newsletterSubscribers", "text": "Newsletter Subscribers", "type": "number" }]
+      }]
+    },
+    {
+      "id": 7, "title": "Revenue & orders trend", "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 4 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "timeseries",
+        "url": "$app_url/api/internal/metrics/revenue-timeseries?days=30",
+        "url_options": { "method": "GET" },
+        "root_selector": "series",
+        "columns": [
+          { "selector": "date", "text": "Time", "type": "timestamp" },
+          { "selector": "revenue", "text": "Revenue", "type": "number" },
+          { "selector": "newOrders", "text": "New Orders", "type": "number" }
+        ]
+      }]
+    },
+    {
+      "id": 8, "title": "Subscriber growth (new vs. canceled)", "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 13 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "timeseries",
+        "url": "$app_url/api/internal/metrics/revenue-timeseries?days=30",
+        "url_options": { "method": "GET" },
+        "root_selector": "series",
+        "columns": [
+          { "selector": "date", "text": "Time", "type": "timestamp" },
+          { "selector": "newSubscribers", "text": "New Subscribers", "type": "number" },
+          { "selector": "canceledSubscribers", "text": "Canceled", "type": "number" }
+        ]
+      }]
+    },
+    {
+      "id": 9, "title": "Species split (dog vs. cat)", "type": "piechart",
+      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 22 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/species-breakdown",
+        "url_options": { "method": "GET" },
+        "root_selector": "bySpecies",
+        "columns": []
+      }]
+    },
+    {
+      "id": 10, "title": "Rescue Crew adoption", "type": "stat",
+      "gridPos": { "h": 9, "w": 8, "x": 8, "y": 22 },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/rescue-crew-usage",
+        "url_options": { "method": "GET" },
+        "root_selector": "",
+        "columns": [
+          { "selector": "ownersWithAtLeastOneContact", "text": "Owners w/ Rescue Crew", "type": "number" },
+          { "selector": "viewedByFinderCount", "text": "Times Shown to a Finder", "type": "number" }
+        ]
+      }]
+    },
+    {
+      "id": 11, "title": "Acquisition channel — orders (last 90d)", "type": "bargauge",
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 22 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+      "targets": [{
+        "refId": "A",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
+        "type": "json", "source": "url", "format": "table",
+        "url": "$app_url/api/internal/metrics/acquisition?days=90",
+        "url_options": { "method": "GET" },
+        "root_selector": "ordersBySource",
+        "columns": []
+      }]
+    },
+    {
+      "id": 12, "title": "Data notes", "type": "text",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 31 },
+      "options": {
+        "mode": "markdown",
+        "content": "Set the **app_url** variable above (dashboard settings → Variables) to your deployed app's URL. Revenue/subscriber trend panels read from the `daily_metrics` rollup — history only exists from whenever the Vercel Cron job (`/api/internal/rollup/daily`) started running, not retroactively. All panel queries here are a v1 starting point authored without a live Infinity-plugin instance to test against — if a panel shows a query error after import, open it in edit mode; the Infinity query editor's own validation will point at the exact field to fix (usually a column selector name)."
+      }
+    }
+  ]
+}

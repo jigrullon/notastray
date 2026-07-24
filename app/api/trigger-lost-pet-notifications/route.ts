@@ -4,8 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 // (FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY), making its behavior depend on
 // which env vars existed and which route initialized the app first.
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log } from '@/lib/observability/logger'
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('trigger-lost-pet-notifications', async (request: NextRequest) => {
   try {
     // Verify authorization token
     const authHeader = request.headers.get('authorization')
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('[Lost Pet Notifications] Starting batch notification check')
+    log.info('lost_pet_notifications_batch_started', {})
 
     const db = adminDb
     const auth = adminAuth
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
       .where('lostNotificationSent', '==', false)
       .get()
 
-    console.log(`[Lost Pet Notifications] Found ${snapshot.size} lost pets pending notification`)
+    log.info('lost_pet_notifications_pending_found', { count: snapshot.size })
 
     let sentCount = 0
     let errorCount = 0
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
 
       // Check if 3+ hours have passed since pet was marked lost
       if (!lostAt || now - lostAt < threeHoursInMs) {
-        console.log(`[Lost Pet Notifications] Skipping ${doc.id}: Not 3 hours yet`)
+        log.info('lost_pet_notification_skipped', { tagCode: doc.id, reason: 'not_3_hours_yet' })
         continue
       }
 
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
         // Check if pet is still marked as lost (might have been found/unmarked)
         const freshDoc = await db.collection('tags').doc(doc.id).get()
         if (!freshDoc.exists || !freshDoc.get('isLost')) {
-          console.log(`[Lost Pet Notifications] Skipping ${doc.id}: Pet no longer marked as lost`)
+          log.info('lost_pet_notification_skipped', { tagCode: doc.id, reason: 'no_longer_lost' })
           continue
         }
 
@@ -68,7 +70,10 @@ export async function POST(request: NextRequest) {
           const user = await auth.getUser(userId)
           ownerEmail = user.email || ''
         } catch (err) {
-          console.error(`[Lost Pet Notifications] Failed to get user email for ${userId}:`, err)
+          log.warn('lost_pet_owner_email_lookup_failed', {
+            tagCode: doc.id,
+            error: err instanceof Error ? err.message : String(err),
+          })
         }
 
         // Build email data
@@ -149,7 +154,7 @@ export async function POST(request: NextRequest) {
 
         sentCount++
         results.push({ tagCode: doc.id, petName, status: 'sent' })
-        console.log(`[Lost Pet Notifications] Successfully sent notification for ${doc.id}`)
+        log.info('lost_pet_notification_sent', { tagCode: doc.id })
       } catch (err) {
         errorCount++
         results.push({
@@ -157,7 +162,10 @@ export async function POST(request: NextRequest) {
           error: err instanceof Error ? err.message : String(err),
           status: 'error',
         })
-        console.error(`[Lost Pet Notifications] Error processing ${doc.id}:`, err)
+        log.error('lost_pet_notification_failed', {
+          tagCode: doc.id,
+          error: err instanceof Error ? err.message : String(err),
+        })
       }
     }
 
@@ -170,7 +178,9 @@ export async function POST(request: NextRequest) {
       results,
     })
   } catch (err) {
-    console.error('[Lost Pet Notifications] Fatal error:', err)
+    log.error('lost_pet_notifications_batch_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
     return NextResponse.json(
       {
         error: 'Failed to send lost pet notifications',
@@ -179,7 +189,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 interface EmailData {
   petName: string

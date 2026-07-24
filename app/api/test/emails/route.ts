@@ -3,8 +3,9 @@ import {
   getOrderConfirmationEmail,
   getMerchantOrderEmail,
 } from '@/lib/emailTemplates';
+import { withObservability } from '@/lib/observability/withObservability';
 
-export async function GET(request: Request) {
+export const GET = withObservability('test-emails', async (request: Request) => {
   // Test endpoint to preview emails - only available in development
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available in production' }, { status: 403 });
@@ -100,4 +101,4 @@ export async function GET(request: Request) {
     html: emailData.html,
     text: emailData.text,
   });
-}
+})

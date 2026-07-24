@@ -17,6 +17,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { captureAttribution, getAttribution } from './observability/attribution';
 
 // Sends the branded verification email via our own endpoint (AWS SES), replacing
 // Firebase's default sendEmailVerification. Throws with code 'auth/too-many-requests'
@@ -82,6 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        captureAttribution();
+
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setUser(user);
             setLoading(false);
@@ -104,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             displayName,
             email,
+            acquisition: getAttribution(),
             subscription: {
                 status: 'none',
                 plan: null,

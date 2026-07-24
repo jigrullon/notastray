@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
+import { getAttributionFromRequest } from '@/lib/observability/attribution';
 
 interface CheckoutRequest {
     items: Array<{
@@ -21,7 +24,7 @@ interface CheckoutRequest {
     shippingZipCode?: string;
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('checkout', async (request: Request) => {
     if (!process.env.STRIPE_SECRET_KEY) {
         return NextResponse.json({ error: 'Stripe configuration missing' }, { status: 500 });
     }
@@ -33,6 +36,9 @@ export async function POST(request: Request) {
     try {
         const body: CheckoutRequest = await request.json();
         const { items, userEmail, userId, shippingOption, shippingZipCode } = body;
+        if (userId) setRequestUser(userId);
+
+        const attribution = getAttributionFromRequest(request);
 
         const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item) => ({
             price_data: {
@@ -58,6 +64,9 @@ export async function POST(request: Request) {
                 type: 'one_time_purchase',
                 shippingOption: shippingOption?.service || '',
                 shippingZipCode: shippingZipCode || '',
+                utm_source: attribution?.source || '',
+                utm_medium: attribution?.medium || '',
+                utm_campaign: attribution?.campaign || '',
             },
         };
 
@@ -92,7 +101,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ id: session.id, url: session.url });
     } catch (error: any) {
-        console.error('Stripe Checkout Error:', error);
+        log.error('checkout_session_failed', { error: error.message });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+})

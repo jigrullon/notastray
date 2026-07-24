@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
 function encodeEmailId(email: string): string {
   return encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('newsletter-unsubscribe', async (request: Request) => {
   try {
     const body = await request.json();
     const { email } = body;
@@ -22,12 +24,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Newsletter unsubscribe error:', error);
+    log.error('newsletter_unsubscribe_post_failed', { error: error.message });
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
-}
+})
 
-export async function GET(request: Request) {
+export const GET = withObservability('newsletter-unsubscribe', async (request: Request) => {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get('email');
 
@@ -47,10 +49,10 @@ export async function GET(request: Request) {
       message: 'You have been unsubscribed from our newsletter.'
     });
   } catch (error: any) {
-    console.error('Newsletter unsubscribe error:', error);
+    log.error('newsletter_unsubscribe_get_failed', { error: error.message });
     return NextResponse.json(
       { error: 'Something went wrong. Please try again.' },
       { status: 500 }
     );
   }
-}
+})

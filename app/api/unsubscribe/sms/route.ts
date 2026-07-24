@@ -1,8 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
 // Handles incoming SMS STOP commands (from Twilio or other SMS provider webhook)
-export async function POST(request: NextRequest) {
+export const POST = withObservability('unsubscribe-sms', async (request: NextRequest) => {
   try {
     const body = await request.json();
     const {
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
       .get();
 
     if (usersSnapshot.empty) {
-      console.log(`STOP received from unknown number: ${phoneNumber}`);
+      log.info('sms_stop_unknown_number', {});
       return NextResponse.json({
         success: true,
         processed: false,
@@ -52,6 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = usersSnapshot.docs[0].id;
+    setRequestUser(userId);
     const userData = usersSnapshot.docs[0].data();
 
     // Update user preferences - unsubscribe from SMS
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
       ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
     });
 
-    console.log(`User ${userId} unsubscribed from SMS via STOP reply: "${message}"`);
+    log.info('user_unsubscribed_sms', { userId });
 
     return NextResponse.json({
       success: true,
@@ -91,10 +94,12 @@ export async function POST(request: NextRequest) {
       message: 'User has been unsubscribed from SMS',
     });
   } catch (error) {
-    console.error('SMS STOP handler error:', error);
+    log.error('sms_stop_handler_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to process STOP command' },
       { status: 500 }
     );
   }
-}
+})
