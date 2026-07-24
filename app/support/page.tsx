@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, HelpCircle, Mail } from 'lucide-react'
+import { ArrowLeft, Question, EnvelopeSimple } from '@phosphor-icons/react'
 
 export default function SupportPage() {
   const router = useRouter()
@@ -21,7 +21,7 @@ export default function SupportPage() {
               Back
             </button>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 text-balance">
             Support
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400">
@@ -38,10 +38,10 @@ export default function SupportPage() {
             {/* FAQ Card */}
             <Link
               href="/resources/faq"
-              className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8 hover:shadow-md dark:hover:shadow-gray-900/50 hover:border-primary-300 dark:hover:border-primary-700 transition-all"
+              className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 hover:shadow-lg hover:shadow-gray-900/5 dark:hover:shadow-black/40 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-150"
             >
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mb-5">
-                <HelpCircle className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mb-5">
+                <Question className="w-6 h-6 text-primary-600 dark:text-primary-400" weight="duotone" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Browse the FAQ
@@ -55,9 +55,9 @@ export default function SupportPage() {
             </Link>
 
             {/* Email Card */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8">
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mb-5">
-                <Mail className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-8">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mb-5">
+                <EnvelopeSimple className="w-6 h-6 text-primary-600 dark:text-primary-400" weight="duotone" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Email Us

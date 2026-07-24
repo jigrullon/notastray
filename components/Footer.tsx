@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Mail, Phone, Facebook } from 'lucide-react'
+import { EnvelopeSimple, Phone, FacebookLogo } from '@phosphor-icons/react'
 import NewsletterSignup from '@/components/NewsletterSignup'
 
 export default function Footer() {
@@ -31,15 +31,15 @@ export default function Footer() {
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
               Helping lost pets get home faster—just one scan away.
             </p>
-            <div className="flex space-x-4 text-gray-500 dark:text-gray-400">
-              <a href="mailto:notastray.hq@gmail.com" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors" aria-label="Email us">
-                <Mail className="w-5 h-5" />
+            <div className="flex space-x-3 text-gray-500 dark:text-gray-400">
+              <a href="mailto:notastray.hq@gmail.com" className="p-2 rounded-full hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-gray-800 dark:hover:text-primary-400 transition-colors duration-150 active:scale-95" aria-label="Email us">
+                <EnvelopeSimple className="w-5 h-5" weight="regular" />
               </a>
-              <a href="tel:+14702107216" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors" aria-label="Call us">
-                <Phone className="w-5 h-5" />
+              <a href="tel:+14702107216" className="p-2 rounded-full hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-gray-800 dark:hover:text-primary-400 transition-colors duration-150 active:scale-95" aria-label="Call us">
+                <Phone className="w-5 h-5" weight="regular" />
               </a>
-              <a href="https://www.facebook.com/profile.php?id=61577464901900" target="_blank" rel="noopener noreferrer" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors" aria-label="Facebook">
-                <Facebook className="w-5 h-5" />
+              <a href="https://www.facebook.com/profile.php?id=61577464901900" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-gray-800 dark:hover:text-primary-400 transition-colors duration-150 active:scale-95" aria-label="Facebook">
+                <FacebookLogo className="w-5 h-5" weight="regular" />
               </a>
             </div>
           </div>
