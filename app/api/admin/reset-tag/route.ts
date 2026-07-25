@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
-export async function POST(request: Request) {
+export const POST = withObservability('admin-reset-tag', async (request: Request) => {
   try {
     // Admin-only: Verify admin API key
     const authHeader = request.headers.get('authorization');
@@ -65,10 +67,12 @@ export async function POST(request: Request) {
       tagCode: tagCode.toUpperCase(),
     });
   } catch (error) {
-    console.error('Admin reset tag error:', error);
+    log.error('admin_reset_tag_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
-}
+})

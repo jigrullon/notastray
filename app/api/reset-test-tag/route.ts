@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
 const TAG_CODE = 'TEST01';
 
@@ -35,14 +37,14 @@ async function resetTestTag(request: NextRequest): Promise<NextResponse> {
             updatedAt: now,
         });
 
-        console.log(`Test tag ${TAG_CODE} reset successfully`);
+        log.info('test_tag_reset', { tagCode: TAG_CODE });
         return NextResponse.json({ success: true, tagCode: TAG_CODE, resetAt: now });
     } catch (error: any) {
-        console.error('Reset test tag error:', error);
+        log.error('reset_test_tag_failed', { error: error.message });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('reset-test-tag', async (request: NextRequest) => {
     return resetTestTag(request);
-}
+})

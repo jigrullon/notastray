@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
 interface CancelRequest {
     subscriptionId: string;
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('subscribe-cancel', async (request: Request) => {
     if (!process.env.STRIPE_SECRET_KEY) {
         return NextResponse.json({ error: 'Stripe configuration missing' }, { status: 500 });
     }
@@ -21,6 +23,7 @@ export async function POST(request: Request) {
     try {
         const decodedToken = await adminAuth.verifyIdToken(token);
         uid = decodedToken.uid;
+        setRequestUser(uid);
     } catch {
         return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
@@ -56,14 +59,16 @@ export async function POST(request: Request) {
                     },
                 }, { merge: true });
             } catch (firestoreError) {
-                console.error('Failed to update Firestore after cancellation:', firestoreError);
+                log.error('subscription_cancel_firestore_update_failed', {
+                    error: firestoreError instanceof Error ? firestoreError.message : String(firestoreError),
+                });
                 // Don't fail the response - cancellation succeeded in Stripe
             }
         }
 
         return NextResponse.json({ status: subscription.status });
     } catch (error: any) {
-        console.error('Stripe Cancel Error:', error);
+        log.error('subscribe_cancel_failed', { error: error.message });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+})

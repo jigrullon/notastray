@@ -1,0 +1,84 @@
+services:
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: notastray-loki
+    # Bound to localhost only, same as Grafana below — for local testing /
+    # SSH-tunnel access. The app pushes logs to Loki from the public
+    # internet, so that path goes through the Caddy reverse proxy (TLS +
+    # basic auth) instead of this port; this port is never meant to be
+    # reachable from outside the host.
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:11.4.0
+    container_name: notastray-grafana
+    # Bound to localhost only — reach it locally via `ssh -L 3001:localhost:3001`
+    # to the host, or publicly via the Caddy domain below once DNS is set up.
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in observability/.env}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
+      # Read by observability/grafana/provisioning/datasources/datasources.yml
+      # to authenticate the Infinity datasource to this app's internal
+      # metrics API — must match INTERNAL_METRICS_API_KEY in the app's own
+      # env vars (Vercel), not a separate value.
+      - INTERNAL_METRICS_API_KEY=${INTERNAL_METRICS_API_KEY:?set in observability/.env, matching the app's Vercel env var}
+      # Restricts the Infinity datasource to only ever query this one host
+      # (a real Infinity security feature — without an allowlist, EVERY
+      # panel query 403s with "requested URL not allowed", confirmed by
+      # testing). Must be the exact same origin as the Business & Growth
+      # dashboard's `app_url` template variable, e.g. https://notastray.com
+      # — mismatched values silently bring back the 403.
+      - APP_BASE_URL=${APP_BASE_URL:?set in observability/.env to your deployed app's origin, e.g. https://notastray.com}
+      # The 5xx-spike alert's contact point (Slack/Discord/custom webhook
+      # URL). NOT truly optional despite the placeholder default below —
+      # Grafana's alerting provisioner refuses to start at all (the whole
+      # container crash-loops, not just alerting) if this resolves to an
+      # empty string, since a webhook contact point requires a non-empty
+      # url. The placeholder is a syntactically valid but inert URL so the
+      # container boots; replace it via observability/.env + restart, or
+      # edit the contact point directly in the Grafana UI (Alerting →
+      # Contact points) once you have a real Slack/Discord webhook.
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-https://example.com/configure-a-real-webhook-in-grafana}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: notastray-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - LOKI_PUBLIC_DOMAIN=${LOKI_PUBLIC_DOMAIN:?set in observability/.env}
+      - GRAFANA_PUBLIC_DOMAIN=${GRAFANA_PUBLIC_DOMAIN:?set in observability/.env}
+      - LOKI_PUSH_USERNAME=${LOKI_PUSH_USERNAME:?set in observability/.env}
+      # A bcrypt hash, not the raw password — generate with:
+      # docker run --rm caddy:2.9-alpine caddy hash-password --plaintext '<password>'
+      - LOKI_PUSH_PASSWORD_HASH=${LOKI_PUSH_PASSWORD_HASH:?set in observability/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - loki
+      - grafana
+    restart: unless-stopped
+
+volumes:
+  loki-data:
+  grafana-data:
+  caddy-data:

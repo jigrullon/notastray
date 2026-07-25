@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
 function generateOrderId(): string {
     const now = new Date();
@@ -35,7 +37,7 @@ function addBusinessDays(startDate: Date, days: number): Date {
     return current;
 }
 
-export async function GET(request: Request) {
+export const GET = withObservability('orders-verify', async (request: Request) => {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('session_id');
 
@@ -59,6 +61,7 @@ export async function GET(request: Request) {
         if (fullSession.payment_status !== 'paid') {
             return NextResponse.json({ error: 'Payment not completed' }, { status: 400 });
         }
+        if (fullSession.metadata?.userId) setRequestUser(fullSession.metadata.userId);
 
         // Look up the order in Firestore by Stripe session ID
         const snapshot = await adminDb
@@ -133,7 +136,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json(fallbackOrder);
     } catch (error: any) {
-        console.error('Order verification error:', error);
+        log.error('order_verification_failed', { error: error.message });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+})

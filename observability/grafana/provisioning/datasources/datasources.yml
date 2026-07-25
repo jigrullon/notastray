@@ -1,0 +1,32 @@
+apiVersion: 1
+
+datasources:
+  - uid: loki
+    name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
+    jsonData:
+      maxLines: 1000
+
+  # JSON API datasource (community plugin, installed via GF_INSTALL_PLUGINS
+  # in docker-compose.yml) pointed at this app's own internal metrics
+  # endpoints — the business/marketing dashboard's data source. Values are
+  # expanded from the Grafana container's own environment (set in
+  # observability/.env, see .env.example) — never hardcoded here.
+  - uid: infinity
+    name: Infinity (NotAStray Metrics)
+    type: yesoreyeram-infinity-datasource
+    access: proxy
+    jsonData:
+      httpHeaderName1: 'X-Internal-Metrics-Key'
+      # Infinity blocks every URL by default (a real security feature, not
+      # a bug) unless the datasource explicitly allowlists it — confirmed
+      # by testing: without this, every panel query 403s with "requested
+      # URL not allowed". Restricts this datasource instance to only ever
+      # be able to query this app, nothing else.
+      allowedHosts:
+        - '${APP_BASE_URL}'
+    secureJsonData:
+      httpHeaderValue1: '${INTERNAL_METRICS_API_KEY}'

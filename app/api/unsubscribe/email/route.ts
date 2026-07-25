@@ -1,7 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
-export async function GET(request: NextRequest) {
+export const GET = withObservability('unsubscribe-email', async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
@@ -63,6 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = usersSnapshot.docs[0].id;
+    setRequestUser(userId);
 
     // Update user preferences
     await adminDb.collection('users').doc(userId).set(
@@ -89,7 +92,7 @@ export async function GET(request: NextRequest) {
       ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
     });
 
-    console.log(`User ${userId} unsubscribed from email notifications`);
+    log.info('user_unsubscribed_email', { userId });
 
     // Return HTML confirmation page
     return new NextResponse(
@@ -131,10 +134,12 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Unsubscribe error:', error);
+    log.error('unsubscribe_email_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       { error: 'Failed to process unsubscribe request' },
       { status: 500 }
     );
   }
-}
+})

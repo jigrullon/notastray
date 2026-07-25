@@ -1,0 +1,79 @@
+apiVersion: 1
+
+# Combined alert-rule / contact-point / routing provisioning file — Grafana
+# merges every YAML file under provisioning/alerting/, so these don't need
+# to be split across files.
+
+groups:
+  - orgId: 1
+    name: notastray-error-rate
+    folder: NotAStray
+    interval: 1m
+    rules:
+      - uid: notastray-5xx-spike
+        title: "5xx error rate spike"
+        condition: C
+        # Query A: 5xx rate over the last 5 minutes, per Loki. Expression B
+        # reduces the time series to its last value. Expression C compares
+        # that value against the threshold — adjust 0.1 (i.e. >0.1 req/s of
+        # 5xx errors, roughly 30+ failed requests in 5 minutes) once real
+        # traffic volume gives a better sense of normal noise.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'sum(rate({app="notastray"} | json | event="api_request" | status >= 500 [5m]))'
+              refId: A
+          - refId: B
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "-100"
+            model:
+              type: reduce
+              reducer: last
+              expression: A
+              refId: B
+          - refId: C
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "-100"
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0.1] }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx error rate has exceeded threshold for 5+ minutes"
+          description: "Check the Ops dashboard's error-rate panel and the live error stream, then cross-reference with Sentry (tagged by route/requestId/userId) for stack traces."
+
+contactPoints:
+  - orgId: 1
+    name: notastray-alerts
+    receivers:
+      - uid: notastray-alerts-webhook
+        type: webhook
+        settings:
+          # Any webhook-compatible target works here: a Slack "Incoming
+          # Webhook" URL, a Discord webhook URL (append /slack to the URL
+          # for Discord's Slack-compatible format), or your own endpoint.
+          # Expanded from ALERT_WEBHOOK_URL in observability/.env — never
+          # hardcoded here. Grafana's provisioner refuses to start at all
+          # if this resolves to an empty string, so docker-compose.yml
+          # falls back to a syntactically-valid placeholder rather than
+          # blank (see the comment there).
+          url: "${ALERT_WEBHOOK_URL}"
+          httpMethod: POST
+
+policies:
+  - orgId: 1
+    receiver: notastray-alerts
+    group_by: ["alertname"]
+    routes:
+      - receiver: notastray-alerts
+        object_matchers:
+          - ["severity", "=", "critical"]

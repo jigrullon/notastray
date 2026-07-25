@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
-export async function GET(request: Request) {
+export const GET = withObservability('geocode', async (request: Request) => {
     const { searchParams } = new URL(request.url)
     const lat = searchParams.get('lat')
     const lng = searchParams.get('lng')
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
         })
 
     } catch (error) {
-        console.error('Geocoding error:', error)
+        log.warn('geocode_failed', { error: error instanceof Error ? error.message : String(error) })
 
         return NextResponse.json({
             address: `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}`,
@@ -50,4 +52,4 @@ export async function GET(request: Request) {
             error: 'Could not resolve address'
         })
     }
-}
+})

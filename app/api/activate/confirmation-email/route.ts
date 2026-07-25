@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { sendEmail } from '@/lib/sendEmail';
 import { getActivationConfirmationEmail } from '@/lib/emailTemplates';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('activate-confirmation-email', async (request: NextRequest) => {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -14,6 +16,7 @@ export async function POST(request: NextRequest) {
     let decodedToken;
     try {
       decodedToken = await adminAuth.verifyIdToken(token);
+      setRequestUser(decodedToken.uid);
     } catch {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
@@ -57,7 +60,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Activation confirmation email error:', error);
+    log.error('activation_confirmation_email_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json({ error: 'Failed to send confirmation email' }, { status: 500 });
   }
-}
+})

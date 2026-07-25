@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { verifyBearerToken } from '@/lib/apiAuth'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log, setRequestUser } from '@/lib/observability/logger'
 
 interface ConsentUpdate {
     preferences: {
@@ -14,11 +16,12 @@ interface ConsentUpdate {
     displayName?: string
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('user-consent', async (request: Request) => {
     try {
         const { decoded, error } = await verifyBearerToken(request)
         if (error) return error
         const uid = decoded.uid
+        setRequestUser(uid)
 
         const body = await request.json()
         const {
@@ -116,10 +119,10 @@ export async function POST(request: Request) {
             },
         })
     } catch (error: any) {
-        console.error('Consent error:', error)
+        log.error('user_consent_failed', { error: error.message })
         return NextResponse.json(
             { success: false, error: error.message || 'Failed to save preferences' },
             { status: 500 }
         )
     }
-}
+})

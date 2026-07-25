@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
-export async function GET(request: Request) {
+export const GET = withObservability('ip-location', async (request: Request) => {
     try {
         const forwarded = request.headers.get('x-forwarded-for')
         const realIp = request.headers.get('x-real-ip')
@@ -44,7 +46,9 @@ export async function GET(request: Request) {
         })
 
     } catch (error) {
-        console.error('IP location error:', error)
+        log.warn('ip_location_lookup_failed', {
+            error: error instanceof Error ? error.message : String(error),
+        })
 
         return NextResponse.json({
             city: 'Unknown',
@@ -58,4 +62,4 @@ export async function GET(request: Request) {
             note: 'Location services unavailable'
         })
     }
-}
+})

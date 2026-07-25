@@ -5,8 +5,10 @@ import { NextRequest, NextResponse } from 'next/server'
 // (FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY) and threw at module load when
 // those vars were absent, which silently broke flyer downloads per-environment.
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log, setRequestUser } from '@/lib/observability/logger'
 
-export async function GET(request: NextRequest) {
+export const GET = withObservability('download-missing-flyer', async (request: NextRequest) => {
   try {
     const searchParams = request.nextUrl.searchParams
     const tagCode = searchParams.get('tagCode')
@@ -35,6 +37,7 @@ export async function GET(request: NextRequest) {
     try {
       const decodedToken = await adminAuth.verifyIdToken(token)
       uid = decodedToken.uid
+      setRequestUser(uid)
     } catch (err) {
       return NextResponse.json(
         { error: 'Invalid or expired token' },
@@ -97,10 +100,12 @@ export async function GET(request: NextRequest) {
       tagCode,
     })
   } catch (error) {
-    console.error('Error generating download URL:', error)
+    log.error('download_missing_flyer_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: 'Failed to generate download URL' },
       { status: 500 }
     )
   }
-}
+})

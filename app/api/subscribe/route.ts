@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
+import { getAttributionFromRequest } from '@/lib/observability/attribution';
 
 interface SubscribeRequest {
     plan: 'monthly' | 'yearly';
@@ -41,7 +44,7 @@ async function checkExistingSubscription(userId: string, stripe: Stripe): Promis
     }
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('subscribe', async (request: Request) => {
     if (!process.env.STRIPE_SECRET_KEY) {
         return NextResponse.json({ error: 'Stripe configuration missing' }, { status: 500 });
     }
@@ -53,6 +56,7 @@ export async function POST(request: Request) {
     try {
         const body: SubscribeRequest = await request.json();
         const { plan, userEmail, userId } = body;
+        if (userId) setRequestUser(userId);
 
         if (userId) {
             const alreadySubscribed = await checkExistingSubscription(userId, stripe);
@@ -80,6 +84,8 @@ export async function POST(request: Request) {
                 }
             }
         }
+
+        const attribution = getAttributionFromRequest(request);
 
         const priceData = plan === 'yearly'
             ? { unit_amount: 3000, interval: 'year' as const }
@@ -112,6 +118,9 @@ export async function POST(request: Request) {
                 userId: userId || '',
                 plan,
                 type: 'protect_subscription',
+                utm_source: attribution?.source || '',
+                utm_medium: attribution?.medium || '',
+                utm_campaign: attribution?.campaign || '',
             },
             subscription_data: {
                 metadata: {
@@ -129,7 +138,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ id: session.id, url: session.url });
     } catch (error: any) {
-        console.error('Stripe Subscribe Error:', error);
+        log.error('subscribe_session_failed', { error: error.message });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+})

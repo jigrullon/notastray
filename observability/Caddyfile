@@ -1,0 +1,17 @@
+{$LOKI_PUBLIC_DOMAIN} {
+	# Loki has no built-in auth and this box is reachable from the public
+	# internet (the app pushes logs to it from Vercel). Basic auth here is
+	# what LOKI_PUSH_USERNAME / LOKI_PUSH_PASSWORD in the app's env map to.
+	# Caddy handles TLS automatically via Let's Encrypt for the domain above.
+	basicauth {
+		{$LOKI_PUSH_USERNAME} {$LOKI_PUSH_PASSWORD_HASH}
+	}
+
+	reverse_proxy loki:3100
+}
+
+{$GRAFANA_PUBLIC_DOMAIN} {
+	# Grafana has its own login (GF_SECURITY_ADMIN_USER/PASSWORD) so no
+	# extra basic auth layer needed here — just TLS termination.
+	reverse_proxy grafana:3000
+}

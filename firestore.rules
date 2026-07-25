@@ -51,5 +51,18 @@ service cloud.firestore {
     match /newsletter_subscribers/{docId} {
       allow read, write: if false;
     }
+
+    // Product usage events (e.g. Rescue Crew adoption) — server-side only via
+    // Admin SDK, read by the internal business/marketing metrics endpoints.
+    match /product_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Daily rollup docs (revenue/subscriber/tag trend) — written by the
+    // Vercel Cron rollup job, read by the revenue-timeseries metrics
+    // endpoint. Server-side only.
+    match /daily_metrics/{date} {
+      allow read, write: if false;
+    }
   }
 }

@@ -5,6 +5,8 @@ import { getPasswordChangedEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
 // How recently tokensValidAfterTime must have moved for us to believe a
 // password change just happened. Generous enough to absorb the round trip
@@ -28,11 +30,12 @@ const ratelimit = new Ratelimit({
 // client SDK (which requires reauthentication). This endpoint only sends the
 // "your password was changed" security alert email — it does not touch the
 // password itself.
-export async function POST(request: NextRequest) {
+export const POST = withObservability('user-change-password', async (request: NextRequest) => {
   const { decoded, error } = await verifyBearerToken(request);
   if (error) return error;
 
   const uid = decoded.uid;
+  setRequestUser(uid);
   const email = decoded.email ?? '';
   const displayName = decoded.name;
 
@@ -73,8 +76,10 @@ export async function POST(request: NextRequest) {
       from: 'support@notastray.com',
     });
   } catch (err) {
-    console.error('change-password: failed to send security notification email', err);
+    log.error('password_changed_email_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   return NextResponse.json({ success: true });
-}
+})

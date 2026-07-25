@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
 /**
  * POST /api/import-tags?secret=ADMIN_API_KEY
@@ -7,7 +9,7 @@ import { adminDb } from '@/lib/firebaseAdmin';
  *
  * Bulk-imports tags into Firestore via Firebase Admin SDK (server-side, bypasses security rules).
  */
-export async function POST(request: NextRequest) {
+export const POST = withObservability('import-tags', async (request: NextRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const secret = searchParams.get('secret')
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ created, skipped, errors, total: tags.length });
     } catch (error: any) {
-        console.error('Import error:', error);
+        log.error('import_tags_failed', { error: error.message });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+})
