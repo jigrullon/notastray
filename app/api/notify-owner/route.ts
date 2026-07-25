@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sendEmail } from '@/lib/sendEmail';
@@ -28,14 +29,19 @@ interface NotificationRequest {
 }
 
 // One-way fingerprint of the visitor (IP + user agent) used for the
-// per-visitor notification cooldown. No raw IP is ever persisted.
-async function computeVisitorHash(request: Request, userAgent: string): Promise<string> {
-    const ip = request.headers.get('cf-connecting-ip')
-        || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-        || 'unknown-ip'
-    const data = new TextEncoder().encode(`${ip}|${userAgent}`)
-    const digest = await crypto.subtle.digest('SHA-256', data)
-    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('')
+// per-visitor notification cooldown. No raw IP is ever persisted. Returns null
+// if fingerprinting fails so a hashing error can never block a notification —
+// fail open, since a missed lost-pet alert is worse than a duplicate.
+function computeVisitorHash(request: Request, userAgent: string): string | null {
+    try {
+        const ip = request.headers.get('cf-connecting-ip')
+            || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+            || 'unknown-ip'
+        return crypto.createHash('sha256').update(`${ip}|${userAgent}`).digest('hex')
+    } catch (err) {
+        log.warn('visitor_hash_failed', { error: err instanceof Error ? err.message : String(err) })
+        return null
+    }
 }
 
 export const POST = withObservability('notify-owner', async (request: Request) => {
@@ -46,6 +52,10 @@ export const POST = withObservability('notify-owner', async (request: Request) =
         const source: ScanSource = SCAN_SOURCES.includes(body.source as ScanSource)
             ? (body.source as ScanSource)
             : 'unknown'
+        // Client-supplied timestamp is untrusted — fall back to server time if it's
+        // missing or unparseable, so a bad value can't throw and drop the alert.
+        const parsedTimestamp = new Date(timestamp)
+        const eventTimestamp = isNaN(parsedTimestamp.getTime()) ? new Date() : parsedTimestamp
 
         // Get tag from Firestore
         const tagDoc = await adminDb.collection('tags').doc(tagCode.toUpperCase()).get()
@@ -81,7 +91,7 @@ export const POST = withObservability('notify-owner', async (request: Request) =
             return NextResponse.json({ error: 'No contact information available' }, { status: 400 })
         }
 
-        const visitorHash = await computeVisitorHash(request, userAgent)
+        const visitorHash = computeVisitorHash(request, userAgent)
 
         const locationData = location ? {
             latitude: location.latitude,
@@ -98,7 +108,7 @@ export const POST = withObservability('notify-owner', async (request: Request) =
                 ownerName: owner.name,
                 petName: owner.petName,
                 location: locationData,
-                timestamp: new Date(timestamp).toISOString(),
+                timestamp: eventTimestamp.toISOString(),
                 userAgent,
                 locationMethod,
                 source,
@@ -134,7 +144,9 @@ export const POST = withObservability('notify-owner', async (request: Request) =
         // bypasses client-side guards only.
         const visitorCooldownMs = tagData.isLost ? SERVER_VISITOR_COOLDOWN_LOST_MS : SERVER_VISITOR_COOLDOWN_MS
         const visitorCutoff = new Date(Date.now() - visitorCooldownMs).toISOString()
-        const recentlyNotifiedByVisitor = recentScanDocs.some(doc => {
+        // Skip the cooldown entirely when fingerprinting failed (null) — never
+        // let a null hash match another null and suppress a real notification.
+        const recentlyNotifiedByVisitor = visitorHash !== null && recentScanDocs.some(doc => {
             const data = doc.data()
             return data.visitorHash === visitorHash
                 && (data.notificationsSent?.sms || data.notificationsSent?.email)
@@ -202,7 +214,7 @@ export const POST = withObservability('notify-owner', async (request: Request) =
         }
 
         // Format timestamp
-        const scanTime = new Date(timestamp).toLocaleString('en-US', {
+        const scanTime = eventTimestamp.toLocaleString('en-US', {
             timeZone: 'America/Los_Angeles',
             year: 'numeric',
             month: 'short',

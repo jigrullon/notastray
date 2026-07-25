@@ -164,7 +164,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
   //  'sent'       – server confirmed a notification went out (green banner)
   //  'suppressed' – client-side guard skipped auto-notify (amber banner + Alert Owner Again)
   //  'already'    – server said the owner was alerted recently (amber banner, no button)
-  const [notifyState, setNotifyState] = useState<'idle' | 'sent' | 'suppressed' | 'already'>('idle')
+  const [notifyState, setNotifyState] = useState<'idle' | 'sent' | 'suppressed' | 'already' | 'reload'>('idle')
   const [manualSending, setManualSending] = useState(false)
   const [location, setLocation] = useState<LocationData | null>(null)
   const [editing, setEditing] = useState(false)
@@ -220,32 +220,37 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
     // Don't notify when owner views their own pet
     if (isOwner) return
 
-    // Layer 1: reload detection. A restored/reloaded tab (mobile browsers
-    // discard and reload background tabs) is not a new scan — only a fresh
-    // navigation (QR scan, lookup, typed URL) should auto-notify.
-    try {
-      const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
-      if (navEntry && navEntry.type !== 'navigate') {
-        setNotifyState('suppressed')
-        return
-      }
-    } catch {
-      // Navigation Timing unavailable — fail open
-    }
-
-    // Layer 2: durable cooldown. localStorage survives tab discard/restore
-    // (unlike sessionStorage). Timestamp is written only after a confirmed send.
+    // Durable proof of a prior *confirmed* send for this tag. localStorage
+    // survives tab discard/restore (unlike sessionStorage) and is written only
+    // after a confirmed send, so it's the source of truth for "already alerted."
+    let confirmedRecently = false
     try {
       const last = localStorage.getItem(`scan_notified_${tagCode}`)
       if (last) {
         const cooldownMs = isLost ? CLIENT_COOLDOWN_LOST_MS : CLIENT_COOLDOWN_MS
-        if (Date.now() - new Date(last).getTime() < cooldownMs) {
-          setNotifyState('suppressed')
-          return
-        }
+        confirmedRecently = Date.now() - new Date(last).getTime() < cooldownMs
       }
     } catch {
-      // Private-mode storage errors — fail open
+      // Private-mode storage errors — fail open (treat as no record)
+    }
+
+    if (confirmedRecently) {
+      setNotifyState('suppressed')
+      return
+    }
+
+    // Reload detection. A restored/reloaded tab (mobile browsers discard and
+    // reload background tabs) is not a new scan, so don't auto-notify again —
+    // but with no confirmed send on record we must NOT claim the owner was
+    // alerted. Show the honest 'reload' state and let the finder trigger one.
+    try {
+      const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+      if (navEntry && navEntry.type !== 'navigate') {
+        setNotifyState('reload')
+        return
+      }
+    } catch {
+      // Navigation Timing unavailable — fail open
     }
 
     sendNotification(false)
@@ -526,6 +531,26 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               <p className="text-amber-800 dark:text-amber-300 font-medium">
                 The owner has already been alerted recently — thank you for helping!
               </p>
+            </div>
+          </div>
+        )}
+        {notifyState === 'reload' && !isOwner && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center">
+                <BellRing className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2 flex-shrink-0" />
+                <p className="text-amber-800 dark:text-amber-300 font-medium">
+                  This page was reloaded, so we didn&apos;t automatically alert the owner. If this pet needs help, alert them now.
+                </p>
+              </div>
+              <button
+                onClick={handleManualAlert}
+                disabled={manualSending}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50"
+              >
+                {manualSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BellRing className="w-3.5 h-3.5" />}
+                {manualSending ? 'Alerting...' : 'Alert Owner'}
+              </button>
             </div>
           </div>
         )}
