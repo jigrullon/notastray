@@ -514,6 +514,25 @@ function DashboardContent() {
               </div>
             </div>
           </Link>
+
+          <Link
+            href="/dashboard/privacy"
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:border-primary-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 transition-colors">
+                  Privacy &amp; Sharing
+                </h3>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Choose what contact info shows on your pets&apos; public profiles
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                <Eye className="w-5 h-5 text-indigo-600" />
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* PROTECT Plan Section */}
@@ -688,30 +707,19 @@ function DashboardContent() {
                     )}
                   </div>
 
-                  <div className="mt-auto space-y-2">
+                  <div className="mt-auto">
+                    {tag.isActive && !tag.isLost && (
+                      <Link
+                        href={`/report-lost/${tag.code}`}
+                        className="w-full text-center block px-3 py-1.5 rounded-md text-xs font-medium border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                      >
+                        Report Lost
+                      </Link>
+                    )}
                     {tag.isLost && (
                       <p className="text-xs text-center text-orange-600 dark:text-orange-400 font-medium">
                         Marked as lost — visit the pet profile to mark found.
                       </p>
-                    )}
-                    {tag.isActive && (
-                      <div className="flex gap-2">
-                        {!tag.isLost && (
-                          <Link
-                            href={`/report-lost/${tag.code}`}
-                            className="flex-1 text-center block px-3 py-1.5 rounded-md text-xs font-medium border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                          >
-                            Report Lost
-                          </Link>
-                        )}
-                        <Link
-                          href={`/dashboard/privacy/${tag.code}`}
-                          className={`${tag.isLost ? 'w-full' : 'flex-1'} text-center flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors`}
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          Privacy
-                        </Link>
-                      </div>
                     )}
                   </div>
                 </div>
