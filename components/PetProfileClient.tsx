@@ -86,6 +86,12 @@ function formatAddress(address: RescueCrewAddress): string {
     .join(', ')
 }
 
+interface PetPrivacy {
+  showOwnerName: boolean
+  showPhone: boolean
+  showAddress: boolean
+}
+
 interface PetData {
   name: string
   photo: string
@@ -103,6 +109,7 @@ interface PetData {
   goodWithDogs: 'yes' | 'no' | 'unsure'
   goodWithCats: 'yes' | 'no' | 'unsure'
   goodWithChildren: 'yes' | 'no' | 'unsure'
+  privacy: PetPrivacy
 }
 
 interface PetProfileClientProps {
@@ -350,6 +357,9 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           goodWithChildren: editData.goodWithChildren,
           species: editSpecies,
           breed: editBreed,
+          // This save replaces the whole `pet` map, so privacy prefs set from
+          // Dashboard > Privacy must be carried forward or they'd be wiped out.
+          privacy: editData.privacy,
         },
         updatedAt: new Date().toISOString(),
       })
@@ -756,73 +766,103 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
             )}
           </div>
 
-          {/* Contact Information */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-              <Phone className="w-5 h-5 mr-2 text-primary-600" />
-              Contact Owner
-            </h2>
+          {/* Contact Information — a public (non-owner) viewer only sees the
+              fields the owner has opted to share via Dashboard > Privacy. The
+              owner always sees everything, with a note on anything they've hidden. */}
+          {(() => {
+            const canShowName = isOwner || petData.privacy.showOwnerName
+            const canShowPhone = isOwner || petData.privacy.showPhone
+            const canShowAddress = isOwner || petData.privacy.showAddress
+            const nothingToShow = !editing && !canShowName && !canShowPhone && !canShowAddress
 
-            {editing ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Name</label>
-                  <input
-                    value={editData.owner}
-                    onChange={(e) => setEditData({ ...editData, owner: e.target.value })}
-                    className={inputClass}
-                    placeholder="Owner name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                  <input
-                    value={editData.phone}
-                    onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
-                    className={inputClass}
-                    placeholder="Phone number"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                  <input
-                    value={editData.address}
-                    onChange={(e) => setEditData({ ...editData, address: e.target.value })}
-                    className={inputClass}
-                    placeholder="Address"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="text-gray-700 dark:text-gray-300">{petData.owner}</span>
-                  {petData.phone ? (
-                    <a
-                      href={`tel:${petData.phone}`}
-                      className="btn-primary"
-                    >
-                      Call Now
-                    </a>
-                  ) : (
-                    <button
-                      disabled
-                      className="btn-primary opacity-50 cursor-not-allowed"
-                    >
-                      Call Now
-                    </button>
-                  )}
-                </div>
+            if (nothingToShow) return null
 
-                {petData.address && (
-                  <div className="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 mr-2 mt-0.5" />
-                    <span className="text-gray-700 dark:text-gray-300">{petData.address}</span>
+            return (
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                  <Phone className="w-5 h-5 mr-2 text-primary-600" />
+                  Contact Owner
+                </h2>
+
+                {editing ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Name</label>
+                      <input
+                        value={editData.owner}
+                        onChange={(e) => setEditData({ ...editData, owner: e.target.value })}
+                        className={inputClass}
+                        placeholder="Owner name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                      <input
+                        value={editData.phone}
+                        onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                        className={inputClass}
+                        placeholder="Phone number"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
+                      <input
+                        value={editData.address}
+                        onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                        className={inputClass}
+                        placeholder="Address"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Control who can see this info from{' '}
+                      <Link href="/dashboard" className="text-primary-600 dark:text-primary-400 hover:underline">
+                        Dashboard &gt; Privacy
+                      </Link>.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(canShowName || canShowPhone) && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <span className="text-gray-700 dark:text-gray-300">
+                          {canShowName ? petData.owner : <span className="text-gray-400 dark:text-gray-500 italic">Name hidden</span>}
+                          {isOwner && !petData.privacy.showOwnerName && (
+                            <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">(hidden from public)</span>
+                          )}
+                        </span>
+                        {canShowPhone && petData.phone ? (
+                          <a href={`tel:${petData.phone}`} className="btn-primary">
+                            Call Now
+                          </a>
+                        ) : canShowPhone ? (
+                          <button disabled className="btn-primary opacity-50 cursor-not-allowed">
+                            Call Now
+                          </button>
+                        ) : (
+                          isOwner && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">Phone hidden from public</span>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                    {petData.address && canShowAddress && (
+                      <div className="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 mr-2 mt-0.5" />
+                        <span className="text-gray-700 dark:text-gray-300">{petData.address}</span>
+                      </div>
+                    )}
+                    {petData.address && !canShowAddress && isOwner && (
+                      <div className="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 mr-2 mt-0.5" />
+                        <span className="text-gray-400 dark:text-gray-500 italic">Address hidden from public</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            )
+          })()}
 
           {/* Medical Information */}
           {(editing || petData.allergies) && (

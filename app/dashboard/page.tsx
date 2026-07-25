@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, collection, getDocs, query, where, documentId } from 'firebase/firestore'
-import { Loader2, Package, Settings, Heart, Shield, Check, QrCode, AlertTriangle, Activity, Users, Lock } from 'lucide-react'
+import { Loader2, Package, Settings, Heart, Shield, Check, QrCode, AlertTriangle, Activity, Users, Lock, Eye } from 'lucide-react'
 import Link from 'next/link'
 
 interface SubscriptionData {
@@ -688,19 +688,30 @@ function DashboardContent() {
                     )}
                   </div>
 
-                  <div className="mt-auto">
-                    {tag.isActive && !tag.isLost && (
-                      <Link
-                        href={`/report-lost/${tag.code}`}
-                        className="w-full text-center block px-3 py-1.5 rounded-md text-xs font-medium border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                      >
-                        Report Lost
-                      </Link>
-                    )}
+                  <div className="mt-auto space-y-2">
                     {tag.isLost && (
                       <p className="text-xs text-center text-orange-600 dark:text-orange-400 font-medium">
                         Marked as lost — visit the pet profile to mark found.
                       </p>
+                    )}
+                    {tag.isActive && (
+                      <div className="flex gap-2">
+                        {!tag.isLost && (
+                          <Link
+                            href={`/report-lost/${tag.code}`}
+                            className="flex-1 text-center block px-3 py-1.5 rounded-md text-xs font-medium border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                          >
+                            Report Lost
+                          </Link>
+                        )}
+                        <Link
+                          href={`/dashboard/privacy/${tag.code}`}
+                          className={`${tag.isLost ? 'w-full' : 'flex-1'} text-center flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors`}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Privacy
+                        </Link>
+                      </div>
                     )}
                   </div>
                 </div>

@@ -17,6 +17,7 @@ async function getPetData(code: string) {
     }
 
     const pet = fields.pet.mapValue.fields;
+    const privacyFields = pet.privacy?.mapValue?.fields;
     return {
       petData: {
         name: pet.name?.stringValue || '',
@@ -35,6 +36,12 @@ async function getPetData(code: string) {
         goodWithDogs: (pet.goodWithDogs?.stringValue as 'yes' | 'no' | 'unsure') || 'unsure',
         goodWithCats: (pet.goodWithCats?.stringValue as 'yes' | 'no' | 'unsure') || 'unsure',
         goodWithChildren: (pet.goodWithChildren?.stringValue as 'yes' | 'no' | 'unsure') || 'unsure',
+        // Defaults to showing everything for pets activated before this field existed.
+        privacy: {
+          showOwnerName: privacyFields?.showOwnerName?.booleanValue ?? true,
+          showPhone: privacyFields?.showPhone?.booleanValue ?? true,
+          showAddress: privacyFields?.showAddress?.booleanValue ?? true,
+        },
       },
       userId: fields.userId?.stringValue || undefined,
       isLost: fields.isLost?.booleanValue || false,
