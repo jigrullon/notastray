@@ -73,6 +73,123 @@ const faqs = [
     ],
   },
   {
+    category: 'Privacy & Notifications',
+    items: [
+      {
+        question: "I don't want my info public. What can people actually see?",
+        answer: (
+          <>
+            <p>
+              Your contact info isn&apos;t public or searchable anywhere online. The only way anyone
+              sees it is by scanning your pet&apos;s actual tag or opening their profile link
+              directly — and even then, only what you&apos;ve chosen to share.
+            </p>
+            <p className="mt-3">
+              From{' '}
+              <Link href="/dashboard/privacy" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">
+                Dashboard &gt; Privacy &amp; Sharing
+              </Link>
+              , you decide exactly which contact details show up on your pet&apos;s profile:
+            </p>
+            <ul className="list-disc list-inside mt-3 space-y-1 text-gray-700 dark:text-gray-300">
+              <li>Your name</li>
+              <li>Your phone number</li>
+              <li>Your home address</li>
+            </ul>
+            <p className="mt-3">
+              Turn any of those off and they simply won&apos;t appear to a finder. This applies to
+              all of your tags at once, and you can change it anytime. Pet details like breed,
+              coloring, and medical notes always stay visible, since a finder needs those to help
+              your pet.
+            </p>
+          </>
+        ),
+      },
+      {
+        question: 'Can I add other people who can be reached about my pet?',
+        answer: (
+          <>
+            <p>
+              Yes — that&apos;s what{' '}
+              <Link href="/dashboard/rescue-crew" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">
+                Rescue Crew
+              </Link>{' '}
+              is for. Add up to 5 trusted people — family, a roommate, a pet sitter, anyone who
+              could help get your pet home — with their name, relationship, and phone number, and
+              choose which of your tags each one applies to.
+            </p>
+            <p className="mt-3">
+              Keep &quot;Shown when lost&quot; checked on a contact and they&apos;ll appear on your
+              pet&apos;s profile once you mark your pet as lost, giving a finder another way to
+              reach someone who can help. Rescue Crew contacts aren&apos;t shown on the day-to-day
+              profile — only after a pet is reported lost.
+            </p>
+          </>
+        ),
+      },
+      {
+        question: 'Can scan alerts go to a second phone number too?',
+        answer: (
+          <>
+            <p>
+              Yes. From{' '}
+              <Link href="/settings/notifications" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">
+                Notification Settings
+              </Link>
+              , turn on SMS Notifications and click <strong>Add a phone number</strong>. Both
+              numbers get the same text the moment your tag is scanned — handy if you want a
+              spouse or partner alerted at the same time you are.
+            </p>
+            <p className="mt-3">
+              Each number has its own separate consent step, confirmed on its own. If you ever
+              change one number, only that number needs to re-confirm consent — it doesn&apos;t
+              touch or reset the other one.
+            </p>
+            <p className="mt-3">
+              This is different from Rescue Crew: a second number here is private and only used to
+              notify you two when a scan happens. It&apos;s never shown on the public profile, unlike
+              Rescue Crew contacts, which only appear once a pet is reported lost.
+            </p>
+          </>
+        ),
+      },
+      {
+        question: "I got a notification that my pet's tag was scanned, but I didn't scan it. What happened?",
+        answer: (
+          <>
+            <p>A few things can trigger this, and most are harmless:</p>
+            <ul className="list-disc list-inside mt-3 space-y-2 text-gray-700 dark:text-gray-300">
+              <li>
+                <strong>Your pet&apos;s profile page reloaded.</strong> Every time the profile page
+                loads, it counts as a new view and sends a fresh alert — if a browser tab with the
+                profile still open gets reloaded or restored later, that counts as a new view even
+                though nobody scanned anything. Closing the tab after viewing helps prevent this.
+              </li>
+              <li>Someone came across the tag or QR code (in person or in a photo) and scanned it out of curiosity.</li>
+              <li>
+                Double-check that the code printed under the QR code on your tag actually matches
+                the tag linked to your pet&apos;s profile.
+              </li>
+            </ul>
+            <p className="mt-3">
+              You can see a log of every scan and view — with its approximate location and time —
+              from{' '}
+              <Link href="/dashboard/activity" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">
+                Dashboard &gt; Tag Activity
+              </Link>
+              . If the alerts keep happening and don&apos;t match anything above, forward us the
+              notification email at{' '}
+              <a href="mailto:support@notastray.com" className="text-primary-600 dark:text-primary-400 hover:underline">
+                support@notastray.com
+              </a>{' '}
+              and we&apos;ll help track down what&apos;s triggering it.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
     category: 'About the Tag',
     items: [
       {
@@ -116,6 +233,50 @@ const faqs = [
               support@notastray.com
             </a>{' '}
             and we&apos;ll get you sorted out.
+          </p>
+        ),
+      },
+    ],
+  },
+  {
+    category: 'Activating Your Tag',
+    items: [
+      {
+        question: "I'm trying to activate my tag and it says the code wasn't found. What should I do?",
+        answer: (
+          <>
+            <p>This is almost always a small typo — a few characters are easy to mix up:</p>
+            <ul className="list-disc list-inside mt-3 space-y-1 text-gray-700 dark:text-gray-300">
+              <li>0 (zero) vs. O</li>
+              <li>1 vs. I vs. l</li>
+              <li>2 vs. Z</li>
+              <li>5 vs. S</li>
+              <li>8 vs. B</li>
+            </ul>
+            <p className="mt-3">
+              Re-enter the exact code printed under the QR code on your tag on the{' '}
+              <Link href="/activate" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">
+                Activate
+              </Link>{' '}
+              page. If it still won&apos;t go through, email{' '}
+              <a href="mailto:support@notastray.com" className="text-primary-600 dark:text-primary-400 hover:underline">
+                support@notastray.com
+              </a>{' '}
+              with a clear photo of the QR code side of the tag and we&apos;ll get it sorted out.
+            </p>
+          </>
+        ),
+      },
+      {
+        question: "It says my tag is already linked to another account. What do I do?",
+        answer: (
+          <p>
+            Email{' '}
+            <a href="mailto:support@notastray.com" className="text-primary-600 dark:text-primary-400 hover:underline">
+              support@notastray.com
+            </a>{' '}
+            with a clear photo of the QR code side of your tag, and we&apos;ll get it freed up so
+            you can activate it.
           </p>
         ),
       },

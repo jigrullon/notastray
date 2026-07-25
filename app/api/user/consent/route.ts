@@ -12,6 +12,11 @@ interface ConsentUpdate {
         locationSharing: boolean
     }
     phone?: string
+    phone2?: string
+    // Set independently, only for whichever number the SMS consent modal was
+    // just confirmed for — never both from a single confirmation.
+    phoneConsentedAt?: string
+    phone2ConsentedAt?: string | null
     email?: string
     displayName?: string
 }
@@ -29,6 +34,10 @@ export const POST = withObservability('user-consent', async (request: Request) =
             smsOptIn = true,
             emailOptIn = true,
             phone,
+            phone2,
+            // Which number this specific request just obtained consent for, if any.
+            // Omitted on a plain settings save that isn't a consent confirmation.
+            consentFor,
             email,
             consentIp,
             consentMethod = 'user_selection',
@@ -93,8 +102,19 @@ export const POST = withObservability('user-consent', async (request: Request) =
 
         // Include phone and email if provided
         if (phone) updateData.phone = phone
+        // phone2 is optional and removable — unlike phone/email, an explicit empty
+        // string clears it (there's no other field a user would be left without).
+        if (phone2 !== undefined) updateData.phone2 = phone2
+        // Clearing phone2 also clears its consent record — there's nothing left to
+        // have consented to. Re-adding a number always requires fresh consent.
+        if (phone2 === '') updateData.phone2ConsentedAt = null
         if (email) updateData.email = email
         if (trimmedDisplayName) updateData.displayName = trimmedDisplayName
+
+        // Consent timestamps are set independently per number — confirming consent
+        // for one number must never touch the other's consent record.
+        if (consentFor === 'phone' && phone) updateData.phoneConsentedAt = now
+        if (consentFor === 'phone2' && phone2) updateData.phone2ConsentedAt = now
 
         // Update Firebase Auth displayName if provided
         if (trimmedDisplayName) {
@@ -113,6 +133,7 @@ export const POST = withObservability('user-consent', async (request: Request) =
                 smsOptIn,
                 emailOptIn,
                 phone,
+                phone2,
                 email,
                 displayName: trimmedDisplayName,
                 consentTimestamp: now,

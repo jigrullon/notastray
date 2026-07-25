@@ -47,6 +47,8 @@ export const POST = withObservability('notify-owner', async (request: Request) =
             name: tagData.pet?.ownerName || 'Pet Owner',
             email: userData?.email || tagData.pet?.ownerEmail,
             phone: userData?.phone || tagData.pet?.ownerPhone,
+            // Optional second SMS recipient — e.g. a spouse — set from Notification Settings.
+            phone2: userData?.phone2 as string | undefined,
             petName: tagData.pet?.name || 'Your pet',
             smsEnabled: userData?.preferences?.sms?.optIn ?? true, // Default to true if not set
             emailEnabled: userData?.preferences?.email?.optIn ?? true, // Default to true if not set
@@ -194,19 +196,37 @@ export const POST = withObservability('notify-owner', async (request: Request) =
             email: false,
         }
 
-        // Send SMS notification
-        log.info('sms_notification_check', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone })
-        if (owner.smsEnabled && owner.phone) {
-            try {
-                await sendSMS(owner.phone, smsMessage)
-                notificationsSent.sms = true
-                log.info('sms_notification_sent', { tagCode })
-            } catch (smsError) {
-                log.error('sms_notification_failed', {
-                    tagCode,
-                    error: smsError instanceof Error ? smsError.message : String(smsError),
-                })
-            }
+        // Send SMS notification(s) — recipients are independent and best-effort,
+        // so they're sent concurrently rather than one after another, and a
+        // failure on one (e.g. a spouse's number) never affects the other.
+        // Deduped by digits so an accidental duplicate entry (e.g. phone2 set
+        // to the same number as phone) never double-sends the same message.
+        const normalizePhone = (p: string) => p.replace(/\D/g, '')
+        const seenPhones = new Set<string>()
+        const smsRecipients: { phone: string; label?: string }[] = []
+        for (const [phone, label] of [[owner.phone, undefined], [owner.phone2, 'phone2']] as const) {
+            if (!phone) continue
+            const key = normalizePhone(phone)
+            if (!key || seenPhones.has(key)) continue
+            seenPhones.add(key)
+            smsRecipients.push({ phone, label })
+        }
+        log.info('sms_notification_check', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone, hasPhone2: !!owner.phone2 })
+        if (owner.smsEnabled && smsRecipients.length > 0) {
+            const results = await Promise.allSettled(smsRecipients.map((r) => sendSMS(r.phone, smsMessage)))
+            results.forEach((result, i) => {
+                const { label } = smsRecipients[i]
+                const logFields = label ? { tagCode, recipient: label } : { tagCode }
+                if (result.status === 'fulfilled') {
+                    notificationsSent.sms = true
+                    log.info('sms_notification_sent', logFields)
+                } else {
+                    log.error('sms_notification_failed', {
+                        ...logFields,
+                        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+                    })
+                }
+            })
         } else {
             log.info('sms_notification_skipped', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone })
         }
