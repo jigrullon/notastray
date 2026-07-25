@@ -35,9 +35,15 @@ export const GET = withObservability('internal-metrics-species-breakdown', async
     // a real category to chart, but the numbers should still reconcile.
     bySpecies['Unknown'] = Math.max(0, activatedTags - accountedFor);
 
+    // Infinity's table/pie-chart parser wants an array of rows, not a
+    // bare object keyed by species — `data` is that array form; `bySpecies`
+    // stays too for anything that wants keyed lookup.
+    const data = Object.entries(bySpecies).map(([species, count]) => ({ species, count }));
+
     return NextResponse.json({
       activatedTags,
       bySpecies,
+      data,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {

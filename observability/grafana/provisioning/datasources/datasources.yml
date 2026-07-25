@@ -21,5 +21,12 @@ datasources:
     access: proxy
     jsonData:
       httpHeaderName1: 'X-Internal-Metrics-Key'
+      # Infinity blocks every URL by default (a real security feature, not
+      # a bug) unless the datasource explicitly allowlists it — confirmed
+      # by testing: without this, every panel query 403s with "requested
+      # URL not allowed". Restricts this datasource instance to only ever
+      # be able to query this app, nothing else.
+      allowedHosts:
+        - '${APP_BASE_URL}'
     secureJsonData:
       httpHeaderValue1: '${INTERNAL_METRICS_API_KEY}'

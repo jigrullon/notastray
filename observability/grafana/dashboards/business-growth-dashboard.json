@@ -26,10 +26,10 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/summary",
         "url_options": { "method": "GET" },
-        "root_selector": "",
+        "root_selector": "data",
         "columns": [{ "selector": "activatedTags", "text": "Activated Tags", "type": "number" }]
       }]
     },
@@ -40,10 +40,10 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/summary",
         "url_options": { "method": "GET" },
-        "root_selector": "",
+        "root_selector": "data",
         "columns": [{ "selector": "totalCustomers", "text": "Total Customers", "type": "number" }]
       }]
     },
@@ -54,10 +54,10 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/summary",
         "url_options": { "method": "GET" },
-        "root_selector": "",
+        "root_selector": "data",
         "columns": [{ "selector": "activeSubscribers", "text": "Active Subscribers", "type": "number" }]
       }]
     },
@@ -69,10 +69,10 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/summary",
         "url_options": { "method": "GET" },
-        "root_selector": "",
+        "root_selector": "data",
         "columns": [{ "selector": "mrr", "text": "MRR", "type": "number" }]
       }]
     },
@@ -84,10 +84,10 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/summary",
         "url_options": { "method": "GET" },
-        "root_selector": "",
+        "root_selector": "data",
         "columns": [{ "selector": "revenue30d", "text": "Revenue (30d)", "type": "number" }]
       }]
     },
@@ -98,10 +98,10 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/summary",
         "url_options": { "method": "GET" },
-        "root_selector": "",
+        "root_selector": "data",
         "columns": [{ "selector": "newsletterSubscribers", "text": "Newsletter Subscribers", "type": "number" }]
       }]
     },
@@ -113,7 +113,7 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "timeseries",
+        "type": "json", "source": "url", "format": "timeseries", "parser": "backend",
         "url": "$app_url/api/internal/metrics/revenue-timeseries?days=30",
         "url_options": { "method": "GET" },
         "root_selector": "series",
@@ -131,7 +131,7 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "timeseries",
+        "type": "json", "source": "url", "format": "timeseries", "parser": "backend",
         "url": "$app_url/api/internal/metrics/revenue-timeseries?days=30",
         "url_options": { "method": "GET" },
         "root_selector": "series",
@@ -149,11 +149,14 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/species-breakdown",
         "url_options": { "method": "GET" },
-        "root_selector": "bySpecies",
-        "columns": []
+        "root_selector": "data",
+        "columns": [
+          { "selector": "species", "text": "Species", "type": "string" },
+          { "selector": "count", "text": "Count", "type": "number" }
+        ]
       }]
     },
     {
@@ -164,10 +167,10 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/rescue-crew-usage",
         "url_options": { "method": "GET" },
-        "root_selector": "",
+        "root_selector": "data",
         "columns": [
           { "selector": "ownersWithAtLeastOneContact", "text": "Owners w/ Rescue Crew", "type": "number" },
           { "selector": "viewedByFinderCount", "text": "Times Shown to a Finder", "type": "number" }
@@ -181,11 +184,14 @@
       "targets": [{
         "refId": "A",
         "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity" },
-        "type": "json", "source": "url", "format": "table",
+        "type": "json", "source": "url", "format": "table", "parser": "backend",
         "url": "$app_url/api/internal/metrics/acquisition?days=90",
         "url_options": { "method": "GET" },
-        "root_selector": "ordersBySource",
-        "columns": []
+        "root_selector": "data",
+        "columns": [
+          { "selector": "source", "text": "Source", "type": "string" },
+          { "selector": "orders", "text": "Orders", "type": "number" }
+        ]
       }]
     },
     {
@@ -193,7 +199,7 @@
       "gridPos": { "h": 4, "w": 24, "x": 0, "y": 31 },
       "options": {
         "mode": "markdown",
-        "content": "Set the **app_url** variable above (dashboard settings → Variables) to your deployed app's URL. Revenue/subscriber trend panels read from the `daily_metrics` rollup — history only exists from whenever the Vercel Cron job (`/api/internal/rollup/daily`) started running, not retroactively. All panel queries here are a v1 starting point authored without a live Infinity-plugin instance to test against — if a panel shows a query error after import, open it in edit mode; the Infinity query editor's own validation will point at the exact field to fix (usually a column selector name)."
+        "content": "Set the **app_url** variable above (dashboard settings → Variables) to your deployed app's origin — it must match `APP_BASE_URL` in `observability/.env` exactly, or every panel below will 403 (Infinity's `allowedHosts` restriction). Revenue/subscriber trend panels read from the `daily_metrics` rollup — history only exists from whenever the Vercel Cron job (`/api/internal/rollup/daily`) started running, not retroactively. Panel queries were verified against a live Grafana + Infinity instance with mock data matching the real endpoint response shapes — see OBSERVABILITY.md's \"Local testing\" section for what was actually caught and fixed that way."
       }
     }
   ]

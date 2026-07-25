@@ -28,7 +28,7 @@ export const GET = withObservability('internal-metrics-rescue-crew-usage', async
 
     const activatedTags = activatedTagsSnap.data().count;
 
-    return NextResponse.json({
+    const summary = {
       activatedTags,
       totalContactsConfigured: totalContactsSnap.data().count,
       ownersWithAtLeastOneContact: distinctOwnersWithContact,
@@ -37,7 +37,11 @@ export const GET = withObservability('internal-metrics-rescue-crew-usage', async
       contactCreationEvents: createdEventsSnap.size,
       viewedByFinderCount: viewedEventsSnap.data().count,
       generatedAt: new Date().toISOString(),
-    });
+    };
+
+    // See summary/route.ts's comment: Infinity needs an array of rows, not
+    // a bare object, at the query root.
+    return NextResponse.json({ data: [summary] });
   } catch (error) {
     log.error('internal_metrics_rescue_crew_usage_failed', {
       error: error instanceof Error ? error.message : String(error),

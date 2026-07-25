@@ -67,7 +67,11 @@ export const GET = withObservability('internal-metrics-summary', async (request:
       generatedAt: new Date().toISOString(),
     };
 
-    return NextResponse.json(summary);
+    // Grafana's Infinity datasource parses table/timeseries data from an
+    // array of rows — a bare flat object at the query root isn't valid
+    // input for its parser and crashes the panel. Wrapping a single-row
+    // summary in a one-element array is the standard workaround.
+    return NextResponse.json({ data: [summary] });
   } catch (error) {
     log.error('internal_metrics_summary_failed', {
       error: error instanceof Error ? error.message : String(error),

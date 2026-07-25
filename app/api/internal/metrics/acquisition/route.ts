@@ -52,11 +52,23 @@ export const GET = withObservability('internal-metrics-acquisition', async (requ
       bucket(signupsBySource, doc.data().acquisition?.source);
     });
 
+    // Infinity's table/bar-gauge parser wants an array of rows — `data`
+    // combines the per-source tallies into one row per channel; the plain
+    // by-source objects stay too for anything that wants keyed lookup.
+    const allSources = new Set([...Object.keys(ordersBySource), ...Object.keys(signupsBySource)]);
+    const data = Array.from(allSources).map((source) => ({
+      source,
+      orders: ordersBySource[source] || 0,
+      revenue: revenueBySource[source] || 0,
+      signups: signupsBySource[source] || 0,
+    }));
+
     return NextResponse.json({
       windowDays: days,
       ordersBySource,
       revenueBySource,
       signupsBySource,
+      data,
       sampledOrders: ordersSnap.size,
       sampledSignups: usersSnap.size,
       truncated: ordersSnap.size >= MAX_DOCS || usersSnap.size >= MAX_DOCS,

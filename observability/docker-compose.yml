@@ -32,6 +32,13 @@ services:
       # metrics API — must match INTERNAL_METRICS_API_KEY in the app's own
       # env vars (Vercel), not a separate value.
       - INTERNAL_METRICS_API_KEY=${INTERNAL_METRICS_API_KEY:?set in observability/.env, matching the app's Vercel env var}
+      # Restricts the Infinity datasource to only ever query this one host
+      # (a real Infinity security feature — without an allowlist, EVERY
+      # panel query 403s with "requested URL not allowed", confirmed by
+      # testing). Must be the exact same origin as the Business & Growth
+      # dashboard's `app_url` template variable, e.g. https://notastray.com
+      # — mismatched values silently bring back the 403.
+      - APP_BASE_URL=${APP_BASE_URL:?set in observability/.env to your deployed app's origin, e.g. https://notastray.com}
       # The 5xx-spike alert's contact point (Slack/Discord/custom webhook
       # URL). NOT truly optional despite the placeholder default below —
       # Grafana's alerting provisioner refuses to start at all (the whole
