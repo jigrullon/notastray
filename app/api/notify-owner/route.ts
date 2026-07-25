@@ -6,14 +6,11 @@ import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import {
     SERVER_VISITOR_COOLDOWN_MS,
     SERVER_VISITOR_COOLDOWN_LOST_MS,
+    SCAN_SOURCES,
+    type ScanSource,
 } from '@/lib/scanNotificationConfig';
 import { withObservability } from '@/lib/observability/withObservability';
 import { log, setRequestUser } from '@/lib/observability/logger';
-
-// How the visitor arrived at the pet profile. 'likely_qr' is a client-side
-// heuristic for legacy tags printed without ?src=qr — it affects wording and
-// logging ONLY. Dedup/rate-limit behavior must never branch on source.
-type ScanSource = 'qr' | 'lookup' | 'likely_qr' | 'unknown'
 
 interface NotificationRequest {
     tagCode: string
@@ -46,8 +43,8 @@ export const POST = withObservability('notify-owner', async (request: Request) =
         const body: NotificationRequest = await request.json()
         const { tagCode, location, timestamp, userAgent, locationMethod = 'gps', manual = false } = body
         // Sanitize source — only accept known values from the client.
-        const source: ScanSource = body.source === 'qr' || body.source === 'lookup' || body.source === 'likely_qr'
-            ? body.source
+        const source: ScanSource = SCAN_SOURCES.includes(body.source as ScanSource)
+            ? (body.source as ScanSource)
             : 'unknown'
 
         // Get tag from Firestore

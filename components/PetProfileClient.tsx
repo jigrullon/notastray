@@ -8,10 +8,8 @@ import { db, storage } from '@/lib/firebase'
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getSpecies, getBreeds } from '@/lib/breedUtils'
-import { CLIENT_COOLDOWN_MS, CLIENT_COOLDOWN_LOST_MS } from '@/lib/scanNotificationConfig'
+import { CLIENT_COOLDOWN_MS, CLIENT_COOLDOWN_LOST_MS, type ScanSource } from '@/lib/scanNotificationConfig'
 import { RELATIONSHIP_OPTIONS, type PublicRescueCrewContact, type RescueCrewPhone, type RescueCrewAddress } from '@/lib/rescueCrew'
-
-type ScanSource = 'qr' | 'lookup' | 'likely_qr' | 'unknown'
 
 // Determines how the visitor arrived — used for notification wording and
 // analytics ONLY; dedup/suppression logic must never branch on this.

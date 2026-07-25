@@ -20,3 +20,10 @@ export const SERVER_VISITOR_COOLDOWN_MS = 60 * 60 * 1000 // 60 minutes
 
 // Server-side per-visitor cooldown when the pet is marked lost.
 export const SERVER_VISITOR_COOLDOWN_LOST_MS = 10 * 60 * 1000 // 10 minutes
+
+// How a visitor arrived at the pet profile. Shared by client and server so the
+// contract lives in one place. 'likely_qr' is a client-side heuristic for
+// legacy tags printed without ?src=qr — it affects notification wording and
+// logging ONLY. Dedup/rate-limit behavior must never branch on source.
+export const SCAN_SOURCES = ['qr', 'lookup', 'likely_qr', 'unknown'] as const
+export type ScanSource = (typeof SCAN_SOURCES)[number]
