@@ -94,12 +94,12 @@ export default function NotificationSettingsPage() {
     }
   }, [user])
 
-  const [showSMSConsent, setShowSMSConsent] = useState(false)
   const [consentChecked, setConsentChecked] = useState(false)
-  // Which number the open consent modal is currently for, and which number(s)
-  // still need their own separate confirmation after this one closes.
-  const [consentTarget, setConsentTarget] = useState<'phone' | 'phone2' | null>(null)
+  // Numbers still needing their own separate consent confirmation, front-to-back.
+  // The modal is open whenever this is non-empty, showing whichever is at the front.
   const [consentQueue, setConsentQueue] = useState<Array<'phone' | 'phone2'>>([])
+  const showSMSConsent = consentQueue.length > 0
+  const consentTarget = consentQueue[0] ?? null
   const [originalPhone, setOriginalPhone] = useState('')
   const [originalPhone2, setOriginalPhone2] = useState('')
   // Independent per-number consent records — confirming one must never affect the other.
@@ -117,9 +117,7 @@ export default function NotificationSettingsPage() {
     // SMS Consent Check — the Test button only ever targets the primary number
     if (type === 'sms' && (!phoneConsentedAt || phoneChanged())) {
       setPendingAction('test')
-      setConsentTarget('phone')
-      setConsentQueue([])
-      setShowSMSConsent(true)
+      setConsentQueue(['phone'])
       return
     }
 
@@ -177,7 +175,9 @@ export default function NotificationSettingsPage() {
   // number. Shared by the no-consent-needed save path and each step of the
   // consent queue below — the two numbers' consent records are never touched
   // in the same call, so confirming one can't invalidate the other.
-  const persistSettings = async (consentFor: 'phone' | 'phone2' | null, showSuccessMessage = true) => {
+  // `isFinal` skips the Firebase Auth reload for intermediate queue steps —
+  // it only needs to happen once, after the last save in a sequence.
+  const persistSettings = async (consentFor: 'phone' | 'phone2' | null, isFinal = true) => {
     if (!user) return false
     setSaving(true)
     try {
@@ -208,7 +208,7 @@ export default function NotificationSettingsPage() {
         throw new Error(data.error || 'Failed to save settings')
       }
 
-      if (auth.currentUser) {
+      if (isFinal && auth.currentUser) {
         await auth.currentUser.reload()
       }
       setFirstName(firstName.trim())
@@ -218,10 +218,6 @@ export default function NotificationSettingsPage() {
       if (consentFor === 'phone') setPhoneConsentedAt(now)
       if (consentFor === 'phone2') setPhone2ConsentedAt(now)
 
-      if (showSuccessMessage) {
-        setSuccessMessage('Settings saved successfully!')
-        setTimeout(() => setSuccessMessage(''), 3000)
-      }
       return true
     } catch (error) {
       console.error('Error saving settings:', error)
@@ -234,25 +230,18 @@ export default function NotificationSettingsPage() {
 
   const handleConsentConfirm = async () => {
     if (!consentTarget) return
+    const isLastInQueue = consentQueue.length === 1
 
-    // Don't flash "Settings saved" mid-queue — only once everything's done.
-    const ok = await persistSettings(consentTarget, false)
+    const ok = await persistSettings(consentTarget, isLastInQueue)
     if (!ok) return
 
-    setShowSMSConsent(false)
     setConsentChecked(false)
+    setConsentQueue(q => q.slice(1))
 
-    if (consentQueue.length > 0) {
-      const [next, ...rest] = consentQueue
-      setConsentTarget(next)
-      setConsentQueue(rest)
-      setShowSMSConsent(true)
-      return
-    }
+    if (!isLastInQueue) return
 
     const action = pendingAction
     setPendingAction(null)
-    setConsentTarget(null)
 
     if (action === 'save') {
       setSuccessMessage('Settings saved successfully!')
@@ -314,9 +303,7 @@ export default function NotificationSettingsPage() {
 
     if (queue.length > 0) {
       setPendingAction('save')
-      setConsentTarget(queue[0])
-      setConsentQueue(queue.slice(1))
-      setShowSMSConsent(true)
+      setConsentQueue(queue)
       return
     }
 
@@ -734,9 +721,7 @@ export default function NotificationSettingsPage() {
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end space-x-3">
               <button
                 onClick={() => {
-                  setShowSMSConsent(false)
                   setConsentChecked(false)
-                  setConsentTarget(null)
                   setConsentQueue([])
                   setPendingAction(null)
                 }}

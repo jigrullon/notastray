@@ -196,36 +196,27 @@ export const POST = withObservability('notify-owner', async (request: Request) =
             email: false,
         }
 
-        // Send SMS notification(s) — a second number (e.g. a spouse) is optional
-        // and best-effort: its failure doesn't affect the primary number's result.
+        // Send SMS notification(s) — recipients are independent and best-effort,
+        // so they're sent concurrently rather than one after another, and a
+        // failure on one (e.g. a spouse's number) never affects the other.
+        const smsRecipients = [owner.phone, owner.phone2].filter((p): p is string => Boolean(p))
         log.info('sms_notification_check', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone, hasPhone2: !!owner.phone2 })
-        if (owner.smsEnabled && owner.phone) {
-            try {
-                await sendSMS(owner.phone, smsMessage)
-                notificationsSent.sms = true
-                log.info('sms_notification_sent', { tagCode })
-            } catch (smsError) {
-                log.error('sms_notification_failed', {
-                    tagCode,
-                    error: smsError instanceof Error ? smsError.message : String(smsError),
-                })
-            }
+        if (owner.smsEnabled && smsRecipients.length > 0) {
+            const results = await Promise.allSettled(smsRecipients.map((phone) => sendSMS(phone, smsMessage)))
+            results.forEach((result, i) => {
+                const logFields = i === 0 ? { tagCode } : { tagCode, recipient: 'phone2' }
+                if (result.status === 'fulfilled') {
+                    notificationsSent.sms = true
+                    log.info('sms_notification_sent', logFields)
+                } else {
+                    log.error('sms_notification_failed', {
+                        ...logFields,
+                        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+                    })
+                }
+            })
         } else {
             log.info('sms_notification_skipped', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone })
-        }
-
-        if (owner.smsEnabled && owner.phone2) {
-            try {
-                await sendSMS(owner.phone2, smsMessage)
-                notificationsSent.sms = true
-                log.info('sms_notification_sent', { tagCode, recipient: 'phone2' })
-            } catch (smsError) {
-                log.error('sms_notification_failed', {
-                    tagCode,
-                    recipient: 'phone2',
-                    error: smsError instanceof Error ? smsError.message : String(smsError),
-                })
-            }
         }
 
         // Send email notification
