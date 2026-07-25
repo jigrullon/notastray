@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import * as Sentry from '@sentry/nextjs'
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -25,6 +26,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo)
+    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } })
 
     // Check if it's a chunk loading error
     if (error.name === 'ChunkLoadError' || error.message.includes('Loading chunk')) {

@@ -7,6 +7,8 @@ import {
     SERVER_VISITOR_COOLDOWN_MS,
     SERVER_VISITOR_COOLDOWN_LOST_MS,
 } from '@/lib/scanNotificationConfig';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
 // How the visitor arrived at the pet profile. 'likely_qr' is a client-side
 // heuristic for legacy tags printed without ?src=qr — it affects wording and
@@ -39,7 +41,7 @@ async function computeVisitorHash(request: Request, userAgent: string): Promise<
     return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('notify-owner', async (request: Request) => {
     try {
         const body: NotificationRequest = await request.json()
         const { tagCode, location, timestamp, userAgent, locationMethod = 'gps', manual = false } = body
@@ -58,6 +60,7 @@ export async function POST(request: Request) {
         if (!tagData?.userId) {
             return NextResponse.json({ error: 'Tag not activated' }, { status: 404 })
         }
+        setRequestUser(tagData.userId)
 
         // Get owner information from Firestore
         const userDoc = await adminDb.collection('users').doc(tagData.userId).get()
@@ -70,6 +73,8 @@ export async function POST(request: Request) {
             name: tagData.pet?.ownerName || 'Pet Owner',
             email: userData?.email || tagData.pet?.ownerEmail,
             phone: userData?.phone || tagData.pet?.ownerPhone,
+            // Optional second SMS recipient — e.g. a spouse — set from Notification Settings.
+            phone2: userData?.phone2 as string | undefined,
             petName: tagData.pet?.name || 'Your pet',
             smsEnabled: userData?.preferences?.sms?.optIn ?? true, // Default to true if not set
             emailEnabled: userData?.preferences?.email?.optIn ?? true, // Default to true if not set
@@ -119,7 +124,10 @@ export async function POST(request: Request) {
                 .get()
             recentScanDocs = recentScansSnapshot.docs
         } catch (queryError) {
-            console.error('Error querying recent scans:', queryError)
+            log.warn('recent_scans_query_failed', {
+                tagCode,
+                error: queryError instanceof Error ? queryError.message : String(queryError),
+            })
             // Continue with notification if the query fails
         }
 
@@ -268,19 +276,39 @@ export async function POST(request: Request) {
             email: false,
         }
 
-        // Send SMS notification
-        console.log(`SMS check - enabled: ${owner.smsEnabled}, phone: ${owner.phone}`)
-        if (owner.smsEnabled && owner.phone) {
-            try {
-                console.log(`Attempting to send SMS to ${owner.phone}`)
-                await sendSMS(owner.phone, smsMessage)
-                notificationsSent.sms = true
-                console.log(`SMS sent successfully to ${owner.phone}`)
-            } catch (smsError) {
-                console.error('Failed to send SMS:', smsError)
-            }
+        // Send SMS notification(s) — recipients are independent and best-effort,
+        // so they're sent concurrently rather than one after another, and a
+        // failure on one (e.g. a spouse's number) never affects the other.
+        // Deduped by digits so an accidental duplicate entry (e.g. phone2 set
+        // to the same number as phone) never double-sends the same message.
+        const normalizePhone = (p: string) => p.replace(/\D/g, '')
+        const seenPhones = new Set<string>()
+        const smsRecipients: { phone: string; label?: string }[] = []
+        for (const [phone, label] of [[owner.phone, undefined], [owner.phone2, 'phone2']] as const) {
+            if (!phone) continue
+            const key = normalizePhone(phone)
+            if (!key || seenPhones.has(key)) continue
+            seenPhones.add(key)
+            smsRecipients.push({ phone, label })
+        }
+        log.info('sms_notification_check', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone, hasPhone2: !!owner.phone2 })
+        if (owner.smsEnabled && smsRecipients.length > 0) {
+            const results = await Promise.allSettled(smsRecipients.map((r) => sendSMS(r.phone, smsMessage)))
+            results.forEach((result, i) => {
+                const { label } = smsRecipients[i]
+                const logFields = label ? { tagCode, recipient: label } : { tagCode }
+                if (result.status === 'fulfilled') {
+                    notificationsSent.sms = true
+                    log.info('sms_notification_sent', logFields)
+                } else {
+                    log.error('sms_notification_failed', {
+                        ...logFields,
+                        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+                    })
+                }
+            })
         } else {
-            console.log(`SMS not sent - smsEnabled: ${owner.smsEnabled}, phone exists: ${!!owner.phone}`)
+            log.info('sms_notification_skipped', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone })
         }
 
         // Send email notification
@@ -293,9 +321,12 @@ export async function POST(request: Request) {
                     text: emailBody,
                 })
                 notificationsSent.email = true
-                console.log(`Email sent to ${owner.email}`)
+                log.info('email_notification_sent', { tagCode })
             } catch (emailError) {
-                console.error('Failed to send email:', emailError)
+                log.error('email_notification_failed', {
+                    tagCode,
+                    error: emailError instanceof Error ? emailError.message : String(emailError),
+                })
             }
         }
 
@@ -309,13 +340,15 @@ export async function POST(request: Request) {
             notificationsSent,
         })
     } catch (error) {
-        console.error('Notification error:', error)
+        log.error('notify_owner_failed', {
+            error: error instanceof Error ? error.message : String(error),
+        })
         return NextResponse.json(
             { error: error instanceof Error ? error.message : 'Failed to send notification' },
             { status: 500 }
         )
     }
-}
+})
 
 async function sendSMS(phoneNumber: string, message: string) {
     try {
@@ -343,10 +376,10 @@ async function sendSMS(phoneNumber: string, message: string) {
             })
         )
 
-        console.log(`SMS sent successfully to ${formattedNumber}. Message ID: ${response.MessageId}`)
+        log.info('sns_sms_sent', { messageId: response.MessageId })
         return response.MessageId
     } catch (error) {
-        console.error(`Failed to send SMS to ${phoneNumber}:`, error)
+        log.error('sns_sms_failed', { error: error instanceof Error ? error.message : String(error) })
         throw error
     }
 }

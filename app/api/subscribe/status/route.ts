@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
-export async function POST(request: Request) {
+export const POST = withObservability('subscribe-status', async (request: Request) => {
     if (!process.env.STRIPE_SECRET_KEY) {
         return NextResponse.json({ error: 'Stripe configuration missing' }, { status: 500 });
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2023-10-16' as any,
+        apiVersion: '2025-12-15.clover',
     });
 
     try {
         const { userEmail, userId } = await request.json();
+        if (userId) setRequestUser(userId);
 
         // Check Firestore first (fastest path)
         if (userId) {
@@ -33,7 +36,7 @@ export async function POST(request: Request) {
                         }
                     } catch (e) {
                         // Subscription doesn't exist in Stripe - clear from Firestore
-                        console.log('Subscription not found in Stripe, clearing from Firestore');
+                        log.info('subscription_not_found_in_stripe_cleared', { userId });
                         await adminDb.collection('users').doc(userId).set({
                             subscription: {
                                 status: 'canceled',
@@ -43,7 +46,9 @@ export async function POST(request: Request) {
                     }
                 }
             } catch (e) {
-                console.error('Firestore check failed, falling back to Stripe:', e);
+                log.warn('subscribe_status_firestore_check_failed', {
+                    error: e instanceof Error ? e.message : String(e),
+                });
             }
         }
 
@@ -70,12 +75,14 @@ export async function POST(request: Request) {
                                     plan,
                                     stripeSubscriptionId: sub.id,
                                     stripeCustomerId: customer.id,
-                                    currentPeriodEnd: new Date((sub as any).current_period_end * 1000).toISOString(),
+                                    currentPeriodEnd: new Date(sub.items.data[0].current_period_end * 1000).toISOString(),
                                     createdAt: new Date(sub.created * 1000).toISOString(),
                                 },
                             }, { merge: true });
                         } catch (e) {
-                            console.error('Failed to sync subscription to Firestore:', e);
+                            log.error('subscribe_status_firestore_sync_failed', {
+                                error: e instanceof Error ? e.message : String(e),
+                            });
                         }
                     }
 
@@ -83,7 +90,7 @@ export async function POST(request: Request) {
                         status: 'active',
                         plan,
                         stripeSubscriptionId: sub.id,
-                        currentPeriodEnd: new Date((sub as any).current_period_end * 1000).toISOString(),
+                        currentPeriodEnd: new Date(sub.items.data[0].current_period_end * 1000).toISOString(),
                     });
                 }
             }
@@ -91,7 +98,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ status: 'none' });
     } catch (error: any) {
-        console.error('Subscription status error:', error);
+        log.error('subscribe_status_failed', { error: error.message });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+})

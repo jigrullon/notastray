@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns'
+import { adminAuth } from '@/lib/firebaseAdmin'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log } from '@/lib/observability/logger'
 
 const sesClient = new SESClient({
     region: process.env.AWS_REGION || 'us-east-1',
@@ -18,8 +21,25 @@ const snsClient = new SNSClient({
     }
 })
 
-export async function POST(request: Request) {
+export const POST = withObservability('notifications-test', async (request: Request) => {
     try {
+        const authHeader = request.headers.get('authorization')
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json(
+                { success: false, error: 'Missing or invalid authorization header' },
+                { status: 401 }
+            )
+        }
+
+        try {
+            await adminAuth.verifyIdToken(authHeader.substring(7))
+        } catch {
+            return NextResponse.json(
+                { success: false, error: 'Invalid or expired token' },
+                { status: 401 }
+            )
+        }
+
         const body = await request.json()
         const { type, to } = body
 
@@ -79,7 +99,7 @@ export async function POST(request: Request) {
                 PhoneNumber: toE164,
             })
 
-            console.log(`[SMS Test] To: ${toE164}`)
+            log.info('sms_test_send', {})
 
             await snsClient.send(command)
             return NextResponse.json({ success: true, message: 'SMS sent successfully' })
@@ -91,10 +111,10 @@ export async function POST(request: Request) {
         )
 
     } catch (error: any) {
-        console.error('Notification error:', error)
+        log.error('notifications_test_failed', { error: error.message })
         return NextResponse.json(
             { success: false, error: error.message || 'Failed to send notification' },
             { status: 500 }
         )
     }
-}
+})

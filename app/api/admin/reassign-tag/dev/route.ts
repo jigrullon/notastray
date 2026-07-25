@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log } from '@/lib/observability/logger'
 
 // Dev-only endpoint for reassigning tags during development
-export async function POST(request: NextRequest) {
+export const POST = withObservability('admin-reassign-tag-dev', async (request: NextRequest) => {
   // Only allow in development
   if (process.env.NODE_ENV !== 'development') {
     return NextResponse.json(
@@ -56,10 +58,12 @@ export async function POST(request: NextRequest) {
       userId,
     })
   } catch (error) {
-    console.error('Error reassigning tag:', error)
+    log.error('admin_reassign_tag_dev_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to reassign tag' },
       { status: 500 }
     )
   }
-}
+})

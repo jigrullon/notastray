@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Star, Shield, Zap, ArrowLeft } from 'lucide-react'
+import { Check, Star, Shield, Lightning, ArrowLeft } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/AuthContext'
 import { useCart } from '@/lib/CartContext'
@@ -136,7 +136,7 @@ export default function ShopPage() {
                   })
                   setIsCartOpen(true)
                 }}
-                className="block w-full text-center py-3 rounded-lg font-medium transition-colors bg-primary-600 dark:bg-primary-400 hover:bg-primary-400 text-white mb-8"
+                className="block w-full text-center py-3 rounded-lg font-medium transition-all duration-150 active:scale-[0.98] bg-primary-600 dark:bg-primary-400 hover:bg-primary-500 dark:hover:bg-primary-300 text-white mb-8 shadow-sm shadow-primary-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
               >
                 Add to Cart
               </button>
@@ -145,7 +145,7 @@ export default function ShopPage() {
               <ul className="space-y-3">
                 {featureBullets.map((feature) => (
                   <li key={feature} className="flex items-center text-gray-700 dark:text-gray-300">
-                    <Check className="w-5 h-5 text-green-500 mr-3 shrink-0" />
+                    <Check className="w-5 h-5 text-primary-600 dark:text-primary-400 mr-3 shrink-0" weight="bold" />
                     {feature}
                   </li>
                 ))}
@@ -156,42 +156,44 @@ export default function ShopPage() {
       </section>
 
       {/* Why Choose NotAStray Section */}
-      <section className="py-16 bg-brand-cream dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+      <section className="py-16 lg:py-24 bg-brand-cream dark:bg-gray-900">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 text-balance">
               Why choose NotAStray?
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-6 h-6 text-primary-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="md:col-span-2 rounded-3xl bg-white dark:bg-gray-800 p-8 flex flex-col sm:flex-row items-start gap-6">
+              <div className="shrink-0 w-14 h-14 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                <Shield className="w-7 h-7 text-primary-600 dark:text-primary-400" weight="duotone" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Built to Last</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Waterproof and designed for active pets
-              </p>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Built to last</h3>
+                <p className="text-gray-600 dark:text-gray-400 max-w-md">
+                  Waterproof and designed for active pets, so it holds up wherever the day takes them
+                </p>
+              </div>
             </div>
 
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 text-primary-600" />
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+              <div className="w-11 h-11 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-4">
+                <Lightning className="w-5 h-5 text-primary-600 dark:text-primary-400" weight="duotone" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Instant Setup</h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Instant setup</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Get your pet protected in minutes with our simple activation process
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Star className="w-6 h-6 text-primary-600" />
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+              <div className="w-11 h-11 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-4">
+                <Star className="w-5 h-5 text-primary-600 dark:text-primary-400" weight="duotone" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Lifetime Updates</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Update your pet&apos;s profile anytime - no additional fees ever
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Lifetime updates</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Update your pet&apos;s profile anytime, no additional fees ever
               </p>
             </div>
           </div>
@@ -201,7 +203,7 @@ export default function ShopPage() {
       {/* FAQ Section */}
       <section className="py-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 text-center mb-12">
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 text-center mb-12 text-balance">
             Frequently Asked Questions
           </h2>
 

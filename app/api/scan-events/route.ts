@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log, setRequestUser } from '@/lib/observability/logger'
 
 interface ScanEventLocation {
   latitude?: number
@@ -29,7 +31,7 @@ function formatLocation(location: ScanEventLocation | null | undefined): string 
   return null
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withObservability('scan-events', async (request: NextRequest) => {
   // Get the authorization token from the request
   const authHeader = request.headers.get('authorization')
   if (!authHeader?.startsWith('Bearer ')) {
@@ -46,6 +48,7 @@ export async function GET(request: NextRequest) {
   try {
     const decodedToken = await adminAuth.verifyIdToken(token)
     uid = decodedToken.uid
+    setRequestUser(uid)
   } catch {
     return NextResponse.json(
       { error: 'Invalid or expired token' },
@@ -101,10 +104,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ events })
   } catch (error) {
-    console.error('Error fetching scan events:', error)
+    log.error('scan_events_fetch_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: 'Failed to fetch scan events' },
       { status: 500 }
     )
   }
-}
+})

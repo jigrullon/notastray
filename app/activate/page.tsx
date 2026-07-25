@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Camera, Upload, Check, ArrowLeft, Shield, Loader2, AlertCircle } from 'lucide-react'
+import { Camera, UploadSimple, Check, ArrowLeft, Shield, CircleNotch, WarningCircle } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useAuth } from '../../lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
@@ -14,7 +14,7 @@ export default function ActivatePage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-brand-cream dark:bg-gray-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+        <CircleNotch className="w-8 h-8 text-primary-600 animate-spin" />
       </div>
     }>
       <ActivateContent />
@@ -41,10 +41,14 @@ function ActivateContent() {
     species: '',
     breed: '',
     birthday: '',
+    gender: '' as '' | 'male' | 'female',
+    spayedNeutered: '' as '' | 'yes' | 'no',
+    coloring: '',
     address: '',
     vetName: '',
     vetAddress: '',
     allergies: '',
+    behavioralNotes: '',
     goodWithDogs: '' as '' | 'yes' | 'no' | 'unsure',
     goodWithCats: '' as '' | 'yes' | 'no' | 'unsure',
     goodWithChildren: '' as '' | 'yes' | 'no' | 'unsure',
@@ -129,10 +133,14 @@ function ActivateContent() {
             species: pet.species || '',
             breed: pet.breed || '',
             birthday: pet.birthday || '',
+            gender: (pet.gender || '') as '' | 'male' | 'female',
+            spayedNeutered: (pet.spayedNeutered || '') as '' | 'yes' | 'no',
+            coloring: pet.coloring || '',
             address: pet.ownerAddress || '',
             vetName: pet.vetName || '',
             vetAddress: pet.vetAddress || '',
             allergies: pet.allergies || '',
+            behavioralNotes: pet.behavioralNotes || '',
             goodWithDogs: (pet.goodWithDogs || '') as '' | 'yes' | 'no' | 'unsure',
             goodWithCats: (pet.goodWithCats || '') as '' | 'yes' | 'no' | 'unsure',
             goodWithChildren: (pet.goodWithChildren || '') as '' | 'yes' | 'no' | 'unsure',
@@ -163,12 +171,16 @@ function ActivateContent() {
             species: petData.species,
             breed: petData.breed,
             birthday: petData.birthday,
+            gender: petData.gender,
+            spayedNeutered: petData.spayedNeutered,
+            coloring: petData.coloring,
             ownerName: ownerFirstName,
             ownerPhone: accountPhone,
             ownerAddress: petData.address,
             vetName: petData.vetName,
             vetAddress: petData.vetAddress,
             allergies: petData.allergies,
+            behavioralNotes: petData.behavioralNotes,
             goodWithDogs: petData.goodWithDogs,
             goodWithCats: petData.goodWithCats,
             goodWithChildren: petData.goodWithChildren,
@@ -251,10 +263,14 @@ function ActivateContent() {
           species: pet.species || '',
           breed: pet.breed || '',
           birthday: pet.birthday || '',
+          gender: (pet.gender || '') as '' | 'male' | 'female',
+          spayedNeutered: (pet.spayedNeutered || '') as '' | 'yes' | 'no',
+          coloring: pet.coloring || '',
           address: pet.ownerAddress || '',
           vetName: pet.vetName || '',
           vetAddress: pet.vetAddress || '',
           allergies: pet.allergies || '',
+          behavioralNotes: pet.behavioralNotes || '',
           goodWithDogs: (pet.goodWithDogs || '') as '' | 'yes' | 'no' | 'unsure',
           goodWithCats: (pet.goodWithCats || '') as '' | 'yes' | 'no' | 'unsure',
           goodWithChildren: (pet.goodWithChildren || '') as '' | 'yes' | 'no' | 'unsure',
@@ -302,12 +318,16 @@ function ActivateContent() {
           species: petData.species,
           breed: petData.breed,
           birthday: petData.birthday,
+          gender: petData.gender,
+          spayedNeutered: petData.spayedNeutered,
+          coloring: petData.coloring,
           ownerName: ownerFirstName,
           ownerPhone: accountPhone,
           ownerAddress: petData.address,
           vetName: petData.vetName,
           vetAddress: petData.vetAddress,
           allergies: petData.allergies,
+          behavioralNotes: petData.behavioralNotes,
           goodWithDogs: petData.goodWithDogs,
           goodWithCats: petData.goodWithCats,
           goodWithChildren: petData.goodWithChildren,
@@ -397,7 +417,7 @@ function ActivateContent() {
         </div>
 
         {step === 1 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm shadow-gray-900/5 dark:shadow-black/40 p-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Activate Your Tag</h1>
             <p className="text-gray-600 dark:text-gray-400 mb-8">
               Enter the code found on your NotAStray tag to get started
@@ -422,13 +442,13 @@ function ActivateContent() {
                 </p>
                 {activateError && (
                   <div className="mt-3 flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <WarningCircle className="w-4 h-4 mt-0.5 shrink-0" />
                     {activateError}
                   </div>
                 )}
                 {ownActivatedTagCode && (
                   <div className="mt-3 flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <WarningCircle className="w-4 h-4 mt-0.5 shrink-0" />
                     <span>
                       This tag is already activated.{' '}
                       <Link
@@ -466,7 +486,7 @@ function ActivateContent() {
         )}
 
         {step === 2 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm shadow-gray-900/5 dark:shadow-black/40 p-8">
             <div className="flex items-center justify-between gap-3 mb-2">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create Pet Profile</h1>
               <span className="shrink-0 px-2.5 py-1 rounded-md bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-mono text-sm font-semibold">
@@ -508,7 +528,7 @@ function ActivateContent() {
                   )}
                   <p className="text-gray-600 dark:text-gray-400 mb-2">Upload a clear photo of your pet</p>
                   <button type="button" className="btn-outline" onClick={() => fileInputRef.current?.click()}>
-                    <Upload className="w-4 h-4 mr-2" />
+                    <UploadSimple className="w-4 h-4 mr-2" />
                     Choose Photo
                   </button>
                 </div>
@@ -605,6 +625,53 @@ function ActivateContent() {
                 </div>
               </div>
 
+              {/* Gender, Spayed/Neutered & Coloring */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Gender
+                  </label>
+                  <select
+                    id="gender"
+                    value={petData.gender}
+                    onChange={(e) => setPetData({ ...petData, gender: e.target.value as '' | 'male' | 'female' })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  >
+                    <option value="">Select...</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="spayedNeutered" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Spayed/Neutered
+                  </label>
+                  <select
+                    id="spayedNeutered"
+                    value={petData.spayedNeutered}
+                    onChange={(e) => setPetData({ ...petData, spayedNeutered: e.target.value as '' | 'yes' | 'no' })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  >
+                    <option value="">Select...</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="coloring" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Coloring
+                  </label>
+                  <input
+                    type="text"
+                    id="coloring"
+                    value={petData.coloring}
+                    onChange={(e) => setPetData({ ...petData, coloring: e.target.value })}
+                    placeholder="e.g. Golden with white patches"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                  />
+                </div>
+              </div>
+
               {/* Owner name & phone come from the account — the activating user
                   is the owner. Editable later from the pet profile if needed. */}
               <div>
@@ -663,6 +730,24 @@ function ActivateContent() {
                   placeholder="List any allergies, medications, or medical conditions..."
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                 />
+              </div>
+
+              {/* Behavioral Notes */}
+              <div>
+                <label htmlFor="behavioralNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Behavioral Notes
+                </label>
+                <textarea
+                  id="behavioralNotes"
+                  value={petData.behavioralNotes}
+                  onChange={(e) => setPetData({ ...petData, behavioralNotes: e.target.value })}
+                  rows={3}
+                  placeholder={'e.g. "Scared of thunder," "Doesn\'t like men or people with hats," "Shy around strangers"...'}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Anything a finder should know about your pet&apos;s temperament — not medical.
+                </p>
               </div>
 
               {/* Temperament */}
@@ -792,7 +877,7 @@ function ActivateContent() {
 
               {activateError && (
                 <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <WarningCircle className="w-4 h-4 mt-0.5 shrink-0" />
                   {activateError}
                 </div>
               )}
@@ -804,7 +889,7 @@ function ActivateContent() {
               <button type="submit" className="w-full btn-primary py-3 text-lg flex items-center justify-center" disabled={activateLoading}>
                 {activateLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    <CircleNotch className="w-5 h-5 mr-2 animate-spin" />
                     Activating...
                   </>
                 ) : 'Create Profile'}
@@ -815,9 +900,9 @@ function ActivateContent() {
 
         {step === 3 && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm shadow-gray-900/5 dark:shadow-black/40 p-8 text-center">
               <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Check className="w-8 h-8 text-green-600" />
+                <Check className="w-8 h-8 text-green-600" weight="bold" />
               </div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Profile Created!</h1>
               <p className="text-gray-600 dark:text-gray-400 mb-8">
@@ -845,7 +930,7 @@ function ActivateContent() {
             </div>
 
             {/* PROTECT Plan Upsell */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-8 border-2 border-primary-200 dark:border-primary-800">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm shadow-gray-900/5 dark:shadow-black/40 p-8 border-2 border-primary-200 dark:border-primary-800">
               <div className="flex items-center mb-4">
                 <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mr-3">
                   <Shield className="w-5 h-5 text-primary-600" />
@@ -862,15 +947,15 @@ function ActivateContent() {
 
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
-                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  <Check className="w-4 h-4 text-primary-600 dark:text-primary-400 mr-2 shrink-0" weight="bold" />
                   Instant SMS &amp; Email scan alerts
                 </li>
                 <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
-                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  <Check className="w-4 h-4 text-primary-600 dark:text-primary-400 mr-2 shrink-0" weight="bold" />
                   Advanced location tracking
                 </li>
                 <li className="flex items-center text-gray-700 dark:text-gray-300 text-sm">
-                  <Check className="w-4 h-4 text-green-500 mr-2 shrink-0" />
+                  <Check className="w-4 h-4 text-primary-600 dark:text-primary-400 mr-2 shrink-0" weight="bold" />
                   Detailed medical profile
                 </li>
               </ul>
@@ -881,14 +966,14 @@ function ActivateContent() {
                   disabled={subscribeLoading}
                   className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70"
                 >
-                  {subscribeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '$3/month'}
+                  {subscribeLoading ? <CircleNotch className="w-4 h-4 animate-spin" /> : '$3/month'}
                 </button>
                 <button
                   onClick={() => handleSubscribe('yearly')}
                   disabled={subscribeLoading}
                   className="w-full bg-primary-600 hover:bg-primary-400 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center disabled:opacity-70"
                 >
-                  {subscribeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                  {subscribeLoading ? <CircleNotch className="w-4 h-4 animate-spin" /> : (
                     <span>$30/year <span className="text-primary-200 text-xs ml-1">Save $6</span></span>
                   )}
                 </button>

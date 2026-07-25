@@ -1,0 +1,145 @@
+{
+  "title": "NotAStray — Ops (SRE)",
+  "uid": "notastray-ops",
+  "tags": ["notastray", "ops"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum by (route) (rate({app=\"notastray\"} | json | event=\"api_request\" [$__interval]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "title": "5xx error rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum by (route) (rate({app=\"notastray\"} | json | event=\"api_request\" | status >= 500 [$__interval]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "alert": null
+    },
+    {
+      "id": 3,
+      "title": "4xx rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum by (route) (rate({app=\"notastray\"} | json | event=\"api_request\" | status >= 400 | status < 500 [$__interval]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "title": "p50 / p95 / p99 latency (all routes)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "quantile_over_time(0.50, {app=\"notastray\"} | json | event=\"api_request\" | unwrap duration_ms [$__interval])",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "quantile_over_time(0.95, {app=\"notastray\"} | json | event=\"api_request\" | unwrap duration_ms [$__interval])",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "quantile_over_time(0.99, {app=\"notastray\"} | json | event=\"api_request\" | unwrap duration_ms [$__interval])",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "title": "Top error routes (last 6h)",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum by (route) (count_over_time({app=\"notastray\", level=\"error\"} [$__range]))",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Notification / integration failures (Twilio, SendGrid, EasyPost, Stripe)",
+      "type": "logs",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": { "showTime": true, "wrapLogMessage": true },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{app=\"notastray\", level=\"error\"} | json | event=~\".*_failed\""
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Live error stream",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{app=\"notastray\", level=\"error\"}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Sentry (exception detail)",
+      "type": "text",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 34 },
+      "options": {
+        "mode": "markdown",
+        "content": "For full stack traces, source-mapped line numbers, and error grouping, see the [Sentry project dashboard](https://sentry.io) — this Grafana dashboard covers rates and volume, not exception detail. Every event there is tagged with `route`, `requestId`, and — when the request was authenticated — `userId` (the Firestore/Firebase Auth uid, never an email or phone). Search Sentry by that `userId` tag, then look the uid up in the Firestore console (`users/{uid}`) to find the actual customer."
+      }
+    }
+  ]
+}

@@ -175,7 +175,7 @@ function SignupContent() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Check your email!</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              We've sent a confirmation link to <strong>{email}</strong>. Click the link to verify your account.
+              We&apos;ve sent a confirmation link to <strong>{email}</strong>. Click the link to verify your account.
             </p>
             {fromActivate ? (
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -205,7 +205,7 @@ function SignupContent() {
             <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-sm sm:rounded-lg sm:px-10 border border-gray-200 dark:border-gray-700">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">SMS Notification Consent</h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Enable instant SMS alerts when your pet's tag is scanned. Standard message rates apply.
+                Enable instant SMS alerts when your pet&apos;s tag is scanned. Standard message rates apply.
               </p>
 
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
@@ -284,7 +284,7 @@ function SignupContent() {
           <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-sm sm:rounded-lg sm:px-10 border border-gray-200 dark:border-gray-700">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Notification Preferences</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              How would you like to be notified when someone scans your pet's tag?
+              How would you like to be notified when someone scans your pet&apos;s tag?
             </p>
 
             {error && (

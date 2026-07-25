@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log } from '@/lib/observability/logger'
 
-export async function POST(request: NextRequest) {
+// Only Firebase Storage hosts are allowed — this route is a fetch proxy, so an
+// unrestricted URL would let a caller make our server request any host (SSRF).
+const ALLOWED_HOSTS = ['firebasestorage.googleapis.com', 'storage.googleapis.com']
+
+export const POST = withObservability('proxy-image', async (request: NextRequest) => {
   try {
     const { imageUrl } = await request.json()
 
@@ -9,6 +15,17 @@ export async function POST(request: NextRequest) {
         { error: 'Missing or invalid imageUrl' },
         { status: 400 }
       )
+    }
+
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(imageUrl)
+    } catch {
+      return NextResponse.json({ error: 'Invalid imageUrl' }, { status: 400 })
+    }
+
+    if (parsedUrl.protocol !== 'https:' || !ALLOWED_HOSTS.includes(parsedUrl.hostname)) {
+      return NextResponse.json({ error: 'imageUrl host not allowed' }, { status: 400 })
     }
 
     // Fetch the image from Firebase Storage
@@ -27,10 +44,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ dataUrl })
   } catch (error) {
-    console.error('Error proxying image:', error)
+    log.error('proxy_image_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: 'Failed to proxy image' },
       { status: 500 }
     )
   }
-}
+})

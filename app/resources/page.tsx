@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { BookOpen, Shield, Heart, Zap, Calendar, ArrowRight, ArrowLeft } from 'lucide-react'
+import { BookOpen, Shield, Heart, Lightning, CalendarBlank, ArrowRight, ArrowLeft } from '@phosphor-icons/react'
 import { useAuth } from '@/lib/AuthContext'
 import { articles } from '@/lib/articles'
 
@@ -42,7 +42,7 @@ export default function ResourcesPage() {
             </Link>
           </div>
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 text-balance">
               Pet Safety Resources
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
@@ -55,36 +55,36 @@ export default function ResourcesPage() {
       {/* Quick Actions */}
       <section className="py-12 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link href="/activate" className="group bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg p-6 transition-colors">
-              <div className="flex items-center mb-3">
-                <Zap className="w-6 h-6 text-primary-600 mr-2" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Activate Your Tag</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <Link href="/activate" className="group rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 p-6 transition-colors duration-150">
+              <div className="w-11 h-11 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-4">
+                <Lightning className="w-5 h-5 text-primary-600 dark:text-primary-400" weight="duotone" />
               </div>
-              <p className="text-gray-600 dark:text-gray-400 mb-3">Set up your pet's profile in just a few minutes</p>
-              <span className="text-primary-600 group-hover:text-primary-700 dark:group-hover:text-primary-400 font-medium">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Activate your tag</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-3 text-sm">Set up your pet&apos;s profile in just a few minutes</p>
+              <span className="text-primary-600 group-hover:text-primary-700 dark:group-hover:text-primary-400 font-medium text-sm">
                 Get started →
               </span>
             </Link>
 
-            <Link href="/resources/setup" className="group bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg p-6 transition-colors">
-              <div className="flex items-center mb-3">
-                <BookOpen className="w-6 h-6 text-blue-600 mr-2" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Setup Guide</h3>
+            <Link href="/resources/setup" className="group rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 p-6 transition-colors duration-150">
+              <div className="w-11 h-11 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-4">
+                <BookOpen className="w-5 h-5 text-primary-600 dark:text-primary-400" weight="duotone" />
               </div>
-              <p className="text-gray-600 dark:text-gray-400 mb-3">Complete walkthrough for new users</p>
-              <span className="text-blue-600 group-hover:text-blue-700 dark:group-hover:text-blue-400 font-medium">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Setup guide</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-3 text-sm">Complete walkthrough for new users</p>
+              <span className="text-primary-600 group-hover:text-primary-700 dark:group-hover:text-primary-400 font-medium text-sm">
                 Read guide →
               </span>
             </Link>
 
-            <Link href="/resources/emergency" className="group bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg p-6 transition-colors">
-              <div className="flex items-center mb-3">
-                <Shield className="w-6 h-6 text-red-600 mr-2" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Emergency Plan</h3>
+            <Link href="/resources/emergency" className="group rounded-2xl border border-red-200 dark:border-red-900/50 hover:border-red-300 dark:hover:border-red-700 p-6 transition-colors duration-150">
+              <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-4">
+                <Shield className="w-5 h-5 text-red-600 dark:text-red-400" weight="duotone" />
               </div>
-              <p className="text-gray-600 dark:text-gray-400 mb-3">What to do if your pet goes missing</p>
-              <span className="text-red-600 group-hover:text-red-700 dark:group-hover:text-red-400 font-medium">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Emergency plan</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-3 text-sm">What to do if your pet goes missing</p>
+              <span className="text-red-600 group-hover:text-red-700 dark:group-hover:text-red-400 font-medium text-sm">
                 View plan →
               </span>
             </Link>
@@ -95,19 +95,22 @@ export default function ResourcesPage() {
       {/* Featured Articles */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8">Featured Articles</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-8">Featured articles</h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
             {featuredArticles.map((article) => (
               <Link key={article.id} href={'/resources/' + article.slug} className="group cursor-pointer block">
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg h-48 mb-4 flex items-center justify-center">
-                  <Heart className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                <div
+                  className="relative overflow-hidden rounded-2xl h-48 mb-4 flex items-center justify-center bg-primary-50 dark:bg-primary-900/10"
+                  style={{ backgroundImage: 'radial-gradient(circle at 30% 20%, rgba(31,77,58,0.08), transparent 55%)' }}
+                >
+                  <Heart className="w-12 h-12 text-primary-300 dark:text-primary-700" weight="duotone" />
                 </div>
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-2">
                   <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200 px-2 py-1 rounded text-xs font-medium mr-2">
                     {article.category}
                   </span>
-                  <Calendar className="w-4 h-4 mr-1" />
+                  <CalendarBlank className="w-4 h-4 mr-1" />
                   <span>{article.readTime}</span>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-primary-600 transition-colors">
@@ -161,7 +164,7 @@ export default function ResourcesPage() {
       {/* Newsletter Signup */}
       <section className="py-16 bg-brand-cream dark:bg-gray-900">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 text-balance">
             Stay updated on pet safety
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">

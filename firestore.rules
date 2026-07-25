@@ -8,6 +8,16 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Rescue Crew — owner-only emergency contacts (public exposure is gated
+    // server-side via the Admin SDK when the pet is marked lost; never read directly)
+    // create: server-side only via Admin SDK (app/api/rescue-crew), so the
+    //   per-owner contact cap can actually be enforced — a client-side check
+    //   alone could be bypassed by writing to Firestore directly.
+    match /users/{userId}/rescueCrew/{contactId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if false;
+    }
+
     // Owners — own data only
     match /owners/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -39,6 +49,19 @@ service cloud.firestore {
 
     // Newsletter subscribers — server-side only via Admin SDK
     match /newsletter_subscribers/{docId} {
+      allow read, write: if false;
+    }
+
+    // Product usage events (e.g. Rescue Crew adoption) — server-side only via
+    // Admin SDK, read by the internal business/marketing metrics endpoints.
+    match /product_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Daily rollup docs (revenue/subscriber/tag trend) — written by the
+    // Vercel Cron rollup job, read by the revenue-timeseries metrics
+    // endpoint. Server-side only.
+    match /daily_metrics/{date} {
       allow read, write: if false;
     }
   }

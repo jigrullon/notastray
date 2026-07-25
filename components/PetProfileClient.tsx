@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, BellRing, CheckCircle, Edit3, Save, X, Camera, Loader2, Download, ArrowLeft } from 'lucide-react'
+import { Phone, MapPin, Heart, AlertTriangle, Users, Dog, Cat, Baby, BellRing, CheckCircle, Edit3, Save, X, Camera, Loader2, Download, ArrowLeft, User, Home, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { db, storage } from '@/lib/firebase'
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getSpecies, getBreeds } from '@/lib/breedUtils'
 import { CLIENT_COOLDOWN_MS, CLIENT_COOLDOWN_LOST_MS } from '@/lib/scanNotificationConfig'
+import { RELATIONSHIP_OPTIONS, type PublicRescueCrewContact, type RescueCrewPhone, type RescueCrewAddress } from '@/lib/rescueCrew'
 
 type ScanSource = 'qr' | 'lookup' | 'likely_qr' | 'unknown'
 
@@ -57,19 +58,83 @@ function formatBirthday(birthday: string): string {
   return `${formatted} (${age} ${age === 1 ? 'year' : 'years'} old)`
 }
 
+// Joins gender / spayed-neutered / coloring into a single "Male • Neutered •
+// Golden with white patches" line, omitting whichever fields are unset.
+function formatPetDetails(
+  gender: 'male' | 'female' | '',
+  spayedNeutered: 'yes' | 'no' | '',
+  coloring: string
+): string {
+  const parts: string[] = []
+  if (gender) parts.push(gender === 'male' ? 'Male' : 'Female')
+  if (spayedNeutered) parts.push(spayedNeutered === 'yes' ? 'Spayed/Neutered' : 'Not spayed/neutered')
+  if (coloring) parts.push(coloring)
+  return parts.join(' • ')
+}
+
+// Map a Rescue Crew relationship value to its human-readable label.
+function relationshipLabel(value: string): string {
+  return RELATIONSHIP_OPTIONS.find((o) => o.value === value)?.label || 'Contact'
+}
+
+// Whether a Rescue Crew phone entry has a dialable number.
+function hasPhone(phone: RescueCrewPhone | null | undefined): phone is RescueCrewPhone {
+  return !!phone && !!phone.number && phone.number.trim() !== ''
+}
+
+// Build a tel: href from a Rescue Crew phone (country code + number, digits/+ only).
+function phoneHref(phone: RescueCrewPhone): string {
+  const raw = `${phone.countryCode || ''}${phone.number || ''}`
+  return `tel:${raw.replace(/[^\d+]/g, '')}`
+}
+
+// Human-friendly phone display, including type and extension when present.
+function phoneDisplay(phone: RescueCrewPhone): string {
+  const base = `${phone.countryCode ? `${phone.countryCode} ` : ''}${phone.number}`.trim()
+  const parts = [base]
+  if (phone.ext) parts.push(`ext. ${phone.ext}`)
+  const label = base + (phone.ext ? ` ext. ${phone.ext}` : '')
+  return phone.type ? `${label} (${phone.type})` : parts.join(' ')
+}
+
+// Whether a Rescue Crew address has any content worth showing.
+function hasAddress(address: RescueCrewAddress | null | undefined): address is RescueCrewAddress {
+  if (!address) return false
+  return !!(address.street || address.city || address.state || address.postal)
+}
+
+// Ordered, comma-joined single-line address for display and map lookup.
+function formatAddress(address: RescueCrewAddress): string {
+  const line1 = [address.street, address.unit].filter(Boolean).join(' ')
+  return [line1, address.city, address.state, address.postal, address.country]
+    .filter((p) => p && p.trim() !== '')
+    .join(', ')
+}
+
+interface PetPrivacy {
+  showOwnerName: boolean
+  showPhone: boolean
+  showAddress: boolean
+}
+
 interface PetData {
   name: string
   photo: string
   birthday: string
+  gender: 'male' | 'female' | ''
+  spayedNeutered: 'yes' | 'no' | ''
+  coloring: string
   owner: string
   address: string
   phone: string
   vet: string
   vetAddress: string
   allergies: string
+  behavioralNotes: string
   goodWithDogs: 'yes' | 'no' | 'unsure'
   goodWithCats: 'yes' | 'no' | 'unsure'
   goodWithChildren: 'yes' | 'no' | 'unsure'
+  privacy: PetPrivacy
 }
 
 interface PetProfileClientProps {
@@ -83,7 +148,18 @@ interface PetProfileClientProps {
 
 export default function PetProfileClient({ petData, tagCode, userId, isLost, species, breed }: PetProfileClientProps) {
   const { user, loading } = useAuth()
-  const isOwner = !!(user && userId && user.uid === userId)
+  // While auth is still resolving, treat the viewer as not-the-owner so the
+  // owner's own page doesn't briefly flash the redacted public view before
+  // snapping to the full one once `loading` settles.
+  const isOwner = !loading && !!(user && userId && user.uid === userId)
+
+  // What this specific viewer is allowed to see — the owner always sees
+  // everything; a public/finder viewer sees only what's opted into via
+  // Dashboard > Privacy. Shared by every place on this page that touches
+  // owner contact info, so a new one can't accidentally skip the gate.
+  const canShowName = isOwner || petData.privacy.showOwnerName
+  const canShowPhone = isOwner || petData.privacy.showPhone
+  const canShowAddress = isOwner || petData.privacy.showAddress
 
   // Notification flow state:
   //  'idle'       – nothing sent or decided yet
@@ -102,6 +178,38 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
   const [reportedFound, setReportedFound] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [crewContacts, setCrewContacts] = useState<PublicRescueCrewContact[]>([])
+
+  // Fetch the pet's public Rescue Crew contacts only while it is marked lost.
+  // The API is server-gated on isLost, but we also mirror the state here so that
+  // when the owner marks the pet found (handleToggleLost flips lostStatus), the
+  // section disappears immediately without a page reload.
+  useEffect(() => {
+    if (!lostStatus || isOwner) {
+      setCrewContacts([])
+      return
+    }
+
+    let cancelled = false
+    const loadRescueCrew = async () => {
+      try {
+        const response = await fetch(`/api/rescue-crew/${tagCode}`)
+        if (!response.ok) return
+        const data = await response.json()
+        if (!cancelled && Array.isArray(data?.contacts)) {
+          setCrewContacts(data.contacts as PublicRescueCrewContact[])
+        }
+      } catch (error) {
+        // Never let this feature break the pet profile.
+        console.error('Failed to load Rescue Crew:', error)
+      }
+    }
+
+    loadRescueCrew()
+    return () => {
+      cancelled = true
+    }
+  }, [lostStatus, isOwner, tagCode])
 
   // Auto-notify on mount — guarded so lingering-tab restores and repeat
   // visits don't spam the owner. Every guard fails open: a duplicate alert
@@ -293,17 +401,24 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           name: editData.name,
           photo: photoUrl,
           birthday: editData.birthday,
+          gender: editData.gender,
+          spayedNeutered: editData.spayedNeutered,
+          coloring: editData.coloring,
           ownerName: editData.owner,
           ownerAddress: editData.address,
           ownerPhone: editData.phone,
           vetName: editData.vet,
           vetAddress: editData.vetAddress,
           allergies: editData.allergies,
+          behavioralNotes: editData.behavioralNotes,
           goodWithDogs: editData.goodWithDogs,
           goodWithCats: editData.goodWithCats,
           goodWithChildren: editData.goodWithChildren,
           species: editSpecies,
           breed: editBreed,
+          // This save replaces the whole `pet` map, so privacy prefs set from
+          // Dashboard > Privacy must be carried forward or they'd be wiped out.
+          privacy: editData.privacy,
         },
         updatedAt: new Date().toISOString(),
       })
@@ -428,6 +543,93 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
             </div>
           </div>
         )}
+
+        {/* Rescue Crew - trusted contacts shown to finders only while the pet is lost */}
+        {lostStatus && !isOwner && crewContacts.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 mb-6">
+            <div className="flex items-center mb-1">
+              <ShieldCheck className="w-5 h-5 text-primary-600 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Rescue Crew</h2>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              People who can help bring this pet home
+            </p>
+            <div className="space-y-3">
+              {crewContacts.map((contact, index) => {
+                const isSafePlace = contact.relationship === 'safe_place'
+                const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(' ')
+                return (
+                  <div
+                    key={index}
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/40"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex-shrink-0">
+                        {isSafePlace ? (
+                          <MapPin className="w-5 h-5 text-primary-600" />
+                        ) : (
+                          <User className="w-5 h-5 text-primary-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">{contact.title}</p>
+                        {fullName && (
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{fullName}</p>
+                        )}
+                        <span className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+                          {isSafePlace ? (
+                            <>
+                              <MapPin className="w-3 h-3 mr-1" />
+                              Safe drop-off location
+                            </>
+                          ) : (
+                            relationshipLabel(contact.relationship)
+                          )}
+                        </span>
+
+                        {(hasPhone(contact.phone1) || hasPhone(contact.phone2)) && (
+                          <div className="mt-3 space-y-2">
+                            {hasPhone(contact.phone1) && (
+                              <a
+                                href={phoneHref(contact.phone1)}
+                                className="flex items-center gap-2 text-sm font-medium text-primary-700 dark:text-primary-300 hover:underline"
+                              >
+                                <Phone className="w-4 h-4 flex-shrink-0" />
+                                {phoneDisplay(contact.phone1)}
+                              </a>
+                            )}
+                            {hasPhone(contact.phone2) && (
+                              <a
+                                href={phoneHref(contact.phone2)}
+                                className="flex items-center gap-2 text-sm font-medium text-primary-700 dark:text-primary-300 hover:underline"
+                              >
+                                <Phone className="w-4 h-4 flex-shrink-0" />
+                                {phoneDisplay(contact.phone2)}
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {hasAddress(contact.address) && (
+                          <a
+                            href={`https://maps.google.com/?q=${encodeURIComponent(formatAddress(contact.address))}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-300"
+                          >
+                            <Home className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>{formatAddress(contact.address)}</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {isOwner && lostStatus && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
             <div className="flex items-center">
@@ -436,6 +638,13 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                 Your pet is marked as lost. Click Report Found below when they&apos;re back safe.
               </p>
             </div>
+            <Link
+              href="/dashboard/rescue-crew"
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Manage your Rescue Crew
+            </Link>
           </div>
         )}
 
@@ -590,6 +799,41 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                     className={`${inputClass} text-center text-sm`}
                   />
                 </div>
+                <div className="mt-3 max-w-xs mx-auto grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gender</label>
+                    <select
+                      value={editData.gender}
+                      onChange={(e) => setEditData({ ...editData, gender: e.target.value as 'male' | 'female' | '' })}
+                      className={`${inputClass} text-center text-sm`}
+                    >
+                      <option value="">Select...</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Spayed/Neutered</label>
+                    <select
+                      value={editData.spayedNeutered}
+                      onChange={(e) => setEditData({ ...editData, spayedNeutered: e.target.value as 'yes' | 'no' | '' })}
+                      className={`${inputClass} text-center text-sm`}
+                    >
+                      <option value="">Select...</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-2 max-w-xs mx-auto">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Coloring</label>
+                  <input
+                    value={editData.coloring}
+                    onChange={(e) => setEditData({ ...editData, coloring: e.target.value })}
+                    className={`${inputClass} text-center text-sm`}
+                    placeholder="e.g. Golden with white patches"
+                  />
+                </div>
               </>
             ) : (
               <>
@@ -602,77 +846,109 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
                     Birthday: {formatBirthday(petData.birthday)}
                   </p>
                 )}
+                {formatPetDetails(petData.gender, petData.spayedNeutered, petData.coloring) && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                    {formatPetDetails(petData.gender, petData.spayedNeutered, petData.coloring)}
+                  </p>
+                )}
               </>
             )}
           </div>
 
-          {/* Contact Information */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-              <Phone className="w-5 h-5 mr-2 text-primary-600" />
-              Contact Owner
-            </h2>
+          {/* Contact Information — a public (non-owner) viewer only sees the
+              fields the owner has opted to share via Dashboard > Privacy. The
+              owner always sees everything, with a note on anything they've hidden. */}
+          {(() => {
+            const nothingToShow = !editing && !canShowName && !canShowPhone && !canShowAddress
 
-            {editing ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Name</label>
-                  <input
-                    value={editData.owner}
-                    onChange={(e) => setEditData({ ...editData, owner: e.target.value })}
-                    className={inputClass}
-                    placeholder="Owner name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                  <input
-                    value={editData.phone}
-                    onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
-                    className={inputClass}
-                    placeholder="Phone number"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                  <input
-                    value={editData.address}
-                    onChange={(e) => setEditData({ ...editData, address: e.target.value })}
-                    className={inputClass}
-                    placeholder="Address"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="text-gray-700 dark:text-gray-300">{petData.owner}</span>
-                  {petData.phone ? (
-                    <a
-                      href={`tel:${petData.phone}`}
-                      className="btn-primary"
-                    >
-                      Call Now
-                    </a>
-                  ) : (
-                    <button
-                      disabled
-                      className="btn-primary opacity-50 cursor-not-allowed"
-                    >
-                      Call Now
-                    </button>
-                  )}
-                </div>
+            if (nothingToShow) return null
 
-                {petData.address && (
-                  <div className="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 mr-2 mt-0.5" />
-                    <span className="text-gray-700 dark:text-gray-300">{petData.address}</span>
+            return (
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                  <Phone className="w-5 h-5 mr-2 text-primary-600" />
+                  Contact Owner
+                </h2>
+
+                {editing ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Name</label>
+                      <input
+                        value={editData.owner}
+                        onChange={(e) => setEditData({ ...editData, owner: e.target.value })}
+                        className={inputClass}
+                        placeholder="Owner name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                      <input
+                        value={editData.phone}
+                        onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                        className={inputClass}
+                        placeholder="Phone number"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
+                      <input
+                        value={editData.address}
+                        onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                        className={inputClass}
+                        placeholder="Address"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Control who can see this info from{' '}
+                      <Link href="/dashboard" className="text-primary-600 dark:text-primary-400 hover:underline">
+                        Dashboard &gt; Privacy
+                      </Link>.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(canShowName || canShowPhone) && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <span className="text-gray-700 dark:text-gray-300">
+                          {canShowName ? petData.owner : <span className="text-gray-400 dark:text-gray-500 italic">Name hidden</span>}
+                          {isOwner && !petData.privacy.showOwnerName && (
+                            <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">(hidden from public)</span>
+                          )}
+                        </span>
+                        {canShowPhone && petData.phone ? (
+                          <a href={`tel:${petData.phone}`} className="btn-primary">
+                            Call Now
+                          </a>
+                        ) : canShowPhone ? (
+                          <button disabled className="btn-primary opacity-50 cursor-not-allowed">
+                            Call Now
+                          </button>
+                        ) : (
+                          isOwner && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">Phone hidden from public</span>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                    {petData.address && canShowAddress && (
+                      <div className="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 mr-2 mt-0.5" />
+                        <span className="text-gray-700 dark:text-gray-300">{petData.address}</span>
+                      </div>
+                    )}
+                    {petData.address && !canShowAddress && isOwner && (
+                      <div className="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 mr-2 mt-0.5" />
+                        <span className="text-gray-400 dark:text-gray-500 italic">Address hidden from public</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            )
+          })()}
 
           {/* Medical Information */}
           {(editing || petData.allergies) && (
@@ -695,6 +971,32 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               ) : (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                   <p className="text-red-800 dark:text-red-300">{petData.allergies}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Behavioral Notes */}
+          {(editing || petData.behavioralNotes) && (
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                <AlertTriangle className="w-5 h-5 mr-2 text-amber-500" />
+                Behavioral Notes
+              </h2>
+              {editing ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Temperament &amp; behavior</label>
+                  <textarea
+                    value={editData.behavioralNotes}
+                    onChange={(e) => setEditData({ ...editData, behavioralNotes: e.target.value })}
+                    className={`${inputClass} resize-none`}
+                    rows={3}
+                    placeholder={'e.g. "Scared of thunder," "Doesn\'t like men or people with hats"'}
+                  />
+                </div>
+              ) : (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <p className="text-amber-800 dark:text-amber-300">{petData.behavioralNotes}</p>
                 </div>
               )}
             </div>
@@ -855,7 +1157,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-3">
               {!isOwner && (
-                petData.phone ? (
+                canShowPhone && petData.phone ? (
                   <a href={`tel:${petData.phone}`} className="btn-primary flex-1 text-center py-3">
                     Call Owner Now
                   </a>
@@ -897,8 +1199,8 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">Found a pet? Here&apos;s how to help:</h3>
           <ul className="text-blue-800 dark:text-blue-300 text-sm space-y-1">
             <li>&bull; Keep the pet safe and secure</li>
-            <li>&bull; Call the owner using the number above</li>
-            <li>&bull; If no answer, try texting or calling again later</li>
+            {canShowPhone && <li>&bull; Call the owner using the number above</li>}
+            {canShowPhone && <li>&bull; If no answer, try texting or calling again later</li>}
             <li>&bull; Consider taking the pet to the listed veterinarian</li>
           </ul>
         </div>

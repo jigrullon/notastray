@@ -5,8 +5,10 @@ import { NextRequest, NextResponse } from 'next/server'
 // (FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY) and threw at module load when
 // those vars were absent, which silently broke PDF uploads per-environment.
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log, setRequestUser } from '@/lib/observability/logger'
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('upload-missing-flyer', async (request: NextRequest) => {
   try {
     // Get the authorization token
     const authHeader = request.headers.get('authorization')
@@ -24,6 +26,7 @@ export async function POST(request: NextRequest) {
     try {
       const decodedToken = await adminAuth.verifyIdToken(token)
       uid = decodedToken.uid
+      setRequestUser(uid)
     } catch (err) {
       return NextResponse.json(
         { error: 'Invalid or expired token' },
@@ -97,10 +100,12 @@ export async function POST(request: NextRequest) {
       tagCode,
     })
   } catch (error) {
-    console.error('Error uploading PDF:', error)
+    log.error('upload_missing_flyer_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: 'Failed to upload PDF' },
       { status: 500 }
     )
   }
-}
+})

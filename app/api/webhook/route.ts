@@ -4,6 +4,9 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { getOrderConfirmationEmail, getMerchantOrderEmail, getSubscriptionConfirmationEmail, getMerchantSubscriptionEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
 import { createShipment, calculateShipmentWeightOz } from '@/lib/easypost';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
+import { logProductEvent } from '@/lib/observability/productEvents';
 
 function encodeEmailId(email: string): string {
     return encodeURIComponent(email.toLowerCase().trim()).replace(/\./g, '%2E');
@@ -53,7 +56,24 @@ function addBusinessDays(startDate: Date, days: number): Date {
     return current;
 }
 
-async function writeSubscriptionToFirestore(userId: string, subscription: any): Promise<void> {
+interface AcquisitionInfo {
+    source: string;
+    medium: string;
+    campaign: string;
+}
+
+interface SubscriptionRecord {
+    status: string;
+    plan: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId?: string;
+    currentPeriodEnd?: string;
+    // Only set on creation — omitted on cancel/update writes so merge:true
+    // leaves the original first-touch acquisition value in place.
+    acquisition?: AcquisitionInfo;
+}
+
+async function writeSubscriptionToFirestore(userId: string, subscription: SubscriptionRecord): Promise<void> {
     await adminDb.collection('users').doc(userId).set({
         subscription: {
             status: subscription.status,
@@ -62,12 +82,50 @@ async function writeSubscriptionToFirestore(userId: string, subscription: any): 
             stripeCustomerId: subscription.stripeCustomerId || '',
             currentPeriodEnd: subscription.currentPeriodEnd || '',
             createdAt: new Date().toISOString(),
+            ...(subscription.acquisition && { acquisition: subscription.acquisition }),
         },
     }, { merge: true });
-    console.log('Subscription written to Firestore for user:', userId);
+    log.info('subscription_written', { userId, status: subscription.status });
 }
 
-async function writeOrderToFirestore(order: any): Promise<void> {
+interface OrderItem {
+    name: string;
+    color: string;
+    size: string;
+    quantity: number;
+    price: number;
+}
+
+interface OrderRecord {
+    orderId: string;
+    confirmationCode: string;
+    stripeSessionId: string;
+    stripePaymentIntentId?: string;
+    userId?: string;
+    customerEmail?: string;
+    items: OrderItem[];
+    subtotal: number;
+    shippingMethod: string;
+    shippingOption?: string;
+    shippingZipCode?: string;
+    shippingCost: number;
+    tax?: number;
+    total: number;
+    shippingAddress: {
+        name: string;
+        line1: string;
+        line2: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+    };
+    estimatedDeliveryMin: string;
+    estimatedDeliveryMax: string;
+    acquisition?: AcquisitionInfo;
+}
+
+async function writeOrderToFirestore(order: OrderRecord): Promise<void> {
     await adminDb.collection('orders').doc(order.orderId).set({
         orderId: order.orderId,
         confirmationCode: order.confirmationCode,
@@ -86,13 +144,14 @@ async function writeOrderToFirestore(order: any): Promise<void> {
         shippingAddress: order.shippingAddress,
         estimatedDeliveryMin: order.estimatedDeliveryMin,
         estimatedDeliveryMax: order.estimatedDeliveryMax,
+        acquisition: order.acquisition || null,
         status: 'confirmed',
         createdAt: new Date().toISOString(),
     });
-    console.log('Order written to Firestore:', order.orderId);
+    log.info('order_written', { orderId: order.orderId, total: order.total });
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('webhook', async (request: Request) => {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
     if (!process.env.STRIPE_SECRET_KEY || !webhookSecret) {
@@ -100,7 +159,7 @@ export async function POST(request: Request) {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2023-10-16' as any,
+        apiVersion: '2025-12-15.clover',
     });
 
     const signature = request.headers.get('stripe-signature');
@@ -116,13 +175,19 @@ export async function POST(request: Request) {
         switch (event.type) {
             case 'checkout.session.completed': {
                 const session = event.data.object as Stripe.Checkout.Session;
-                console.log('Payment successful for session:', session.id);
+                log.info('payment_successful', { sessionId: session.id, mode: session.mode });
 
                 const userId = session.metadata?.userId;
+                if (userId) setRequestUser(userId);
                 const isSubscription = session.mode === 'subscription';
 
                 let stripeSub: Stripe.Subscription | null = null;
                 const plan = (session.metadata?.plan as 'monthly' | 'yearly') || 'monthly';
+                const acquisition: AcquisitionInfo = {
+                    source: session.metadata?.utm_source || '',
+                    medium: session.metadata?.utm_medium || '',
+                    campaign: session.metadata?.utm_campaign || '',
+                };
 
                 if (isSubscription) {
                     const stripeSubscriptionId = session.subscription as string;
@@ -134,8 +199,10 @@ export async function POST(request: Request) {
                                 plan,
                                 stripeSubscriptionId,
                                 stripeCustomerId: session.customer as string || '',
-                                currentPeriodEnd: new Date((stripeSub as any).current_period_end * 1000).toISOString(),
+                                currentPeriodEnd: new Date(stripeSub.items.data[0].current_period_end * 1000).toISOString(),
+                                acquisition,
                             });
+                            await logProductEvent('subscription_started', { userId, plan });
                         }
                     }
                 }
@@ -143,7 +210,7 @@ export async function POST(request: Request) {
                 if (isSubscription) {
                     const customerEmail = session.customer_email || session.customer_details?.email || '';
                     const renewalDate = stripeSub
-                        ? new Date((stripeSub as any).current_period_end * 1000).toLocaleDateString('en-US', {
+                        ? new Date(stripeSub.items.data[0].current_period_end * 1000).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
@@ -169,9 +236,11 @@ export async function POST(request: Request) {
                                 html: subscriptionEmailData.html,
                                 text: subscriptionEmailData.text,
                             });
-                            console.log(`Subscription confirmation email sent to ${customerEmail}`);
+                            log.info('subscription_confirmation_email_sent', {});
                         } catch (emailErr) {
-                            console.error('Subscription confirmation email failed (non-fatal):', emailErr);
+                            log.error('subscription_confirmation_email_failed', {
+                                error: emailErr instanceof Error ? emailErr.message : String(emailErr),
+                            });
                         }
                     }
 
@@ -192,9 +261,11 @@ export async function POST(request: Request) {
                                 html: merchantSubEmailData.html,
                                 text: merchantSubEmailData.text,
                             });
-                            console.log(`Merchant subscription notification sent to ${subMerchantEmail}`);
+                            log.info('merchant_subscription_notification_sent', {});
                         } catch (emailErr) {
-                            console.error('Merchant subscription email failed (non-fatal):', emailErr);
+                            log.error('merchant_subscription_email_failed', {
+                                error: emailErr instanceof Error ? emailErr.message : String(emailErr),
+                            });
                         }
                     }
 
@@ -202,9 +273,12 @@ export async function POST(request: Request) {
                     if (customerEmail) {
                         try {
                             await subscribeToNewsletter(customerEmail, 'purchase');
-                            console.log('Newsletter auto-enrolled subscriber:', customerEmail);
+                            log.info('newsletter_auto_enrolled', { source: 'subscription' });
                         } catch (newsletterErr) {
-                            console.error('Newsletter auto-enroll failed (non-fatal):', newsletterErr);
+                            log.error('newsletter_auto_enroll_failed', {
+                                source: 'subscription',
+                                error: newsletterErr instanceof Error ? newsletterErr.message : String(newsletterErr),
+                            });
                         }
                     }
 
@@ -216,9 +290,9 @@ export async function POST(request: Request) {
                     expand: ['line_items', 'shipping_cost.shipping_rate', 'payment_intent'],
                 });
 
-                const sessionAny = fullSession as any;
-                const shippingAddress = sessionAny.shipping_details?.address;
-                const shippingName = sessionAny.shipping_details?.name;
+                const shippingDetails = fullSession.collected_information?.shipping_details;
+                const shippingAddress = shippingDetails?.address;
+                const shippingName = shippingDetails?.name;
                 const shippingRate = fullSession.shipping_cost?.shipping_rate as Stripe.ShippingRate | undefined;
                 const shippingDisplayName = shippingRate?.display_name || '';
                 const shippingAmount = (fullSession.shipping_cost?.amount_total || 0) / 100;
@@ -237,9 +311,9 @@ export async function POST(request: Request) {
                     deliveryMax = addBusinessDays(now, 7);
                 }
 
-                const items = JSON.parse(session.metadata?.items || '[]');
-                const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-                const taxAmount = (sessionAny.total_details?.amount_tax || 0) / 100;
+                const items = JSON.parse(session.metadata?.items || '[]') as OrderItem[];
+                const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const taxAmount = (fullSession.total_details?.amount_tax || 0) / 100;
                 const paymentIntent = fullSession.payment_intent as Stripe.PaymentIntent | null;
 
                 const order = {
@@ -268,6 +342,7 @@ export async function POST(request: Request) {
                     },
                     estimatedDeliveryMin: deliveryMin.toISOString().slice(0, 10),
                     estimatedDeliveryMax: deliveryMax.toISOString().slice(0, 10),
+                    acquisition,
                 };
 
                 await writeOrderToFirestore(order);
@@ -291,7 +366,7 @@ export async function POST(request: Request) {
                         reference: order.orderId,
                         // Weight scales with tag count: envelope + per-tag weight
                         weightOz: calculateShipmentWeightOz(
-                            order.items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+                            order.items.reduce((sum, item) => sum + (item.quantity || 1), 0)
                         ),
                     });
 
@@ -304,9 +379,15 @@ export async function POST(request: Request) {
                         updated_at: new Date().toISOString(),
                     });
 
-                    console.log(`EasyPost shipment created for order ${order.orderId}: ${shipmentResponse.tracking_number}`);
+                    log.info('easypost_shipment_created', {
+                        orderId: order.orderId,
+                        trackingNumber: shipmentResponse.tracking_number,
+                    });
                 } catch (easypostErr) {
-                    console.error(`EasyPost shipment creation failed for order ${order.orderId}:`, easypostErr);
+                    log.error('easypost_shipment_creation_failed', {
+                        orderId: order.orderId,
+                        error: easypostErr instanceof Error ? easypostErr.message : String(easypostErr),
+                    })
                     // Don't fail the webhook if EasyPost fails - order is still valid
                 }
 
@@ -333,9 +414,12 @@ export async function POST(request: Request) {
                             html: confirmationEmailData.html,
                             text: confirmationEmailData.text,
                         });
-                        console.log(`Order confirmation email sent to ${order.customerEmail}`);
+                        log.info('order_confirmation_email_sent', { orderId: order.orderId });
                     } catch (emailErr) {
-                        console.error('Order confirmation email failed (non-fatal):', emailErr);
+                        log.error('order_confirmation_email_failed', {
+                            orderId: order.orderId,
+                            error: emailErr instanceof Error ? emailErr.message : String(emailErr),
+                        });
                     }
                 }
 
@@ -362,9 +446,12 @@ export async function POST(request: Request) {
                             html: merchantEmailData.html,
                             text: merchantEmailData.text,
                         });
-                        console.log(`Merchant notification sent to ${merchantEmail}`);
+                        log.info('merchant_order_notification_sent', { orderId: order.orderId });
                     } catch (emailErr) {
-                        console.error('Merchant email failed (non-fatal):', emailErr);
+                        log.error('merchant_order_email_failed', {
+                            orderId: order.orderId,
+                            error: emailErr instanceof Error ? emailErr.message : String(emailErr),
+                        });
                     }
                 }
 
@@ -372,9 +459,13 @@ export async function POST(request: Request) {
                 if (order.customerEmail) {
                     try {
                         await subscribeToNewsletter(order.customerEmail, 'purchase');
-                        console.log('Newsletter auto-enrolled buyer:', order.customerEmail);
+                        log.info('newsletter_auto_enrolled', { source: 'order', orderId: order.orderId });
                     } catch (newsletterErr) {
-                        console.error('Newsletter auto-enroll failed (non-fatal):', newsletterErr);
+                        log.error('newsletter_auto_enroll_failed', {
+                            source: 'order',
+                            orderId: order.orderId,
+                            error: newsletterErr instanceof Error ? newsletterErr.message : String(newsletterErr),
+                        });
                     }
                 }
 
@@ -385,14 +476,16 @@ export async function POST(request: Request) {
                 const canceledSub = event.data.object as Stripe.Subscription;
                 const canceledUserId = canceledSub.metadata?.userId;
                 if (canceledUserId) {
+                    setRequestUser(canceledUserId);
                     await writeSubscriptionToFirestore(canceledUserId, {
                         status: 'canceled',
                         plan: canceledSub.metadata?.plan || '',
                         stripeSubscriptionId: canceledSub.id,
                         stripeCustomerId: canceledSub.customer as string || '',
-                        currentPeriodEnd: new Date((canceledSub as any).current_period_end * 1000).toISOString(),
+                        currentPeriodEnd: new Date(canceledSub.items.data[0].current_period_end * 1000).toISOString(),
                     });
-                    console.log('Subscription canceled for user:', canceledUserId);
+                    log.info('subscription_canceled', { userId: canceledUserId });
+                    await logProductEvent('subscription_canceled', { userId: canceledUserId });
                 }
                 break;
             }
@@ -401,24 +494,25 @@ export async function POST(request: Request) {
                 const updatedSub = event.data.object as Stripe.Subscription;
                 const updatedUserId = updatedSub.metadata?.userId;
                 if (updatedUserId) {
+                    setRequestUser(updatedUserId);
                     await writeSubscriptionToFirestore(updatedUserId, {
                         status: updatedSub.status === 'active' ? 'active' : updatedSub.status,
                         plan: updatedSub.metadata?.plan || '',
                         stripeSubscriptionId: updatedSub.id,
                         stripeCustomerId: updatedSub.customer as string || '',
-                        currentPeriodEnd: new Date((updatedSub as any).current_period_end * 1000).toISOString(),
+                        currentPeriodEnd: new Date(updatedSub.items.data[0].current_period_end * 1000).toISOString(),
                     });
                 }
                 break;
             }
 
             default:
-                console.log(`Unhandled event type ${event.type}`);
+                log.info('webhook_event_unhandled', { eventType: event.type });
         }
 
         return NextResponse.json({ received: true });
     } catch (err: any) {
-        console.error(`Webhook Error: ${err.message}`);
+        log.error('webhook_error', { error: err.message });
         return new Response(`Webhook Error: ${err.message}`, { status: 400 });
     }
-}
+})

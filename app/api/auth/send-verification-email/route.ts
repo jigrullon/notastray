@@ -1,10 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { adminAuth } from '@/lib/firebaseAdmin';
+import { verifyBearerToken } from '@/lib/apiAuth';
 import { generateVerificationToken } from '@/lib/emailVerification';
 import { getEmailVerificationEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log, setRequestUser } from '@/lib/observability/logger';
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
@@ -18,34 +20,15 @@ const ratelimit = new Ratelimit({
   analytics: false,
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('auth-send-verification-email', async (request: NextRequest) => {
   // ── 1. Authenticate: require Bearer token ──────────────────────────────
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json(
-      { success: false, error: 'Missing or invalid authorization header' },
-      { status: 401 }
-    );
-  }
+  const { decoded, error } = await verifyBearerToken(request);
+  if (error) return error;
 
-  const idToken = authHeader.slice(7);
-
-  let uid: string;
-  let email: string;
-  let emailVerified: boolean;
-
-  try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    uid = decoded.uid;
-    email = decoded.email ?? '';
-    emailVerified = decoded.email_verified ?? false;
-  } catch (err) {
-    console.error('send-verification-email: token verification failed', err);
-    return NextResponse.json(
-      { success: false, error: 'Invalid or expired authorization token' },
-      { status: 401 }
-    );
-  }
+  const uid = decoded.uid;
+  setRequestUser(uid);
+  const email = decoded.email ?? '';
+  const emailVerified = decoded.email_verified ?? false;
 
   if (!email) {
     return NextResponse.json(
@@ -92,7 +75,9 @@ export async function POST(request: NextRequest) {
   try {
     token = generateVerificationToken({ uid, email, continueUrl });
   } catch (err) {
-    console.error('send-verification-email: token generation failed', err);
+    log.error('verification_token_generation_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json(
       { success: false, error: 'Failed to generate verification token' },
       { status: 500 }
@@ -114,7 +99,9 @@ export async function POST(request: NextRequest) {
       from: 'support@notastray.com',
     });
   } catch (err) {
-    console.error('send-verification-email: SES send failed', err);
+    log.error('verification_email_send_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json(
       { success: false, error: 'Failed to send verification email' },
       { status: 500 }
@@ -122,4 +109,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true });
-}
+})

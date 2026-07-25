@@ -1,12 +1,14 @@
 import { adminDb } from '@/lib/firebaseAdmin'
 import { NextRequest, NextResponse } from 'next/server'
+import { withObservability } from '@/lib/observability/withObservability'
+import { log } from '@/lib/observability/logger'
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability('populate-sample-tags', async (request: NextRequest) => {
   try {
     // Simple auth check - requires a secret query parameter
     const { searchParams } = new URL(request.url)
     const secret = searchParams.get('secret')
-    if (secret !== process.env.ADMIN_API_KEY && process.env.NODE_ENV === 'production') {
+    if (!process.env.ADMIN_API_KEY || secret !== process.env.ADMIN_API_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -52,10 +54,12 @@ export async function POST(request: NextRequest) {
       tags: tagCodes,
     })
   } catch (error) {
-    console.error('Error populating sample tags:', error)
+    log.error('populate_sample_tags_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: 'Failed to populate sample tags' },
       { status: 500 }
     )
   }
-}
+})

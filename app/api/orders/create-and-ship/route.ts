@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { createShipment, ShippingAddress } from '@/lib/easypost';
 import { getMerchantOrderEmail } from '@/lib/emailTemplates';
 import { sendEmail } from '@/lib/sendEmail';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
 interface Order {
   orderId: string;
@@ -26,7 +28,7 @@ interface Order {
   estimatedDeliveryMax: string;
 }
 
-export async function POST(request: Request) {
+export const POST = withObservability('orders-create-and-ship', async (request: Request) => {
   try {
     const order: Order = await request.json();
 
@@ -62,7 +64,10 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       });
 
-    console.log(`Label created for order ${order.orderId}: ${shipmentResponse.tracking_number}`);
+    log.info('shipping_label_created', {
+      orderId: order.orderId,
+      trackingNumber: shipmentResponse.tracking_number,
+    });
 
     // Send merchant notification
     const merchantEmail = process.env.MERCHANT_EMAIL;
@@ -87,9 +92,12 @@ export async function POST(request: Request) {
           html: merchantEmailData.html,
           text: merchantEmailData.text,
         });
-        console.log(`Merchant notification sent to ${merchantEmail}`);
+        log.info('merchant_order_notification_sent', { orderId: order.orderId });
       } catch (emailError) {
-        console.error('Failed to send merchant email:', emailError);
+        log.error('merchant_order_email_failed', {
+          orderId: order.orderId,
+          error: emailError instanceof Error ? emailError.message : String(emailError),
+        });
         // Don't fail the order if email fails
       }
     }
@@ -101,8 +109,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Error creating shipment:', errorMessage);
-    console.error('Full error:', error);
+    log.error('create_and_ship_failed', {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       {
         error: errorMessage,
@@ -111,4 +121,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+})

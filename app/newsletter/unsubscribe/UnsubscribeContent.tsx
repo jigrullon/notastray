@@ -56,10 +56,10 @@ export default function UnsubscribeContent() {
               <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              You've been unsubscribed
+              You&apos;ve been unsubscribed
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              We've removed your email from our newsletter. You won't receive any more emails from us.
+              We&apos;ve removed your email from our newsletter. You won&apos;t receive any more emails from us.
             </p>
             <Link
               href="/"

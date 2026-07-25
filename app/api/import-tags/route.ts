@@ -1,15 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withObservability } from '@/lib/observability/withObservability';
+import { log } from '@/lib/observability/logger';
 
 /**
- * POST /api/import-tags
+ * POST /api/import-tags?secret=ADMIN_API_KEY
  * Body: { tags: [{ code, url }] }
  *
  * Bulk-imports tags into Firestore via Firebase Admin SDK (server-side, bypasses security rules).
- * Admin-only endpoint — protect or remove after use.
  */
-export async function POST(request: Request) {
+export const POST = withObservability('import-tags', async (request: NextRequest) => {
     try {
+        const { searchParams } = new URL(request.url)
+        const secret = searchParams.get('secret')
+        if (!process.env.ADMIN_API_KEY || secret !== process.env.ADMIN_API_KEY) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { tags } = await request.json();
         if (!Array.isArray(tags) || tags.length === 0) {
             return NextResponse.json({ error: 'tags array is required' }, { status: 400 });
@@ -64,7 +71,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ created, skipped, errors, total: tags.length });
     } catch (error: any) {
-        console.error('Import error:', error);
+        log.error('import_tags_failed', { error: error.message });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+})
