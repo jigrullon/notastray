@@ -56,8 +56,7 @@ export default function PrivacySharingPage() {
           return
         }
 
-        const codes: string[] = []
-        let seededPrivacy: PrivacySettings | null = null
+        const activeTags: { code: string; privacy: PrivacySettings }[] = []
         for (let i = 0; i < tagCodes.length; i += 10) {
           const batch = tagCodes.slice(i, i + 10)
           const tagsQuery = query(collection(db, 'tags'), where(documentId(), 'in', batch))
@@ -65,18 +64,21 @@ export default function PrivacySharingPage() {
           snapshot.forEach((tagDoc) => {
             const data = tagDoc.data()
             if (!data.isActive) return
-            codes.push(tagDoc.id)
-            if (!seededPrivacy) {
-              seededPrivacy = {
+            activeTags.push({
+              code: tagDoc.id,
+              privacy: {
                 showOwnerName: data.pet?.privacy?.showOwnerName ?? true,
                 showPhone: data.pet?.privacy?.showPhone ?? true,
                 showAddress: data.pet?.privacy?.showAddress ?? true,
-              }
-            }
+              },
+            })
           })
         }
-        setActiveTagCodes(codes)
-        if (seededPrivacy) setPrivacy(seededPrivacy)
+        // Firestore's 'in' query doesn't guarantee order — sort so seeding the
+        // form is deterministic even if a prior save ever left tags diverged.
+        activeTags.sort((a, b) => a.code.localeCompare(b.code))
+        setActiveTagCodes(activeTags.map((t) => t.code))
+        if (activeTags.length > 0) setPrivacy(activeTags[0].privacy)
       } catch (err) {
         console.error('Failed to load tags for privacy settings:', err)
       } finally {
@@ -90,26 +92,37 @@ export default function PrivacySharingPage() {
     if (!user || activeTagCodes.length === 0) return
     setSaving(true)
     setSuccessMessage('')
-    try {
-      // Dotted field path merges only `pet.privacy` on each tag, leaving the
-      // rest of that tag's `pet` map (name, contact info, medical notes,
-      // etc.) untouched.
-      await Promise.all(
-        activeTagCodes.map((code) =>
-          updateDoc(doc(db, 'tags', code), {
-            'pet.privacy': privacy,
-            updatedAt: new Date().toISOString(),
-          })
-        )
+    // Dotted field path merges only `pet.privacy` on each tag, leaving the
+    // rest of that tag's `pet` map (name, contact info, medical notes,
+    // etc.) untouched. Settled (not Promise.all) so one tag's write failing
+    // doesn't hide that the others already succeeded — a partial failure
+    // would otherwise leave tags silently out of sync with each other.
+    const results = await Promise.allSettled(
+      activeTagCodes.map((code) =>
+        updateDoc(doc(db, 'tags', code), {
+          'pet.privacy': privacy,
+          updatedAt: new Date().toISOString(),
+        })
       )
+    )
+    const failedCodes = activeTagCodes.filter((_, i) => results[i].status === 'rejected')
+    results.forEach((result, i) => {
+      if (result.status === 'rejected') {
+        console.error(`Failed to save privacy settings for tag ${activeTagCodes[i]}:`, result.reason)
+      }
+    })
+
+    if (failedCodes.length === 0) {
       setSuccessMessage('Privacy settings saved.')
       setTimeout(() => setSuccessMessage(''), 3000)
-    } catch (err) {
-      console.error('Failed to save privacy settings:', err)
+    } else if (failedCodes.length === activeTagCodes.length) {
       alert('Failed to save privacy settings. Please try again.')
-    } finally {
-      setSaving(false)
+    } else {
+      alert(
+        `Saved for ${activeTagCodes.length - failedCodes.length} of ${activeTagCodes.length} tags, but failed for: ${failedCodes.join(', ')}. Please try saving again.`
+      )
     }
+    setSaving(false)
   }
 
   if (loading || fetching) {

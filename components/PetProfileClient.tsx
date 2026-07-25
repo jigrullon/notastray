@@ -123,7 +123,18 @@ interface PetProfileClientProps {
 
 export default function PetProfileClient({ petData, tagCode, userId, isLost, species, breed }: PetProfileClientProps) {
   const { user, loading } = useAuth()
-  const isOwner = !!(user && userId && user.uid === userId)
+  // While auth is still resolving, treat the viewer as not-the-owner so the
+  // owner's own page doesn't briefly flash the redacted public view before
+  // snapping to the full one once `loading` settles.
+  const isOwner = !loading && !!(user && userId && user.uid === userId)
+
+  // What this specific viewer is allowed to see — the owner always sees
+  // everything; a public/finder viewer sees only what's opted into via
+  // Dashboard > Privacy. Shared by every place on this page that touches
+  // owner contact info, so a new one can't accidentally skip the gate.
+  const canShowName = isOwner || petData.privacy.showOwnerName
+  const canShowPhone = isOwner || petData.privacy.showPhone
+  const canShowAddress = isOwner || petData.privacy.showAddress
 
   const [notificationSent, setNotificationSent] = useState(false)
   const [location, setLocation] = useState<LocationData | null>(null)
@@ -770,9 +781,6 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               fields the owner has opted to share via Dashboard > Privacy. The
               owner always sees everything, with a note on anything they've hidden. */}
           {(() => {
-            const canShowName = isOwner || petData.privacy.showOwnerName
-            const canShowPhone = isOwner || petData.privacy.showPhone
-            const canShowAddress = isOwner || petData.privacy.showAddress
             const nothingToShow = !editing && !canShowName && !canShowPhone && !canShowAddress
 
             if (nothingToShow) return null
@@ -1071,7 +1079,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-3">
               {!isOwner && (
-                petData.phone ? (
+                canShowPhone && petData.phone ? (
                   <a href={`tel:${petData.phone}`} className="btn-primary flex-1 text-center py-3">
                     Call Owner Now
                   </a>
@@ -1113,8 +1121,8 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
           <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">Found a pet? Here&apos;s how to help:</h3>
           <ul className="text-blue-800 dark:text-blue-300 text-sm space-y-1">
             <li>&bull; Keep the pet safe and secure</li>
-            <li>&bull; Call the owner using the number above</li>
-            <li>&bull; If no answer, try texting or calling again later</li>
+            {canShowPhone && <li>&bull; Call the owner using the number above</li>}
+            {canShowPhone && <li>&bull; If no answer, try texting or calling again later</li>}
             <li>&bull; Consider taking the pet to the listed veterinarian</li>
           </ul>
         </div>
