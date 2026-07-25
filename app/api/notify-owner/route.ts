@@ -199,12 +199,24 @@ export const POST = withObservability('notify-owner', async (request: Request) =
         // Send SMS notification(s) — recipients are independent and best-effort,
         // so they're sent concurrently rather than one after another, and a
         // failure on one (e.g. a spouse's number) never affects the other.
-        const smsRecipients = [owner.phone, owner.phone2].filter((p): p is string => Boolean(p))
+        // Deduped by digits so an accidental duplicate entry (e.g. phone2 set
+        // to the same number as phone) never double-sends the same message.
+        const normalizePhone = (p: string) => p.replace(/\D/g, '')
+        const seenPhones = new Set<string>()
+        const smsRecipients: { phone: string; label?: string }[] = []
+        for (const [phone, label] of [[owner.phone, undefined], [owner.phone2, 'phone2']] as const) {
+            if (!phone) continue
+            const key = normalizePhone(phone)
+            if (!key || seenPhones.has(key)) continue
+            seenPhones.add(key)
+            smsRecipients.push({ phone, label })
+        }
         log.info('sms_notification_check', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone, hasPhone2: !!owner.phone2 })
         if (owner.smsEnabled && smsRecipients.length > 0) {
-            const results = await Promise.allSettled(smsRecipients.map((phone) => sendSMS(phone, smsMessage)))
+            const results = await Promise.allSettled(smsRecipients.map((r) => sendSMS(r.phone, smsMessage)))
             results.forEach((result, i) => {
-                const logFields = i === 0 ? { tagCode } : { tagCode, recipient: 'phone2' }
+                const { label } = smsRecipients[i]
+                const logFields = label ? { tagCode, recipient: label } : { tagCode }
                 if (result.status === 'fulfilled') {
                     notificationsSent.sms = true
                     log.info('sms_notification_sent', logFields)

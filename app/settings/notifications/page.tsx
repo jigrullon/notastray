@@ -68,7 +68,15 @@ export default function NotificationSettingsPage() {
             setOriginalPhone2(data.phone2 || '')
             // Each number's consent is tracked independently — a value here only
             // ever comes from that specific number's own consent confirmation.
-            setPhoneConsentedAt(data.phoneConsentedAt || null)
+            // phone2ConsentedAt has no legacy equivalent (the field is new), but
+            // phoneConsentedAt falls back to the old account-wide SMS opt-in
+            // timestamp so users who already consented before this field existed
+            // aren't forced to re-confirm consent for an unchanged number.
+            setPhoneConsentedAt(
+              data.phoneConsentedAt ||
+              (data.preferences?.sms?.optIn ? data.preferences?.sms?.consentTimestamp : null) ||
+              null
+            )
             setPhone2ConsentedAt(data.phone2ConsentedAt || null)
             if (data.phone2) setPhone2Expanded(true)
 
@@ -180,6 +188,15 @@ export default function NotificationSettingsPage() {
   const persistSettings = async (consentFor: 'phone' | 'phone2' | null, isFinal = true) => {
     if (!user) return false
     setSaving(true)
+    // A number's new value is only safe to write once its own consent step has
+    // been confirmed (or it never needed consent — unchanged, or cleared to
+    // empty). Otherwise send its still-consented original value, so confirming
+    // one number's consent can't slip the *other* number's unconsented change
+    // into Firestore in the same request.
+    const phoneNeedsConsent = settings.smsEnabled && contactInfo.phone.trim() && phoneChanged()
+    const phone2NeedsConsent = settings.smsEnabled && contactInfo.phone2.trim() && phone2Changed()
+    const safePhone = !phoneNeedsConsent || consentFor === 'phone' ? contactInfo.phone : originalPhone
+    const safePhone2 = !phone2NeedsConsent || consentFor === 'phone2' ? contactInfo.phone2 : originalPhone2
     try {
       const token = await user.getIdToken()
       const response = await fetch('/api/user/consent', {
@@ -192,8 +209,8 @@ export default function NotificationSettingsPage() {
           userId: user.uid,
           smsOptIn: settings.smsEnabled,
           emailOptIn: settings.emailEnabled,
-          phone: contactInfo.phone,
-          phone2: contactInfo.phone2,
+          phone: safePhone,
+          phone2: safePhone2,
           consentFor,
           email: contactInfo.email,
           displayName: firstName.trim(),
@@ -212,8 +229,11 @@ export default function NotificationSettingsPage() {
         await auth.currentUser.reload()
       }
       setFirstName(firstName.trim())
-      setOriginalPhone(contactInfo.phone.trim())
-      setOriginalPhone2(contactInfo.phone2.trim())
+      // Track what was actually persisted, not contactInfo's raw value — if a
+      // number's change was deferred (see safePhone/safePhone2 above), it's
+      // still unsaved and must still show as changed until its own consent step.
+      setOriginalPhone(safePhone.trim())
+      setOriginalPhone2(safePhone2.trim())
       const now = new Date().toISOString()
       if (consentFor === 'phone') setPhoneConsentedAt(now)
       if (consentFor === 'phone2') setPhone2ConsentedAt(now)
