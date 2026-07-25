@@ -47,6 +47,8 @@ export const POST = withObservability('notify-owner', async (request: Request) =
             name: tagData.pet?.ownerName || 'Pet Owner',
             email: userData?.email || tagData.pet?.ownerEmail,
             phone: userData?.phone || tagData.pet?.ownerPhone,
+            // Optional second SMS recipient — e.g. a spouse — set from Notification Settings.
+            phone2: userData?.phone2 as string | undefined,
             petName: tagData.pet?.name || 'Your pet',
             smsEnabled: userData?.preferences?.sms?.optIn ?? true, // Default to true if not set
             emailEnabled: userData?.preferences?.email?.optIn ?? true, // Default to true if not set
@@ -194,8 +196,9 @@ export const POST = withObservability('notify-owner', async (request: Request) =
             email: false,
         }
 
-        // Send SMS notification
-        log.info('sms_notification_check', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone })
+        // Send SMS notification(s) — a second number (e.g. a spouse) is optional
+        // and best-effort: its failure doesn't affect the primary number's result.
+        log.info('sms_notification_check', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone, hasPhone2: !!owner.phone2 })
         if (owner.smsEnabled && owner.phone) {
             try {
                 await sendSMS(owner.phone, smsMessage)
@@ -209,6 +212,20 @@ export const POST = withObservability('notify-owner', async (request: Request) =
             }
         } else {
             log.info('sms_notification_skipped', { tagCode, smsEnabled: owner.smsEnabled, hasPhone: !!owner.phone })
+        }
+
+        if (owner.smsEnabled && owner.phone2) {
+            try {
+                await sendSMS(owner.phone2, smsMessage)
+                notificationsSent.sms = true
+                log.info('sms_notification_sent', { tagCode, recipient: 'phone2' })
+            } catch (smsError) {
+                log.error('sms_notification_failed', {
+                    tagCode,
+                    recipient: 'phone2',
+                    error: smsError instanceof Error ? smsError.message : String(smsError),
+                })
+            }
         }
 
         // Send email notification

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { Bell, Mail, MessageSquare, MapPin, Clock, Shield, ArrowLeft, User, Phone, Save, Loader2 } from 'lucide-react'
+import { Bell, Mail, MessageSquare, MapPin, Clock, Shield, ArrowLeft, User, Phone, Save, Loader2, Plus } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { useRouter } from 'next/navigation'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
@@ -20,7 +20,9 @@ export default function NotificationSettingsPage() {
 
   const [contactInfo, setContactInfo] = useState({
     email: '',
-    phone: ''
+    phone: '',
+    // Optional second SMS recipient (e.g. a spouse) who gets the same scan alerts.
+    phone2: ''
   })
 
   const [firstName, setFirstName] = useState('')
@@ -58,10 +60,17 @@ export default function NotificationSettingsPage() {
             const data = docSnap.data()
             setContactInfo({
               email: data.email || user.email || '',
-              phone: data.phone || ''
+              phone: data.phone || '',
+              phone2: data.phone2 || ''
             })
             setFirstName(data.displayName || user?.displayName || '')
             setOriginalPhone(data.phone || '')
+            setOriginalPhone2(data.phone2 || '')
+            // Each number's consent is tracked independently — a value here only
+            // ever comes from that specific number's own consent confirmation.
+            setPhoneConsentedAt(data.phoneConsentedAt || null)
+            setPhone2ConsentedAt(data.phone2ConsentedAt || null)
+            if (data.phone2) setPhone2Expanded(true)
 
             // Load preferences from Firestore
             if (data.preferences) {
@@ -72,9 +81,6 @@ export default function NotificationSettingsPage() {
                 maxNotificationsPerHour: data.preferences.maxNotificationsPerHour ?? 3,
                 locationSharing: data.preferences.locationSharing ?? true
               }))
-              if (data.preferences.sms?.optIn) {
-                setSmsConsentAccepted(true)
-              }
             }
           } else {
             setContactInfo(prev => ({ ...prev, email: user.email || '' }))
@@ -89,19 +95,30 @@ export default function NotificationSettingsPage() {
   }, [user])
 
   const [showSMSConsent, setShowSMSConsent] = useState(false)
-  const [smsConsentAccepted, setSmsConsentAccepted] = useState(false)
   const [consentChecked, setConsentChecked] = useState(false)
+  // Which number the open consent modal is currently for, and which number(s)
+  // still need their own separate confirmation after this one closes.
+  const [consentTarget, setConsentTarget] = useState<'phone' | 'phone2' | null>(null)
+  const [consentQueue, setConsentQueue] = useState<Array<'phone' | 'phone2'>>([])
   const [originalPhone, setOriginalPhone] = useState('')
+  const [originalPhone2, setOriginalPhone2] = useState('')
+  // Independent per-number consent records — confirming one must never affect the other.
+  const [phoneConsentedAt, setPhoneConsentedAt] = useState<string | null>(null)
+  const [phone2ConsentedAt, setPhone2ConsentedAt] = useState<string | null>(null)
+  const [phone2Expanded, setPhone2Expanded] = useState(false)
   const [pendingAction, setPendingAction] = useState<'save' | 'test' | null>(null)
 
   const phoneChanged = () => contactInfo.phone.trim() !== originalPhone.trim()
+  const phone2Changed = () => contactInfo.phone2.trim() !== originalPhone2.trim()
 
   const handleTestNotification = async (type: 'email' | 'sms') => {
     if (!user) return
 
-    // SMS Consent Check — require consent for new or changed phone numbers
-    if (type === 'sms' && (!smsConsentAccepted || phoneChanged())) {
+    // SMS Consent Check — the Test button only ever targets the primary number
+    if (type === 'sms' && (!phoneConsentedAt || phoneChanged())) {
       setPendingAction('test')
+      setConsentTarget('phone')
+      setConsentQueue([])
       setShowSMSConsent(true)
       return
     }
@@ -156,107 +173,13 @@ export default function NotificationSettingsPage() {
     }
   }
 
-  const handleConsentConfirm = async () => {
-    try {
-      if (user) {
-        const token = await user.getIdToken()
-        const response = await fetch('/api/user/consent', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            userId: user.uid,
-            smsOptIn: true,
-            emailOptIn: settings.emailEnabled,
-            phone: contactInfo.phone,
-            email: contactInfo.email,
-            consentMethod: 'user_selection'
-          }),
-        })
-
-        const data = await response.json()
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to save consent')
-        }
-      }
-    } catch (err) {
-      console.error("Failed to save consent record", err)
-      alert('Failed to save SMS consent. Please try again.')
-      return
-    }
-
-    const action = pendingAction
-    const phone = contactInfo.phone.trim()
-
-    setSmsConsentAccepted(true)
-    setOriginalPhone(phone)
-    setShowSMSConsent(false)
-    setConsentChecked(false)
-    setSettings(prev => ({ ...prev, smsEnabled: true }))
-    setPendingAction(null)
-
-    if (action === 'save') {
-      // Consent API already saved the phone + smsOptIn — just surface success to user
-      setSuccessMessage('Settings saved successfully!')
-      setTimeout(() => setSuccessMessage(''), 3000)
-    } else {
-      // 'test' or legacy null path — send the test SMS directly to avoid stale-closure issues
-      if (!phone) {
-        alert('Please enter a valid phone number first.')
-        return
-      }
-      setTestStatus(prev => ({ ...prev, sms: 'sending' }))
-      setSuccessMessage('')
-      try {
-        const token = await user?.getIdToken()
-        const response = await fetch('/api/notifications/test', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ type: 'sms', to: phone }),
-        })
-        const data = await response.json()
-        if (data.success) {
-          setTestStatus(prev => ({ ...prev, sms: 'sent' }))
-          setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
-        } else {
-          alert(`Failed to send test: ${data.error}`)
-          setTestStatus(prev => ({ ...prev, sms: 'error' }))
-          setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
-        }
-      } catch (error) {
-        console.error('Test notification error:', error)
-        alert('An error occurred while sending the test notification.')
-        setTestStatus(prev => ({ ...prev, sms: 'error' }))
-        setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
-      }
-    }
-  }
-
-  const handleSave = async () => {
-    if (!user) return
-
-    // Validate name
-    const error = validateName(firstName)
-    if (error) {
-      setNameError(error)
-      return
-    }
-
-    // Require consent if SMS is enabled and phone number has been added or changed
-    if (settings.smsEnabled && contactInfo.phone.trim() && phoneChanged()) {
-      setPendingAction('save')
-      setShowSMSConsent(true)
-      return
-    }
-
+  // Persists all settings, optionally recording fresh consent for exactly one
+  // number. Shared by the no-consent-needed save path and each step of the
+  // consent queue below — the two numbers' consent records are never touched
+  // in the same call, so confirming one can't invalidate the other.
+  const persistSettings = async (consentFor: 'phone' | 'phone2' | null, showSuccessMessage = true) => {
+    if (!user) return false
     setSaving(true)
-    setSuccessMessage('')
-
     try {
       const token = await user.getIdToken()
       const response = await fetch('/api/user/consent', {
@@ -270,6 +193,8 @@ export default function NotificationSettingsPage() {
           smsOptIn: settings.smsEnabled,
           emailOptIn: settings.emailEnabled,
           phone: contactInfo.phone,
+          phone2: contactInfo.phone2,
+          consentFor,
           email: contactInfo.email,
           displayName: firstName.trim(),
           consentMethod: 'user_selection',
@@ -279,25 +204,123 @@ export default function NotificationSettingsPage() {
       })
 
       const data = await response.json()
-
-      if (data.success) {
-        // Reload Firebase Auth user to reflect displayName change
-        if (auth.currentUser) {
-          await auth.currentUser.reload()
-        }
-        // Update local state with trimmed name to ensure consistency
-        setFirstName(firstName.trim())
-        setSuccessMessage('Settings saved successfully!')
-        setTimeout(() => setSuccessMessage(''), 3000)
-      } else {
+      if (!data.success) {
         throw new Error(data.error || 'Failed to save settings')
       }
+
+      if (auth.currentUser) {
+        await auth.currentUser.reload()
+      }
+      setFirstName(firstName.trim())
+      setOriginalPhone(contactInfo.phone.trim())
+      setOriginalPhone2(contactInfo.phone2.trim())
+      const now = new Date().toISOString()
+      if (consentFor === 'phone') setPhoneConsentedAt(now)
+      if (consentFor === 'phone2') setPhone2ConsentedAt(now)
+
+      if (showSuccessMessage) {
+        setSuccessMessage('Settings saved successfully!')
+        setTimeout(() => setSuccessMessage(''), 3000)
+      }
+      return true
     } catch (error) {
       console.error('Error saving settings:', error)
       alert('An error occurred while saving.')
+      return false
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleConsentConfirm = async () => {
+    if (!consentTarget) return
+
+    // Don't flash "Settings saved" mid-queue — only once everything's done.
+    const ok = await persistSettings(consentTarget, false)
+    if (!ok) return
+
+    setShowSMSConsent(false)
+    setConsentChecked(false)
+
+    if (consentQueue.length > 0) {
+      const [next, ...rest] = consentQueue
+      setConsentTarget(next)
+      setConsentQueue(rest)
+      setShowSMSConsent(true)
+      return
+    }
+
+    const action = pendingAction
+    setPendingAction(null)
+    setConsentTarget(null)
+
+    if (action === 'save') {
+      setSuccessMessage('Settings saved successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+      return
+    }
+
+    // 'test' — only ever queued for the primary number; send the test SMS now
+    // that its consent is confirmed.
+    const phone = contactInfo.phone.trim()
+    if (!phone) {
+      alert('Please enter a valid phone number first.')
+      return
+    }
+    setTestStatus(prev => ({ ...prev, sms: 'sending' }))
+    setSuccessMessage('')
+    try {
+      const token = await user?.getIdToken()
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ type: 'sms', to: phone }),
+      })
+      const data = await response.json()
+      if (data.success) {
+        setTestStatus(prev => ({ ...prev, sms: 'sent' }))
+        setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
+      } else {
+        alert(`Failed to send test: ${data.error}`)
+        setTestStatus(prev => ({ ...prev, sms: 'error' }))
+        setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
+      }
+    } catch (error) {
+      console.error('Test notification error:', error)
+      alert('An error occurred while sending the test notification.')
+      setTestStatus(prev => ({ ...prev, sms: 'error' }))
+      setTimeout(() => setTestStatus(prev => ({ ...prev, sms: 'idle' })), 3000)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!user) return
+
+    // Validate name
+    const error = validateName(firstName)
+    if (error) {
+      setNameError(error)
+      return
+    }
+
+    // Each changed number needs its own separate consent step — queue them
+    // rather than confirming both at once.
+    const queue: Array<'phone' | 'phone2'> = []
+    if (settings.smsEnabled && contactInfo.phone.trim() && phoneChanged()) queue.push('phone')
+    if (settings.smsEnabled && contactInfo.phone2.trim() && phone2Changed()) queue.push('phone2')
+
+    if (queue.length > 0) {
+      setPendingAction('save')
+      setConsentTarget(queue[0])
+      setConsentQueue(queue.slice(1))
+      setShowSMSConsent(true)
+      return
+    }
+
+    await persistSettings(null)
   }
 
   if (loading) {
@@ -478,6 +501,61 @@ export default function NotificationSettingsPage() {
                     </label>
                   </div>
                 </div>
+
+                {settings.smsEnabled && (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    {!phone2Expanded ? (
+                      <button
+                        type="button"
+                        onClick={() => setPhone2Expanded(true)}
+                        className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 inline-flex items-center gap-1.5"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add a phone number
+                      </button>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <label htmlFor="phone2" className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Second phone number
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setContactInfo(prev => ({ ...prev, phone2: '' }))
+                              setPhone2Expanded(false)
+                            }}
+                            className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                          Gets the same scan alerts as your primary number, with its own separate consent —
+                          great for a spouse or partner.
+                        </p>
+                        <div className="relative max-w-xs">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Phone className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type="tel"
+                            id="phone2"
+                            value={contactInfo.phone2}
+                            onChange={(e) => setContactInfo({ ...contactInfo, phone2: e.target.value })}
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                            placeholder="(555) 987-6543"
+                          />
+                        </div>
+                        {phone2ConsentedAt && !phone2Changed() && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                            Consent given {new Date(phone2ConsentedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -582,12 +660,22 @@ export default function NotificationSettingsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">SMS Messaging Consent</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                SMS Messaging Consent {consentTarget === 'phone2' ? '— Second Number' : ''}
+              </h3>
+              {consentQueue.length > 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  You&apos;ll be asked to confirm your other number separately right after this.
+                </p>
+              )}
             </div>
 
             <div className="p-6 overflow-y-auto">
+              <p className="font-mono text-sm text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-900 rounded px-3 py-2 mb-4 inline-block">
+                {consentTarget === 'phone2' ? contactInfo.phone2 : contactInfo.phone}
+              </p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                By providing your mobile phone number and checking this box, you consent to receive SMS text messages from NotAStray related to your pet&apos;s safety and identification services.
+                By providing this phone number and checking the box below, you consent to receive SMS text messages from NotAStray related to your pet&apos;s safety and identification services. Each phone number on your account is consented to separately.
               </p>
 
               <div className="space-y-4 text-sm text-gray-600 dark:text-gray-400">
@@ -637,7 +725,7 @@ export default function NotificationSettingsPage() {
                 </div>
                 <div className="ml-3 text-sm">
                   <label htmlFor="consent-checkbox" className="font-medium text-gray-700 dark:text-gray-300">
-                    I agree to receive SMS notifications at the phone number provided
+                    I agree to receive SMS notifications at this phone number, and confirm I&apos;m authorized to provide it if it isn&apos;t my own
                   </label>
                 </div>
               </div>
@@ -645,7 +733,13 @@ export default function NotificationSettingsPage() {
 
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end space-x-3">
               <button
-                onClick={() => setShowSMSConsent(false)}
+                onClick={() => {
+                  setShowSMSConsent(false)
+                  setConsentChecked(false)
+                  setConsentTarget(null)
+                  setConsentQueue([])
+                  setPendingAction(null)
+                }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 Cancel
