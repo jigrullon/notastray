@@ -142,9 +142,13 @@ interface PetProfileClientProps {
   isLost?: boolean
   species?: string
   breed?: string
+  // False when the owner has no active PROTECT plan. Suppresses the entire
+  // notify flow, including the browser location prompt — there is no reason to
+  // ask a stranger for their location when nothing will be sent with it.
+  notificationsEnabled?: boolean
 }
 
-export default function PetProfileClient({ petData, tagCode, userId, isLost, species, breed }: PetProfileClientProps) {
+export default function PetProfileClient({ petData, tagCode, userId, isLost, species, breed, notificationsEnabled = true }: PetProfileClientProps) {
   const { user, loading } = useAuth()
   // While auth is still resolving, treat the viewer as not-the-owner so the
   // owner's own page doesn't briefly flash the redacted public view before
@@ -164,7 +168,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
   //  'sent'       – server confirmed a notification went out (green banner)
   //  'suppressed' – client-side guard skipped auto-notify (amber banner + Alert Owner Again)
   //  'already'    – server said the owner was alerted recently (amber banner, no button)
-  const [notifyState, setNotifyState] = useState<'idle' | 'sent' | 'suppressed' | 'already' | 'reload'>('idle')
+  const [notifyState, setNotifyState] = useState<'idle' | 'sent' | 'suppressed' | 'already' | 'reload' | 'unnotified'>('idle')
   const [manualSending, setManualSending] = useState(false)
   const [location, setLocation] = useState<LocationData | null>(null)
   const [editing, setEditing] = useState(false)
@@ -220,6 +224,11 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
     // Don't notify when owner views their own pet
     if (isOwner) return
 
+    // No active plan — the profile still renders in full, we just don't run the
+    // notify flow at all. Returning before getBrowserLocation() is the point:
+    // the finder never sees a location permission prompt.
+    if (!notificationsEnabled) return
+
     // Durable proof of a prior *confirmed* send for this tag. localStorage
     // survives tab discard/restore (unlike sessionStorage) and is written only
     // after a confirmed send, so it's the source of truth for "already alerted."
@@ -255,7 +264,7 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
 
     sendNotification(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tagCode, isOwner, loading])
+  }, [tagCode, isOwner, loading, notificationsEnabled])
 
   // Resolve GPS location as a promise so the whole notify flow is awaitable
   // (needed for the manual Alert Owner Again button's pending state).
@@ -305,7 +314,13 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
         try {
           const ipResponse = await fetch('/api/ip-location')
           if (ipResponse.ok) {
-            ipLocation = await ipResponse.json()
+            const data = await ipResponse.json()
+            // The endpoint returns a coordinate-less shape when the IP can't be
+            // resolved. Only forward a real fix — passing nulls through would
+            // render as "Location not available (approximate)" in the alert.
+            if (typeof data?.latitude === 'number' && typeof data?.longitude === 'number') {
+              ipLocation = data
+            }
           }
         } catch {
           // Proceed without location — notification still goes out
@@ -354,6 +369,12 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
       } else if (data?.status === 'deduped' || data?.status === 'rate_limited') {
         // Server suppressed the send — never show the green banner for this
         setNotifyState('already')
+      } else if (data?.status === 'no_subscription') {
+        // Owner has no active PROTECT plan, so no alert was sent. Point the
+        // finder at the contact details on the page instead of implying the
+        // owner is on their way. We deliberately don't say why — the owner's
+        // billing status is not a stranger's business.
+        setNotifyState('unnotified')
       }
     } catch (error) {
       console.error('Failed to send notification:', error)
@@ -530,6 +551,16 @@ export default function PetProfileClient({ petData, tagCode, userId, isLost, spe
               <BellRing className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2 flex-shrink-0" />
               <p className="text-amber-800 dark:text-amber-300 font-medium">
                 The owner has already been alerted recently — thank you for helping!
+              </p>
+            </div>
+          </div>
+        )}
+        {notifyState === 'unnotified' && !isOwner && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <BellRing className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2 flex-shrink-0" />
+              <p className="text-amber-800 dark:text-amber-300 font-medium">
+                We couldn&apos;t alert the owner automatically. Please reach out using the contact details below.
               </p>
             </div>
           </div>

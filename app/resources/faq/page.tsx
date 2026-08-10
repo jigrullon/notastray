@@ -45,6 +45,38 @@ const faqs = [
         ),
       },
       {
+        question: 'The location in my alert was a little off. Why?',
+        answer: (
+          <>
+            <p>
+              The location in your alert comes from the phone of the person who scanned the tag,
+              and how precise it is depends on what that phone was willing to share.
+            </p>
+            <ul className="list-disc list-inside mt-3 space-y-1 text-gray-700 dark:text-gray-300">
+              <li>
+                <strong>If they allowed location access</strong>, we use their phone&apos;s GPS. This is
+                usually accurate to within a few yards &mdash; essentially the spot where your pet was found.
+              </li>
+              <li>
+                <strong>If they declined</strong>, we fall back to an estimate based on their internet
+                connection. This is much rougher &mdash; often the right neighborhood or city, but it can
+                land a few miles off, and on a cell connection it may point toward their carrier&apos;s
+                equipment rather than the street they were standing on.
+              </li>
+            </ul>
+            <p className="mt-3">
+              Alerts using the rougher estimate are labeled <strong>approximate</strong> so you know
+              which kind you&apos;re looking at. If we can&apos;t determine a location at all, we&apos;ll
+              still send the alert &mdash; we just leave the location out rather than guess.
+            </p>
+            <p className="mt-3">
+              Either way, treat the pin as a starting point rather than an exact address, and get in
+              touch with the person who scanned the tag if you can.
+            </p>
+          </>
+        ),
+      },
+      {
         question: 'How can I cancel my PROTECT service?',
         answer: (
           <>
