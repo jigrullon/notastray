@@ -1,5 +1,28 @@
 import PetProfileClient from '@/components/PetProfileClient'
 import Link from 'next/link'
+import { hasAlertEntitlement } from '@/lib/subscriptionAccess'
+
+// Whether this owner's plan covers scan alerts. Used only to decide if the
+// finder's browser should be asked for location — /api/notify-owner re-checks
+// this server-side and is the authoritative gate, so a wrong answer here can
+// never cause an unpaid notification to go out.
+//
+// Fails OPEN (returns true) on any error: the tag doc is public but the user
+// doc is not, so this needs the Admin SDK, and if that is unavailable we would
+// rather prompt for location unnecessarily than silently suppress a real
+// lost-pet alert. The import is dynamic so a missing FIREBASE_SERVICE_ACCOUNT
+// can't throw at module load and take down the public profile page.
+async function hasActivePlan(userId: string | undefined): Promise<boolean> {
+  if (!userId) return false
+  try {
+    const { adminDb } = await import('@/lib/firebaseAdmin')
+    const doc = await adminDb.collection('users').doc(userId).get()
+    return hasAlertEntitlement(doc.data()?.subscription)
+  } catch (err) {
+    console.error('Subscription lookup failed, assuming active:', err)
+    return true
+  }
+}
 
 async function getPetData(code: string) {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
@@ -82,6 +105,7 @@ export default async function PetProfilePage({
   }
 
   const { petData, userId, isLost, species, breed } = result
+  const notificationsEnabled = await hasActivePlan(userId)
 
-  return <PetProfileClient petData={petData} tagCode={code} userId={userId} isLost={isLost} species={species} breed={breed} />
+  return <PetProfileClient petData={petData} tagCode={code} userId={userId} isLost={isLost} species={species} breed={breed} notificationsEnabled={notificationsEnabled} />
 }

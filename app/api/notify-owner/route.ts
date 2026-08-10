@@ -10,6 +10,7 @@ import {
     SCAN_SOURCES,
     type ScanSource,
 } from '@/lib/scanNotificationConfig';
+import { hasAlertEntitlement } from '@/lib/subscriptionAccess';
 import { withObservability } from '@/lib/observability/withObservability';
 import { log, setRequestUser } from '@/lib/observability/logger';
 
@@ -91,6 +92,11 @@ export const POST = withObservability('notify-owner', async (request: Request) =
             return NextResponse.json({ error: 'No contact information available' }, { status: 400 })
         }
 
+        // Scan alerts are a PROTECT-plan benefit. Without an active subscription
+        // the scan is still recorded — the owner sees it in their dashboard and
+        // it still counts for metrics — but no SMS or email goes out.
+        const hasActivePlan = hasAlertEntitlement(userData?.subscription)
+
         const visitorHash = computeVisitorHash(request, userAgent)
 
         const locationData = location ? {
@@ -117,6 +123,25 @@ export const POST = withObservability('notify-owner', async (request: Request) =
                 createdAt: new Date().toISOString(),
                 ...extra,
             })
+
+        // Gate before the cooldown/rate-limit queries — if nothing will be sent,
+        // there is no send to throttle.
+        if (!hasActivePlan) {
+            await logScanEvent({
+                notificationsSent: { sms: false, email: false },
+                skippedReason: 'no_active_subscription',
+            })
+            log.info('notification_skipped_no_subscription', {
+                tagCode,
+                subscriptionStatus: userData?.subscription?.status ?? 'none',
+            })
+            return NextResponse.json({
+                success: true,
+                status: 'no_subscription',
+                message: 'Scan recorded. Owner has no active PROTECT plan.',
+                notificationsSent: { sms: false, email: false },
+            })
+        }
 
         // Fetch the last hour of scan events for this tag ONCE — shared by the
         // per-visitor cooldown and the per-tag hourly rate limit. Fails open:
