@@ -10,11 +10,28 @@
  *   Create for real:
  *     npm run stripe:setup -- --confirm
  *
- *   Against live mode:
- *     STRIPE_SECRET_KEY=sk_live_... npm run stripe:setup -- --confirm
+ *   Against live mode (reads STRIPE_LIVE_SECRET_KEY, see below):
+ *     npm run stripe:setup -- --live
+ *     npm run stripe:setup -- --live --confirm
  *
- * STRIPE_SECRET_KEY is loaded from .env.local or .dev.vars by scripts/run.js;
- * an already-set environment variable wins, which is how you target live mode.
+ * Keys are loaded from .env.local or .dev.vars by scripts/run.js (both are
+ * gitignored). Put the live key in one of them as a SEPARATE variable:
+ *
+ *   STRIPE_LIVE_SECRET_KEY=rk_live_...
+ *
+ * Stripe shows a secret key exactly once, at creation, so an existing sk_live_
+ * key usually can't be re-read. Don't roll it — that invalidates the key your
+ * production deployment is using. Instead create a RESTRICTED key
+ * (Developers → API keys → Create restricted key) with write access to
+ * Products and Prices only. It works here, can't do anything else, and can be
+ * deleted once the catalog exists.
+ *
+ * A separate name matters: STRIPE_SECRET_KEY is what the dev server reads, so
+ * putting a live key there would point local development at real customer data.
+ *
+ * Pasting the key inline (STRIPE_SECRET_KEY=sk_live_... npm run ...) also works
+ * but is worth avoiding — it lands in your shell history in plaintext and is
+ * briefly visible in the process list.
  *
  * Idempotent: prices are looked up by `lookup_key` first, so re-running reports
  * what already exists rather than creating duplicates.
@@ -92,26 +109,58 @@ async function findOrCreateProduct(
     return product.id;
 }
 
+// Resolves which key to use, and refuses any combination where the requested
+// mode and the key's actual mode disagree. Creating a catalog in the wrong mode
+// is quiet and confusing to unpick, so it's worth failing loudly up front.
+function resolveKey(wantLive: boolean): string {
+    const varName = wantLive ? 'STRIPE_LIVE_SECRET_KEY' : 'STRIPE_SECRET_KEY';
+    const key = process.env[varName];
+
+    if (!key) {
+        console.error(`${varName} not found in .env.local, .dev.vars, or the environment.`);
+        if (wantLive) {
+            console.error('Add it to .env.local (gitignored) as:  STRIPE_LIVE_SECRET_KEY=sk_live_...');
+            console.error('Keep it under that name — STRIPE_SECRET_KEY is what the dev server reads.');
+        }
+        process.exit(1);
+    }
+
+    // Accepts both standard secret keys (sk_) and restricted keys (rk_). A
+    // restricted key scoped to Products + Prices write is the better choice for
+    // this script: it doesn't require retrieving the account's real secret key,
+    // and it can't do anything beyond building the catalog.
+    if (!key.startsWith('sk_') && !key.startsWith('rk_')) {
+        console.error(`${varName} does not look like a Stripe secret or restricted key ("${key.slice(0, 12)}...").`);
+        console.error('Expected a key starting with sk_ or rk_. A publishable key (pk_) will not work —');
+        console.error('it has no permission to create products.');
+        process.exit(1);
+    }
+
+    const keyIsLive = key.startsWith('sk_live_') || key.startsWith('rk_live_');
+    if (wantLive && !keyIsLive) {
+        console.error(`--live was passed but ${varName} is a test key. Refusing to run.`);
+        process.exit(1);
+    }
+    if (!wantLive && keyIsLive) {
+        console.error(`STRIPE_SECRET_KEY is a LIVE key. Refusing to run without --live.`);
+        console.error('Move the live key to STRIPE_LIVE_SECRET_KEY and keep a test key here.');
+        process.exit(1);
+    }
+
+    return key;
+}
+
 async function main() {
     const confirm = process.argv.includes('--confirm');
+    const wantLive = process.argv.includes('--live');
 
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) {
-        console.error('STRIPE_SECRET_KEY not found in .env.local, .dev.vars, or the environment.');
-        process.exit(1);
-    }
-    if (!key.startsWith('sk_')) {
-        console.error(`STRIPE_SECRET_KEY does not look like a Stripe secret key ("${key.slice(0, 12)}...").`);
-        console.error('Check .env.local — a placeholder like "sk_test_..." will fail authentication.');
-        process.exit(1);
-    }
-
-    const mode = key.startsWith('sk_live_') ? 'LIVE' : 'TEST';
+    const key = resolveKey(wantLive);
+    const mode = wantLive ? 'LIVE' : 'TEST';
     const stripe = new Stripe(key, { apiVersion: '2025-12-15.clover' });
 
     console.log(`\nStripe mode: ${mode}`);
-    if (mode === 'LIVE') {
-        console.log('This will create real catalog entries in your live account.');
+    if (mode === 'LIVE' && confirm) {
+        console.log('Creating real catalog entries in your LIVE account.');
     }
     console.log('');
 
