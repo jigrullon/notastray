@@ -118,7 +118,13 @@ export const GET = withObservability('orders-verify', async (request: Request) =
             subtotal,
             shippingMethod: shippingDisplayName,
             shippingCost: shippingAmount,
-            total: subtotal + shippingAmount,
+            discount: (fullSession.total_details?.amount_discount || 0) / 100,
+            // Stripe's charged amount, not a recomputed sum — see the same note
+            // in app/api/webhook/route.ts. A recomputed total would silently drop
+            // any promotion code the customer used.
+            total: typeof fullSession.amount_total === 'number'
+                ? fullSession.amount_total / 100
+                : subtotal + shippingAmount,
             shippingAddress: {
                 name: shippingName || '',
                 line1: shippingAddress?.line1 || '',

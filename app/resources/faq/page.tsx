@@ -257,6 +257,44 @@ const faqs = [
         ),
       },
       {
+        question: 'I have a promo code. Where do I enter it?',
+        answer: (
+          <>
+            <p>
+              You enter it on the secure payment page, not in the cart. It&apos;s easy to miss, so
+              here&apos;s exactly where to look:
+            </p>
+            <ol className="list-decimal list-inside mt-3 space-y-1 text-gray-700 dark:text-gray-300">
+              <li>Add your tags to the cart and continue to checkout</li>
+              <li>
+                Click <strong>Proceed to Payment</strong> &mdash; this takes you to our payment
+                processor, Stripe
+              </li>
+              <li>
+                On that page, click <strong>Add promotion code</strong>, type your code, and hit{' '}
+                <strong>Apply</strong>
+              </li>
+            </ol>
+            <p className="mt-3">
+              Your total updates right away, so you&apos;ll see the discount before you pay. If you
+              don&apos;t see it applied, don&apos;t complete the order &mdash; email us first.
+            </p>
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+              A few things worth knowing: codes aren&apos;t case sensitive, only one code can be used
+              per order, and most codes have an expiration date. Promo codes apply to tag orders, not
+              to the PROTECT plan.
+            </p>
+            <p className="mt-3">
+              Code not working? Email{' '}
+              <a href="mailto:support@notastray.com" className="text-primary-600 dark:text-primary-400 hover:underline">
+                support@notastray.com
+              </a>{' '}
+              with the code and we&apos;ll sort it out.
+            </p>
+          </>
+        ),
+      },
+      {
         question: "My pet's tag is damaged. How do I get a replacement?",
         answer: (
           <p>

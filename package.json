@@ -15,6 +15,9 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
+    "script": "node scripts/run.js",
+    "stripe:setup": "npm run script -- scripts/setup-stripe-products.ts",
+    "user:delete": "npm run script -- scripts/delete-user.ts",
     "lint": "eslint app components lib --ext .ts,.tsx",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "reset": "./scripts/dev-reset.sh"

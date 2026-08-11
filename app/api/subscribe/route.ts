@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { withObservability } from '@/lib/observability/withObservability';
 import { log, setRequestUser } from '@/lib/observability/logger';
 import { getAttributionFromRequest } from '@/lib/observability/attribution';
+import { PRICE_LOOKUP_KEYS, resolvePrice } from '@/lib/stripePricing';
 
 interface SubscribeRequest {
     plan: 'monthly' | 'yearly';
@@ -87,31 +88,35 @@ export const POST = withObservability('subscribe', async (request: Request) => {
 
         const attribution = getAttributionFromRequest(request);
 
-        const priceData = plan === 'yearly'
-            ? { unit_amount: 3000, interval: 'year' as const }
-            : { unit_amount: 300, interval: 'month' as const };
+        // Plan pricing lives in the Stripe catalog. Editing a price there changes
+        // what's charged without a deploy — note the site still *displays* the
+        // price from hardcoded copy, so a price change is still a code change.
+        const planPrice = await resolvePrice(
+            stripe,
+            plan === 'yearly' ? PRICE_LOOKUP_KEYS.protectYearly : PRICE_LOOKUP_KEYS.protectMonthly
+        );
 
         const sessionParams: Stripe.Checkout.SessionCreateParams = {
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: 'PROTECT Plan',
-                            description: plan === 'yearly'
-                                ? 'Annual PROTECT plan — instant SMS/Email alerts, advanced location tracking, and detailed medical profile.'
-                                : 'Monthly PROTECT plan — instant SMS/Email alerts, advanced location tracking, and detailed medical profile.',
-                        },
-                        unit_amount: priceData.unit_amount,
-                        recurring: {
-                            interval: priceData.interval,
-                        },
-                    },
-                    quantity: 1,
-                },
-            ],
+            line_items: [{ price: planPrice.id, quantity: 1 }],
             mode: 'subscription',
+            // Shows the promotion code field on PROTECT signups.
+            //
+            // Safe to have on now that line items reference real catalog products
+            // (see lib/stripePricing.ts). Scope is enforced by the coupon itself:
+            // a coupon with `applies_to` set to the tag product is rejected here,
+            // and one scoped to the PROTECT product is rejected in the shop.
+            //
+            // That protection depends on every coupon actually setting
+            // `applies_to`. A coupon created WITHOUT it applies to everything and
+            // will discount both tags and subscriptions.
+            //
+            // Coupon duration matters here in a way it doesn't for one-time tag
+            // orders: 'forever' discounts EVERY renewal, permanently. Use 'once'
+            // or 'repeating' unless a permanent price cut is intended. The
+            // subscription emails already render a discounted first period as
+            // "paid today" vs "renews at".
+            allow_promotion_codes: true,
             success_url: `${new URL(request.url).origin}/dashboard?subscribed=true`,
             cancel_url: `${new URL(request.url).origin}/dashboard`,
             metadata: {
