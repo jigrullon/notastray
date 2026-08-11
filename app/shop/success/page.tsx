@@ -32,6 +32,8 @@ interface OrderData {
   customerEmail: string
   items: OrderItem[]
   subtotal: number
+  // Promotion-code discount in dollars. Absent on orders placed before codes existed.
+  discount?: number
   shippingMethod: string
   shippingCost: number
   total: number
@@ -192,6 +194,12 @@ function SuccessContent() {
                 <span>Subtotal</span>
                 <span>${order.subtotal.toFixed(2)}</span>
               </div>
+              {!!order.discount && order.discount > 0 && (
+                <div className="flex justify-between text-primary-700 dark:text-primary-400">
+                  <span>Discount</span>
+                  <span>&minus;${order.discount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>{order.shippingMethod}</span>
                 <span>{order.shippingCost > 0 ? `$${order.shippingCost.toFixed(2)}` : 'Free'}</span>

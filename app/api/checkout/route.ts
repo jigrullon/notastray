@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { withObservability } from '@/lib/observability/withObservability';
 import { log, setRequestUser } from '@/lib/observability/logger';
 import { getAttributionFromRequest } from '@/lib/observability/attribution';
+import { PRICE_LOOKUP_KEYS, resolvePrice } from '@/lib/stripePricing';
 
 interface CheckoutRequest {
     items: Array<{
@@ -10,7 +11,9 @@ interface CheckoutRequest {
         color: string;
         size: string;
         quantity: number;
-        price: number;
+        // The cart may still send a price for its own display purposes; it is
+        // deliberately absent from this type because the server must never read
+        // it. The amount charged comes from the Stripe catalog price.
     }>;
     userEmail?: string;
     userId?: string;
@@ -40,27 +43,51 @@ export const POST = withObservability('checkout', async (request: Request) => {
 
         const attribution = getAttributionFromRequest(request);
 
-        const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item) => ({
-            price_data: {
-                currency: 'usd',
-                product_data: {
-                    name: `${item.name} - ${item.color} / ${item.size}`,
-                },
-                unit_amount: Math.round(item.price * 100),
-            },
-            quantity: item.quantity,
-        }));
+        if (!Array.isArray(items) || items.length === 0) {
+            return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+        }
+
+        // Quantities are the only numbers the client still influences, so they
+        // get validated. Anything non-positive or non-integer is a malformed or
+        // tampered cart.
+        const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+        if (!Number.isInteger(totalQuantity) || totalQuantity < 1 || totalQuantity > 100) {
+            return NextResponse.json({ error: 'Invalid cart quantity' }, { status: 400 });
+        }
+
+        // Every tag variant shares one catalog price, so this is a single line
+        // item at the total quantity. Colour/size live in metadata below —
+        // they affect fulfilment, not cost.
+        const tagPrice = await resolvePrice(stripe, PRICE_LOOKUP_KEYS.tag);
+        const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+            { price: tagPrice.id, quantity: totalQuantity },
+        ];
+
+        // Server-side unit price, used only to record what each line cost on the
+        // order. Sourced from Stripe rather than the request body, so the order
+        // record and the confirmation email can't be skewed by a doctored cart.
+        const unitPrice = tagPrice.unitAmount / 100;
 
         const sessionParams: Stripe.Checkout.SessionCreateParams = {
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
             automatic_tax: { enabled: true },
+            // Shows the "Add promotion code" field on Stripe's hosted checkout.
+            // Codes themselves live entirely in the Stripe Dashboard (Products →
+            // Coupons → Promotion codes) — adding, expiring, or capping a code
+            // needs no deploy. Stripe validates redemption limits and expiry, and
+            // recomputes tax on the discounted amount.
+            //
+            // Mutually exclusive with `discounts: [...]`. If a code ever needs to
+            // be auto-applied from a landing page instead of typed, that flag
+            // must come out.
+            allow_promotion_codes: true,
             success_url: `${new URL(request.url).origin}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${new URL(request.url).origin}/shop/checkout`,
             metadata: {
                 userId: userId || '',
-                items: JSON.stringify(items.map(i => ({ name: i.name, color: i.color, size: i.size, quantity: i.quantity, price: i.price }))),
+                items: JSON.stringify(items.map(i => ({ name: i.name, color: i.color, size: i.size, quantity: i.quantity, price: unitPrice }))),
                 type: 'one_time_purchase',
                 shippingOption: shippingOption?.service || '',
                 shippingZipCode: shippingZipCode || '',

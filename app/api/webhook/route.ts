@@ -110,6 +110,8 @@ interface OrderRecord {
     shippingZipCode?: string;
     shippingCost: number;
     tax?: number;
+    // Total promotion-code discount applied, in dollars. 0 when no code was used.
+    discount?: number;
     total: number;
     shippingAddress: {
         name: string;
@@ -140,6 +142,7 @@ async function writeOrderToFirestore(order: OrderRecord): Promise<void> {
         shippingZipCode: order.shippingZipCode || '',
         shippingCost: order.shippingCost,
         tax: order.tax || 0,
+        discount: order.discount || 0,
         total: order.total,
         shippingAddress: order.shippingAddress,
         estimatedDeliveryMin: order.estimatedDeliveryMin,
@@ -209,6 +212,23 @@ export const POST = withObservability('webhook', async (request: Request) => {
 
                 if (isSubscription) {
                     const customerEmail = session.customer_email || session.customer_details?.email || '';
+
+                    // Recurring price straight from the Stripe price object, so
+                    // these emails stay correct if the plan price ever changes in
+                    // Stripe. Falls back to current list pricing only if absent.
+                    const recurringUnitAmount = stripeSub?.items.data[0]?.price?.unit_amount;
+                    const planPrice = typeof recurringUnitAmount === 'number'
+                        ? recurringUnitAmount / 100
+                        : (plan === 'yearly' ? 30 : 3);
+
+                    // What Stripe actually charged for the first period. Differs
+                    // from planPrice when a promotion code applied (e.g. first
+                    // month free, or a Black Friday discount on the annual plan),
+                    // so the emails can show "paid today" vs "renews at" instead
+                    // of quoting a price the customer wasn't charged.
+                    const amountPaidToday = typeof session.amount_total === 'number'
+                        ? session.amount_total / 100
+                        : undefined;
                     const renewalDate = stripeSub
                         ? new Date(stripeSub.items.data[0].current_period_end * 1000).toLocaleDateString('en-US', {
                               year: 'numeric',
@@ -224,7 +244,8 @@ export const POST = withObservability('webhook', async (request: Request) => {
                             const subscriptionEmailData = getSubscriptionConfirmationEmail({
                                 customerName: session.customer_details?.name || undefined,
                                 planType: plan,
-                                planPrice: plan === 'yearly' ? 30 : 3,
+                                planPrice,
+                                amountPaidToday,
                                 renewalDate,
                                 dashboardUrl,
                                 userEmail: customerEmail,
@@ -252,7 +273,8 @@ export const POST = withObservability('webhook', async (request: Request) => {
                                 customerEmail,
                                 customerName: session.customer_details?.name || undefined,
                                 planType: plan,
-                                planPrice: plan === 'yearly' ? 30 : 3,
+                                planPrice,
+                                amountPaidToday,
                             });
 
                             await sendEmail({
@@ -312,9 +334,25 @@ export const POST = withObservability('webhook', async (request: Request) => {
                 }
 
                 const items = JSON.parse(session.metadata?.items || '[]') as OrderItem[];
-                const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                // Pre-discount, pre-tax amount straight from Stripe. The metadata
+                // sum is only a fallback: it's written server-side from the
+                // catalog price, so it agrees with Stripe, but Stripe is the
+                // authority on what was actually billed.
+                const subtotal = typeof fullSession.amount_subtotal === 'number'
+                    ? fullSession.amount_subtotal / 100
+                    : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                 const taxAmount = (fullSession.total_details?.amount_tax || 0) / 100;
+                const discountAmount = (fullSession.total_details?.amount_discount || 0) / 100;
                 const paymentIntent = fullSession.payment_intent as Stripe.PaymentIntent | null;
+
+                // Use Stripe's amount_total — the amount actually charged — rather
+                // than recomputing from cart metadata. Recomputing ignores any
+                // promotion code, so a discounted order would be recorded, emailed,
+                // and reported at full price. Falls back to the computed sum only
+                // if amount_total is somehow absent.
+                const total = typeof fullSession.amount_total === 'number'
+                    ? fullSession.amount_total / 100
+                    : subtotal + shippingAmount + taxAmount - discountAmount;
 
                 const order = {
                     orderId: generateOrderId(),
@@ -330,7 +368,8 @@ export const POST = withObservability('webhook', async (request: Request) => {
                     shippingZipCode,
                     shippingCost: shippingAmount,
                     tax: taxAmount,
-                    total: subtotal + shippingAmount + taxAmount,
+                    discount: discountAmount,
+                    total,
                     shippingAddress: {
                         name: shippingName || '',
                         line1: shippingAddress?.line1 || '',
@@ -402,6 +441,7 @@ export const POST = withObservability('webhook', async (request: Request) => {
                             items: order.items,
                             subtotal: order.subtotal,
                             shippingCost: order.shippingCost,
+                            discount: order.discount,
                             total: order.total,
                             estimatedDeliveryMin: order.estimatedDeliveryMin,
                             estimatedDeliveryMax: order.estimatedDeliveryMax,
@@ -436,6 +476,7 @@ export const POST = withObservability('webhook', async (request: Request) => {
                             subtotal: order.subtotal || order.total,
                             shippingCost: order.shippingCost || 0,
                             tax: order.tax || 0,
+                            discount: order.discount,
                             total: order.total,
                             shippingAddress: order.shippingAddress,
                         });

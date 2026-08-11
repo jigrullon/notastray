@@ -2,19 +2,19 @@
  * Delete a user account and its associated data. Intended for cleaning up test
  * accounts.
  *
- * Usage:
+ * Usage (run from the repo root):
  *   Dry run (default — prints what would be deleted, changes nothing):
- *     npx tsx scripts/delete-user.ts test@example.com
+ *     npm run user:delete -- test@example.com
  *
  *   Actually delete:
- *     npx tsx scripts/delete-user.ts test@example.com --confirm
+ *     npm run user:delete -- test@example.com --confirm
  *
  *   A uid works anywhere an email does:
- *     npx tsx scripts/delete-user.ts AbC123uid --confirm
+ *     npm run user:delete -- AbC123uid --confirm
  *
- * Requires FIREBASE_SERVICE_ACCOUNT in the environment, the same variable the
- * app's Admin SDK uses. Load it from .dev.vars however you normally do, e.g.:
- *   export $(grep FIREBASE_SERVICE_ACCOUNT .dev.vars | xargs) && npx tsx ...
+ * FIREBASE_SERVICE_ACCOUNT is loaded from .env.local or .dev.vars by
+ * scripts/run.js, so there is nothing to export first. An already-set
+ * environment variable wins, for pointing the script at a different project.
  *
  * Tag documents are NOT deleted — tag codes are physical inventory. Each tag is
  * reset to unactivated so the code can be activated again by someone else.
@@ -36,7 +36,7 @@ interface Plan {
 function init(): { db: Firestore; auth: Auth } {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!raw) {
-        console.error('FIREBASE_SERVICE_ACCOUNT is not set. See the usage notes at the top of this file.');
+        console.error('FIREBASE_SERVICE_ACCOUNT not found in .env.local, .dev.vars, or the environment.');
         process.exit(1);
     }
     const app = getApps().length > 0 ? getApps()[0] : initializeApp({ credential: cert(JSON.parse(raw)) });
@@ -133,7 +133,7 @@ async function main() {
     const confirm = process.argv.includes('--confirm');
 
     if (!identifier) {
-        console.error('Usage: npx tsx scripts/delete-user.ts <email-or-uid> [--confirm]');
+        console.error('Usage: npm run user:delete -- <email-or-uid> [--confirm]');
         process.exit(1);
     }
 

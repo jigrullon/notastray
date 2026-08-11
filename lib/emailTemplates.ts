@@ -23,6 +23,8 @@ export interface OrderConfirmationEmailData {
   }>;
   subtotal: number;
   shippingCost: number;
+  // Promotion-code discount in dollars. Omitted or 0 hides the line entirely.
+  discount?: number;
   total: number;
   estimatedDeliveryMin: string;
   estimatedDeliveryMax: string;
@@ -63,6 +65,8 @@ export interface MerchantOrderEmailData {
   subtotal: number;
   shippingCost: number;
   tax: number;
+  // Promotion-code discount in dollars. Omitted or 0 hides the line entirely.
+  discount?: number;
   total: number;
   shippingAddress: {
     name: string;
@@ -134,6 +138,11 @@ export function getOrderConfirmationEmail(data: OrderConfirmationEmailData) {
                 <td style="padding: 4px 0; font-size: 15px;">Subtotal:</td>
                 <td style="padding: 4px 0; font-size: 15px; text-align: right;">$${data.subtotal.toFixed(2)}</td>
               </tr>
+              ${data.discount && data.discount > 0 ? `
+              <tr>
+                <td style="padding: 4px 0; font-size: 15px; color: #047857;">Discount:</td>
+                <td style="padding: 4px 0; font-size: 15px; text-align: right; color: #047857;">&minus;$${data.discount.toFixed(2)}</td>
+              </tr>` : ''}
               <tr>
                 <td style="padding: 4px 0 12px 0; font-size: 15px;">Shipping:</td>
                 <td style="padding: 4px 0 12px 0; font-size: 15px; text-align: right;">$${data.shippingCost.toFixed(2)}</td>
@@ -191,7 +200,8 @@ Thank you for your purchase! We've received your order and it's being prepared f
 ORDER DETAILS
 ${data.items.map((item) => `${item.name} (${item.color}/${item.size}) x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}`).join('\n')}
 
-Subtotal: $${data.subtotal.toFixed(2)}
+Subtotal: $${data.subtotal.toFixed(2)}${data.discount && data.discount > 0 ? `
+Discount: -$${data.discount.toFixed(2)}` : ''}
 Shipping: $${data.shippingCost.toFixed(2)}
 Total: $${data.total.toFixed(2)}
 
@@ -493,7 +503,10 @@ ${data.userEmail ? `Unsubscribe from emails: https://notastray.com/api/unsubscri
 
 export function getRenewalReminderEmail(data: RenewalReminderEmailData) {
   const planLabel = data.planType === 'monthly' ? 'Monthly' : 'Annual';
-  const planPrice = data.planType === 'monthly' ? '$3' : '$30';
+  // Honors the passed price rather than deriving it from planType — this email
+  // quotes what the customer is about to be charged, so it must reflect the
+  // actual upcoming amount (which a promotion code can change).
+  const planPrice = `$${data.planPrice.toFixed(2)}`;
   const billingPeriod = data.planType === 'monthly' ? '/month' : '/year';
 
   const html = `
@@ -694,6 +707,11 @@ export function getMerchantOrderEmail(data: MerchantOrderEmailData) {
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 15px;">Subtotal</td>
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 15px;">$${data.subtotal.toFixed(2)}</td>
               </tr>
+              ${data.discount && data.discount > 0 ? `
+              <tr style="background-color: #f9fafb;">
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 15px; color: #047857;">Discount</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 15px; color: #047857;">&minus;$${data.discount.toFixed(2)}</td>
+              </tr>` : ''}
               <tr style="background-color: #f9fafb;">
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 15px;">Shipping</td>
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 15px;">$${data.shippingCost.toFixed(2)}</td>
@@ -748,7 +766,8 @@ ${data.shippingAddress.line1}${data.shippingAddress.line2 ? '\n' + data.shipping
 ${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.postalCode}
 
 ORDER SUMMARY
-Subtotal: $${data.subtotal.toFixed(2)}
+Subtotal: $${data.subtotal.toFixed(2)}${data.discount && data.discount > 0 ? `
+Discount: -$${data.discount.toFixed(2)}` : ''}
 Shipping: $${data.shippingCost.toFixed(2)}
 Tax: $${data.tax.toFixed(2)}
 ---
@@ -1084,7 +1103,14 @@ Keeping pets safe, one tag at a time.
 export interface SubscriptionConfirmationEmailData {
   customerName?: string;
   planType: 'monthly' | 'yearly';
+  // The recurring price, in dollars — what they'll be charged each period from
+  // here on. Comes from the Stripe price, not from planType, so changing the
+  // price in Stripe doesn't silently make these emails wrong.
   planPrice: number;
+  // What was actually charged today, in dollars. Differs from planPrice when a
+  // promotion code applied to the first period (e.g. first month free, or 50%
+  // off the first year). Omit when there's no discount.
+  amountPaidToday?: number;
   renewalDate: string;
   dashboardUrl: string;
   userEmail?: string;
@@ -1092,8 +1118,12 @@ export interface SubscriptionConfirmationEmailData {
 
 export function getSubscriptionConfirmationEmail(data: SubscriptionConfirmationEmailData) {
   const planLabel = data.planType === 'monthly' ? 'Monthly' : 'Annual';
-  const planPrice = data.planType === 'monthly' ? '$3' : '$30';
+  const planPrice = `$${data.planPrice.toFixed(2)}`;
   const billingPeriod = data.planType === 'monthly' ? '/month' : '/year';
+  // Only call out today's charge when a discount actually made it differ —
+  // otherwise a single "Amount" line is clearer.
+  const discounted = typeof data.amountPaidToday === 'number' && data.amountPaidToday !== data.planPrice;
+  const paidTodayLabel = discounted ? `$${(data.amountPaidToday as number).toFixed(2)}` : '';
 
   const html = `
     <!DOCTYPE html>
@@ -1130,10 +1160,19 @@ export function getSubscriptionConfirmationEmail(data: SubscriptionConfirmationE
                 </div>
               </div>
               <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 12px;">
+                ${discounted ? `
+                <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: bold;">
+                  <span>Paid today:</span>
+                  <span style="color: #047857;">${paidTodayLabel}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; color: #666;">
+                  <span>Renews at:</span>
+                  <span>${planPrice}${billingPeriod}</span>
+                </div>` : `
                 <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: bold;">
                   <span>Amount:</span>
                   <span style="color: #047857;">${planPrice}${billingPeriod}</span>
-                </div>
+                </div>`}
               </div>
             </div>
 
@@ -1186,7 +1225,8 @@ Thank you for subscribing to the NotAStray PROTECT Plan! Your subscription is no
 SUBSCRIPTION DETAILS
 Plan: ${planLabel}
 Next Renewal Date: ${data.renewalDate}
-Amount: ${planPrice}${billingPeriod}
+${discounted ? `Paid today: ${paidTodayLabel}
+Renews at: ${planPrice}${billingPeriod}` : `Amount: ${planPrice}${billingPeriod}`}
 
 WHAT YOU GET
 ✓ Instant Alerts: Get SMS & email notifications whenever someone scans your pet's tag. This is how you'll know if your pet is lost and found.
@@ -1215,12 +1255,17 @@ export interface MerchantSubscriptionEmailData {
   customerEmail: string;
   customerName?: string;
   planType: 'monthly' | 'yearly';
+  // Recurring price in dollars, from the Stripe price rather than planType.
   planPrice: number;
+  // Actually charged on signup, in dollars. Set when a promotion code applied.
+  amountPaidToday?: number;
 }
 
 export function getMerchantSubscriptionEmail(data: MerchantSubscriptionEmailData) {
   const planLabel = data.planType === 'monthly' ? 'Monthly' : 'Annual';
-  const planPrice = data.planType === 'monthly' ? '$3' : '$30';
+  const planPrice = `$${data.planPrice.toFixed(2)}`;
+  const discounted = typeof data.amountPaidToday === 'number' && data.amountPaidToday !== data.planPrice;
+  const paidTodayNote = discounted ? ` (paid today: $${(data.amountPaidToday as number).toFixed(2)})` : '';
   const billingPeriod = data.planType === 'monthly' ? '/month' : '/year';
 
   const html = `
@@ -1257,7 +1302,7 @@ export function getMerchantSubscriptionEmail(data: MerchantSubscriptionEmailData
               </tr>
               <tr>
                 <td style="padding: 12px; font-size: 16px; font-weight: bold;">Price</td>
-                <td style="padding: 12px; text-align: right; font-size: 16px; font-weight: bold; color: #047857;">${planPrice}${billingPeriod}</td>
+                <td style="padding: 12px; text-align: right; font-size: 16px; font-weight: bold; color: #047857;">${planPrice}${billingPeriod}${paidTodayNote}</td>
               </tr>
             </table>
           </div>
@@ -1284,7 +1329,7 @@ ${data.customerEmail}
 
 SUBSCRIPTION
 Plan: ${planLabel}
-Price: ${planPrice}${billingPeriod}
+Price: ${planPrice}${billingPeriod}${paidTodayNote}
   `;
 
   return {
