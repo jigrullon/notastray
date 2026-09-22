@@ -15,7 +15,12 @@ const productImages = [
 ]
 
 const colorOptions = ['Choose One', 'Red', 'Blue', 'Pink', 'Teal', 'Black']
-const sizeOptions = ['Choose One', 'Small', 'Medium', 'Large']
+const sizeOptions = [
+  { value: 'Choose One', label: 'Choose One' },
+  { value: 'Small', label: 'Small — 1/2" opening' },
+  { value: 'Medium', label: 'Medium — 3/4" opening' },
+  { value: 'Large', label: 'Large — 1" opening' },
+]
 
 const featureBullets = [
   'Waterproof',
@@ -29,7 +34,7 @@ export default function ShopPage() {
   const { user } = useAuth()
   const { addItem, setIsCartOpen } = useCart()
   const [selectedColor, setSelectedColor] = useState(colorOptions[0])
-  const [selectedSize, setSelectedSize] = useState(sizeOptions[0])
+  const [selectedSize, setSelectedSize] = useState(sizeOptions[0].value)
   const [error, setError] = useState('')
 
   return (
@@ -105,11 +110,14 @@ export default function ShopPage() {
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   {sizeOptions.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
+                    <option key={size.value} value={size.value}>
+                      {size.label}
                     </option>
                   ))}
                 </select>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
+                  Openings are stretchy, so if you&apos;re between sizes, size down — a snug fit is better than a tag that swings around on the collar.
+                </p>
               </div>
 
               {/* Add to Cart Button */}
